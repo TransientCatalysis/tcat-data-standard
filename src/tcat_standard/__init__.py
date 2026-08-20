@@ -43,8 +43,11 @@ from .validate import (
     validate_calibration,
     validate_dataset,
     validate_manifest_entry,
+    validate_model,
     validate_protocol,
     validate_provenance,
+    validate_publication,
+    validate_sample,
     validate_uncertainty_ensemble,
 )
 
@@ -70,8 +73,11 @@ __all__ = [
     "validate_calibration",
     "validate_dataset",
     "validate_manifest_entry",
+    "validate_model",
     "validate_protocol",
     "validate_provenance",
+    "validate_publication",
+    "validate_sample",
     "validate_uncertainty_ensemble",
     "__version__",
 ]

@@ -121,7 +121,7 @@
   "access_status": "public",
   "license": "CC-BY-4.0",
   "provenance": {
-    "artifact_id": "conc-prbs-co-ox-synthetic-2026-09-01-8cf5d3",
+    "artifact_id": "canon-prbs-co-ox-synthetic-2026-09-01-8cf5d3",
     "tool": {
       "name": "tcat-ingest",
       "version": "0.1.0",

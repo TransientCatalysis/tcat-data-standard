@@ -67,6 +67,9 @@ KINDS = (
     "provenance",
     "uncertainty-ensemble",
     "protocol",
+    "sample",
+    "model",
+    "publication",
 )
 
 

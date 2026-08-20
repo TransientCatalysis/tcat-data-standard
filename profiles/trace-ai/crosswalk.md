@@ -64,6 +64,7 @@ Consequence: the TRACE-AI manifest is a **generated artifact** in this project, 
 | `features[].source` | `provenance.inputs` | |
 | `features[].generation` | `provenance` chain | The whole chain, not a sentence describing it. |
 | `features[].notes` | `channels[].notes` | |
+| — | `channels[].identifiers` | No upstream counterpart. Chemical identifiers (formula, InChI, SMILES, CAS, crystallographic ids) per channel and per sample, which the DMSP commits to using where available. |
 | — | `channels[].units` | **Required** in ours. Upstream has no units field, which is the single most consequential gap for physical data. |
 | — | `channels[].uncertainty` | **Required** in ours, with a declared noise-model family. No upstream counterpart. |
 
@@ -79,7 +80,7 @@ Consequence: the TRACE-AI manifest is a **generated artifact** in this project, 
 | TRACE-AI | tcat | Notes |
 |---|---|---|
 | `access.landing_page` | `publication.repository_doi` | Absent until deposition. |
-| `access.api` | — | The DMSP's web-accessible research database, once it exists. See `tcat-index/MIGRATION.md`. |
+| `access.api` | — | The project research database, `tcat-index`. Its read interfaces are `query.py --format json` and a generated `catalog.json` an agent can fetch whole. See `tcat-index/DATABASE.md`. |
 | `access.contact` | `personnel` | |
 
 ---
@@ -96,3 +97,6 @@ These are the substance of a transient-kinetics profile, and the concrete conten
 | `uncertainty-ensemble.schema.json` | Item B5 asks for a UQ method description. It does not specify a shape, and in particular does not require the *sample* rather than a summary — which is the thing experimental design actually needs, since a Gaussian summary discards the correlation structure that drives it. |
 | `layer` | No raw/canonical/derived distinction, because a reporting standard describes the finished dataset rather than the pipeline that produced it. |
 | Normative artifact-hash rule | Content addressing that is reproducible **across institutions** requires the canonicalisation rule to be shared, not merely the id format. |
+| `sample.schema.json` | Upstream's manifest has `dataset.custodians` and free-text `description`, but no materials record: no synthesis method, no precursor lots, no ordered thermal treatments, no independently measured properties with their methods. For a catalysis dataset the material *is* half the experiment, and a rate constant is only interpretable against a measured property of the sample it came from. |
+| `model.schema.json` | Upstream covers models through checklist *items* (B1–B5) rather than a document, so there is no defined shape for a model as a distributable research product. In particular there is no place for **limitations on appropriate use**, and no structural expression of a split — B2 is prose, so leakage is asserted rather than checkable. Expressing splits as groups over `batch_id` / `lineage_id` is the single most portable idea here. |
+| `publication.schema.json` | Upstream's manifest is authored at publication and describes one dataset snapshot. It has no representation of a publication's full dependency set with per-artifact roles, so "the data behind Figure 3" is not a thing you can query. |

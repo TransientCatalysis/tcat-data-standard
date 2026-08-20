@@ -1,0 +1,263 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://transientcatalysis.github.io/tcat-data-standard/0.1.0/publication.schema.json",
+  "title": "Publication",
+  "description": "A manuscript or preprint, and everything it depends on.\n\nThe DMSP requires that the registry 'support links between data and publications so that each public result can be traced back to the corresponding experimental runs, catalyst samples, computational calculations, or model versions'. That traceability has a direction, and it is this one: from the paper outward. Reconstructing it from the other direction at submission time -- walking every artifact asking whether a figure used it -- is the exercise this document exists to avoid.\n\nIt is also the unit the release gate operates on. 'Data available at time of publication' is only checkable if something enumerates what the publication used.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "publication_id",
+    "title",
+    "status",
+    "artifacts"
+  ],
+  "properties": {
+    "schema_version": {
+      "$ref": "defs/common.schema.json#/$defs/semver"
+    },
+    "publication_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "description": "Stable internal handle, usable before a DOI exists.",
+      "examples": [
+        "2027-rioux-prbs-transient-vox-odh"
+      ]
+    },
+    "title": {
+      "description": "Working title. Expected to change; it is here so a record is recognisable before a DOI exists.",
+      "type": "string",
+      "minLength": 1
+    },
+    "authors": {
+      "description": "Author list, in order. Free-form strings rather than structured people, because author lists churn and structuring them early buys nothing.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "corresponding": {
+      "description": "Corresponding author(s), for the data-availability correspondence that release generates.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "planned",
+        "drafting",
+        "submitted",
+        "in_revision",
+        "accepted",
+        "published",
+        "withdrawn"
+      ],
+      "description": "Drives the release gate. Data supporting a publication is public no later than the publication itself, so this field is what says when that clock starts."
+    },
+    "venue": {
+      "description": "Journal or conference.",
+      "type": "string"
+    },
+    "year": {
+      "description": "Publication year, or intended year while in progress.",
+      "type": "integer",
+      "minimum": 2026,
+      "maximum": 2100
+    },
+    "doi": {
+      "$ref": "defs/common.schema.json#/$defs/doi"
+    },
+    "preprint_doi": {
+      "$ref": "defs/common.schema.json#/$defs/doi"
+    },
+    "artifacts": {
+      "type": "array",
+      "description": "Everything the paper's claims rest on, each with the role it plays. Required and non-empty: a publication record naming nothing is not traceability, it is a bibliography entry.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "ref",
+          "role"
+        ],
+        "properties": {
+          "ref": {
+            "type": "string",
+            "description": "An artifact id, an art:// reference, a dataset_id, a sample_id, or a model_id."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "artifact",
+              "dataset",
+              "sample",
+              "model",
+              "calibration",
+              "ensemble",
+              "protocol",
+              "external"
+            ],
+            "description": "Which registry to resolve `ref` against. 'external' is for something outside this project -- a public dataset, a literature value -- which must still be named rather than implied."
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "figure",
+              "table",
+              "underlying_data",
+              "model",
+              "calibration",
+              "validation",
+              "supporting",
+              "software"
+            ],
+            "description": "Why the paper needs it. 'figure' and 'table' are the ones the DMSP's release requirement bites on: data displayed in figures and tables must be public at publication."
+          },
+          "locator": {
+            "type": "string",
+            "description": "Which figure or table.",
+            "examples": [
+              "Figure 3b",
+              "Table 2",
+              "Figure S7"
+            ]
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "data_availability_statement": {
+      "type": "string",
+      "description": "The statement as it will appear in the paper. Drafted here so it is derived from the record rather than written from memory at submission -- and so a mismatch between what it promises and what is actually released is visible before a reviewer finds it."
+    },
+    "deposits": {
+      "type": "array",
+      "description": "Where the supporting data and software were deposited, with their DOIs. The DMSP commits to reporting released datasets to DOE OSTI, and this is the list that gets reported.",
+      "items": {
+        "type": "object",
+        "required": [
+          "repository",
+          "doi"
+        ],
+        "properties": {
+          "repository": {
+            "type": "string",
+            "examples": [
+              "Zenodo",
+              "GT SMARTech",
+              "OSTI DataExplorer"
+            ]
+          },
+          "doi": {
+            "$ref": "defs/common.schema.json#/$defs/doi"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "contents": {
+            "type": "string",
+            "description": "What went in -- one line."
+          },
+          "license": {
+            "$ref": "defs/common.schema.json#/$defs/license_spdx"
+          },
+          "deposited_at": {
+            "$ref": "defs/common.schema.json#/$defs/timestamp"
+          },
+          "osti_reported": {
+            "type": "boolean",
+            "description": "Whether this deposit has been reported to DOE OSTI. Tracked as a field because it is a reporting obligation that is easy to complete late and impossible to notice."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "software": {
+      "type": "array",
+      "items": {
+        "$ref": "defs/common.schema.json#/$defs/software_ref"
+      },
+      "description": "Software releases the results depend on, with archived DOIs where they exist."
+    },
+    "trace_ai_checklist": {
+      "type": "object",
+      "description": "The filled TRACE-AI checklist for this manuscript. Generated at write-up from accumulated provenance rather than maintained by hand -- see profiles/trace-ai/enforcement.md.",
+      "properties": {
+        "checklist_version": {
+          "type": "string",
+          "examples": [
+            "2.2.0"
+          ]
+        },
+        "artifact_ref": {
+          "$ref": "defs/common.schema.json#/$defs/artifact_ref"
+        },
+        "path": {
+          "type": "string"
+        },
+        "gaps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Items that could not be substantiated, and why. Reported as gaps rather than silently as 'N-A' -- a checklist that launders an absence into a claim is worse than no checklist."
+        }
+      },
+      "additionalProperties": true
+    },
+    "reproducibility_reviewed": {
+      "type": "boolean",
+      "description": "Whether the reproducibility package was reviewed before release, per the DMSP: major figures, extracted kinetic parameters, spectra assignments, and model predictions regenerate from the archived files."
+    },
+    "reproducibility_reviewer": {
+      "description": "Who checked that the archived files regenerate the paper's figures and parameters. A named person, because 'the team reviewed it' is not a review.",
+      "type": "string"
+    },
+    "funding": {
+      "$ref": "defs/common.schema.json#/$defs/funding"
+    },
+    "project": {
+      "description": "Which project this publication reports on.",
+      "type": "string"
+    },
+    "objective": {
+      "$ref": "defs/common.schema.json#/$defs/objective"
+    },
+    "notes": {
+      "description": "Free text: submission history, reviewer requests affecting the data package, anything relevant to release.",
+      "type": "string"
+    },
+    "extensions": {
+      "$ref": "defs/common.schema.json#/$defs/extensions"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "accepted",
+              "published"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "required": [
+          "data_availability_statement"
+        ],
+        "description": "By acceptance the availability statement must exist, because the data it describes is due at publication and there is no later moment to discover it does not."
+      }
+    }
+  ],
+  "additionalProperties": false
+}

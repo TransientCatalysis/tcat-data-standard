@@ -3,6 +3,67 @@
 Package and schema versions move together in 0.x. They will decouple once the
 schema stabilises and the validator keeps changing without it.
 
+## 0.2.0 — 2026-08-20
+
+Second pass, driven by a clause-by-clause audit against the project Data
+Management and Sharing Plan. See `DMSP-COMPLIANCE.md` alongside the spec.
+
+### Three new document kinds
+
+- **`sample`** — a physical catalyst. Synthesis method, precursors with lot
+  numbers, ordered thermal treatments, nominal *and* measured composition, and
+  independently measured properties each with a method and uncertainty. One
+  sample is measured many times across three institutions; repeating its history
+  on every dataset guarantees the copies diverge. The `properties` object is the
+  side of the M9 join (a rate constant against a measured catalyst property) that
+  is easy to leave in a notebook until too late.
+- **`model`** — a fitted or trained model as a research product. One schema for
+  both ends of the graded palette, because two would put an arbitrary line down
+  the middle of a palette whose point is that the boundary moves per question.
+  Splits are expressed as **groups**, not rows, so leakage is checkable rather
+  than asserted. Metrics declare their split and warn without an interval.
+  `limitations` is warned about when empty.
+- **`publication`** — a manuscript and its full dependency set, with the role
+  each artifact plays. Traceability runs from the paper outward; reconstructing it
+  at submission means walking every artifact asking whether a figure used it.
+  `data_availability_statement` becomes required at `accepted`.
+
+### Fields
+
+Added, all optional: `project`, `objective`, `software` on `dataset`, `sample`,
+and `model`; `chemical_identifiers` (formula, InChI, InChIKey, SMILES, CAS,
+PubChem, COD/ICSD, Materials Project) on channels and samples. These are the last
+of the DMSP's enumerated metadata list. Optional rather than required because
+none is lost by being backfilled — a funding award can be added later from records
+that already exist, whereas a deleted failed run cannot.
+
+Added `split_assignment` to the shared definitions: TRACE-AI B2 made structural.
+
+### TRACE-AI
+
+Four Model Development items moved from "assembled at write-up" to "recorded as
+you go" — B1, B2, B3, and B5 now have homes in the `model` document. B4 stays at
+manuscript time: it is an argument, not a field, and a schema demanding one would
+get "see manuscript". `profiles/trace-ai/enforcement.md` and `crosswalk.md`
+updated; the pin is unchanged at v2.2.0.
+
+### On amending 0.1.0 in place
+
+Schema `0.1.0` was amended rather than forked to a new directory. It is a
+pre-release draft that nobody has used, and manufacturing a fake version history
+before either version had a consumer would be worse than saying so plainly.
+`STANDARD.md` §6 now states that retention begins at the **first tagged release**.
+
+### Fixed during development
+
+- The new advisory checks were initially inserted into `_structural_errors` as
+  well as `_advisory_checks`, because the anchor string appeared in both — so an
+  empty `limitations` field failed validation instead of warning. Caught by the
+  errors-versus-warnings tests, which is what they are for.
+- `test_every_documented_field_has_a_description` caught twelve undescribed
+  fields across the three new schemas. It has now caught real omissions on both
+  passes.
+
 ## 0.1.0 — 2026-08-20
 
 Initial draft, for team review **before any real instrument data exists**. That

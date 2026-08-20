@@ -257,7 +257,10 @@ def build_dataset(entry: ManifestEntry, protocol: dict, cal_id: str) -> dict:
         "license": "CC-BY-4.0",
         "provenance": {
             "artifact_id": make_artifact_id(
-                tool="conc",
+                # `canon`, not `conc`: tcat-ingest emits a CANONICAL artifact.
+                # `conc` is tcat-calibrate's prefix, and using it here described an
+                # ingest record as though a calibration had been applied.
+                tool="canon",
                 name="prbs-co-ox-synthetic",
                 when="2026-09-01",
                 tool_name="tcat-ingest",
@@ -293,6 +296,243 @@ def build_dataset(entry: ManifestEntry, protocol: dict, cal_id: str) -> dict:
     }
 
 
+SAMPLE_ID = "SYNTH-CATALYST-001"
+
+
+def build_sample() -> dict:
+    """A synthetic catalyst sample, with every field a real one would carry.
+
+    Shaped after supported vanadium oxide because that is the Phase I system, but
+    the numbers are invented. It exists so that the M9 join -- a fitted rate
+    constant against an independently measured property -- has a worked example of
+    the property side, which is the side that is easy to leave until too late.
+    """
+    return {
+        "schema_version": "0.1.0",
+        "sample_id": SAMPLE_ID,
+        "status": "ok",
+        "catalyst_family": "synthetic supported oxide",
+        "identifiers": {"formula": "VOx/SiO2"},
+        "composition": {
+            "nominal": {"V": {"value": 3.0, "units": "wt%"}},
+            "measured": {
+                "V": {"value": 2.84, "sigma": 0.09, "units": "wt%", "method": "XRF"}
+            },
+            "support": "SiO2",
+        },
+        "synthesis": {
+            "method": "incipient wetness impregnation",
+            "precursors": [
+                {
+                    "name": "ammonium metavanadate",
+                    "identifiers": {"formula": "NH4VO3", "cas": "7803-55-6"},
+                    "supplier": "SYNTHETIC",
+                    "lot": "SYNTHETIC-LOT-A",
+                    "purity": "99.9%",
+                },
+                {"name": "silica gel", "identifiers": {"formula": "SiO2"}, "supplier": "SYNTHETIC"},
+            ],
+            "thermal_treatments": [
+                {"label": "drying", "temperature_K": 373.0, "duration_s": 43200, "atmosphere": "air"},
+                {
+                    "label": "calcination",
+                    "temperature_K": 823.0,
+                    "ramp_K_per_min": 2.0,
+                    "duration_s": 14400,
+                    "atmosphere": "air",
+                    "flow_sccm": 50.0,
+                },
+            ],
+            "date": "2026-08-25T10:00:00Z",
+            "notes": "SYNTHETIC. No such sample exists.",
+        },
+        "properties": {
+            "surface_area": {
+                "value": 212.0, "sigma": 4.0, "units": "m^2/g",
+                "method": "BET N2 physisorption",
+            },
+            "reducibility_T_max": {
+                "value": 723.0, "sigma": 8.0, "units": "K", "method": "H2-TPR",
+                "notes": "The kind of property milestone M9 correlates a rate constant against.",
+            },
+            "v_surface_density": {
+                "value": 2.3, "sigma": 0.2, "units": "V/nm^2", "method": "XRF + BET",
+            },
+        },
+        "characterization": [
+            {"technique": "XRF", "summary": "2.84 wt% V, no crystalline V2O5 detected."},
+            {"technique": "N2 physisorption", "summary": "212 m^2/g, type IV isotherm."},
+        ],
+        "batch_id": "synthetic-batch-a",
+        "quantity_g": 2.5,
+        "location": "gt",
+        "access_status": "public",
+        "license": "CC-BY-4.0",
+        "funding": [
+            {"funder": "US Department of Energy", "award": "DE-FOA-0003612", "program": "Genesis Mission"}
+        ],
+        "project": "genesis-prbs-phase-1",
+        "notes": (
+            "SYNTHETIC EXEMPLAR. Stored at ambient in a sealed vial; no pretreatment "
+            "beyond the calcination recorded above. Present so every field of the "
+            "sample schema has a worked value."
+        ),
+    }
+
+
+def build_model(ensemble_ref: str, dataset_id: str) -> dict:
+    """A synthetic fitted model, with metrics phrased the way a milestone is.
+
+    The metrics carry intervals on purpose: TRACE-AI B3 exists to prevent
+    best-only reporting, and an example without intervals would teach the
+    opposite of the rule.
+    """
+    model_id = make_artifact_id(
+        tool="model",
+        name="lh-two-site-synthetic",
+        when="2026-09-01",
+        tool_name="tcat-fit",
+        tool_version="0.1.0",
+        inputs=[],
+        parameters={"algorithm": "lh-two-site", "source": "synthetic-example"},
+    )
+    return {
+        "schema_version": "0.1.0",
+        "model_id": model_id,
+        "family": "microkinetic",
+        "algorithm": "lh-two-site",
+        "interpretable": True,
+        "description": (
+            "SYNTHETIC. Two-site Langmuir-Hinshelwood model, fit to the synthetic "
+            "PRBS trace. Present so the model schema has a worked example; the "
+            "numbers are invented and describe no real catalyst."
+        ),
+        "architecture": {
+            "summary": "Two site types, competitive adsorption, one surface reaction.",
+            "n_parameters": 3,
+            "n_species": 3,
+            "n_reactions": 3,
+        },
+        "hyperparameters": {
+            "solver": "radau",
+            "rtol": 1e-8,
+            "atol": 1e-10,
+            "parameter_transform": "log10",
+        },
+        "seed": 20260820,
+        "features": [
+            {"name": "m28_conc", "units": "mol/m^3", "quantity": "concentration", "source": "m28"},
+            {"name": "m32_conc", "units": "mol/m^3", "quantity": "concentration", "source": "m32"},
+            {"name": "m44_conc", "units": "mol/m^3", "quantity": "concentration", "source": "m44"},
+        ],
+        "parameters_ref": f"art://{ensemble_ref}",
+        "uncertainty_ref": f"art://{ensemble_ref}",
+        "training_data": {
+            "dataset_ids": [dataset_id],
+            "sample_ids": [SAMPLE_ID],
+            "n_observations": 5080,
+            "splits": {
+                "strategy": "leave_one_batch_out",
+                "grouped_by": ["batch_id"],
+                "train": ["synthetic-batch-a"],
+                "test": ["synthetic-batch-b"],
+                "seed": 20260820,
+                "notes": (
+                    "Grouped by batch so no batch spans the split. Ungrouped splitting "
+                    "of this data leaks: a PRBS trace is autocorrelated and repeated "
+                    "conditions share a lineage."
+                ),
+            },
+        },
+        "metrics": {
+            "steady_state_rate_rel_error": {
+                "value": 11.8, "units": "%", "split": "held_out",
+                "interval": [8.4, 15.9], "interval_kind": "95% CI", "n": 6,
+                "notes": "SYNTHETIC. Milestone M3 target is <= 15%.",
+            },
+            "trace_nrmse": {
+                "value": 0.041, "units": "1", "split": "test",
+                "interval": [0.033, 0.052], "interval_kind": "95% CI", "n": 6,
+            },
+        },
+        "identifiability": {
+            "identifiable": ["log10_k_rxn"],
+            "unidentifiable": ["log10_k_ads", "log10_k_des"],
+            "criterion": "profile likelihood",
+            "notes": (
+                "SYNTHETIC. Adsorption and desorption are correlated along a flat "
+                "direction here, which is the normal situation and the reason M9 is "
+                "worded in terms of IDENTIFIABLE constants."
+            ),
+        },
+        "limitations": (
+            "SYNTHETIC MODEL -- not usable for any real prediction. Even taken on its "
+            "own terms it was fit at a single temperature (473 K), on one synthetic "
+            "sample, under PRBS forcing only. It has not been validated on "
+            "chemical-looping operation, on any temperature ramp, or on any other "
+            "catalyst, and only one of its three rate constants is identifiable."
+        ),
+        "software": {
+            "name": "tcat-analysis",
+            "repository": "https://github.com/TransientCatalysis/tcat-analysis",
+            "version": "0.1.0",
+            "license": "MIT",
+        },
+        "example_use": "examples/worked_example.py",
+        "autonomy_level": "A1",
+        "access_status": "public",
+        "license": "CC-BY-4.0",
+        "project": "genesis-prbs-phase-1",
+        "objective": {"label": "1b-mechanism", "milestone": "M9"},
+        "notes": "Generated by examples/make_examples.py. No solve was performed.",
+    }
+
+
+def build_publication(dataset_id: str, model_id: str) -> dict:
+    """A synthetic publication record, showing the traceability direction.
+
+    Status is deliberately `drafting`: an example in `published` state would need
+    real deposits and DOIs, and inventing those is exactly the kind of
+    plausible-looking fiction this project's examples avoid.
+    """
+    return {
+        "schema_version": "0.1.0",
+        "publication_id": "0000-example-synthetic-prbs-worked-example",
+        "title": "SYNTHETIC EXAMPLE -- not a real manuscript",
+        "authors": ["Example, A."],
+        "status": "drafting",
+        "artifacts": [
+            {"ref": dataset_id, "kind": "dataset", "role": "underlying_data",
+             "locator": "Figure 1", "notes": "The PRBS trace itself."},
+            {"ref": SAMPLE_ID, "kind": "sample", "role": "supporting",
+             "notes": "Catalyst the trace was measured on."},
+            {"ref": model_id, "kind": "model", "role": "model", "locator": "Figure 2"},
+            {"ref": "tcat-analysis", "kind": "external", "role": "software",
+             "notes": "Analysis code; a release DOI would go in `software` below."},
+        ],
+        "data_availability_statement": (
+            "SYNTHETIC. Drafted here rather than written from memory at submission, so "
+            "that what it promises can be checked against what is actually registered."
+        ),
+        "software": [
+            {
+                "name": "tcat-analysis",
+                "repository": "https://github.com/TransientCatalysis/tcat-analysis",
+                "version": "0.1.0",
+                "license": "MIT",
+            }
+        ],
+        "trace_ai_checklist": {"checklist_version": "2.2.0", "gaps": [
+            "Sections B and C are not substantiable for a synthetic example."
+        ]},
+        "funding": [
+            {"funder": "US Department of Energy", "award": "DE-FOA-0003612", "program": "Genesis Mission"}
+        ],
+        "project": "genesis-prbs-phase-1",
+        "notes": "Generated by examples/make_examples.py. Not a real manuscript.",
+    }
+
+
 def main() -> None:
     csv_path = write_csv()
     entry = ManifestEntry.from_file(csv_path, repo_root=REPO, format="csv", media_type="text/csv")
@@ -301,10 +541,23 @@ def main() -> None:
     calibration = build_calibration()
     dataset = build_dataset(entry, protocol, calibration["calibration_id"])
 
+    # A synthetic ensemble id, so the model example can cite something well-formed.
+    ensemble_ref = make_artifact_id(
+        tool="fit", name="prbs-co-ox-synthetic", when="2026-09-01",
+        tool_name="tcat-fit", tool_version="0.1.0", inputs=[],
+        parameters={"model": "lh-two-site", "method": "laplace"},
+    )
+    sample = build_sample()
+    model = build_model(ensemble_ref, dataset["dataset_id"])
+    publication = build_publication(dataset["dataset_id"], model["model_id"])
+
     for name, doc in (
         ("dataset-prbs-co-ox.json", dataset),
         ("calibration-fixed.json", calibration),
         ("protocol-prbs.json", protocol),
+        ("sample-synthetic.json", sample),
+        ("model-lh-two-site.json", model),
+        ("publication-example.json", publication),
     ):
         (HERE / name).write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
         print(f"wrote examples/{name}")

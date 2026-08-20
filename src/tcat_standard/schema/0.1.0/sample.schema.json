@@ -1,0 +1,385 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://transientcatalysis.github.io/tcat-data-standard/0.1.0/sample.schema.json",
+  "title": "Catalyst sample",
+  "description": "A physical catalyst sample. The DMSP commits to materials data -- synthesis conditions, precursor identities, thermal treatments, composition, phase, particle size, dispersion, surface area, and characterization -- and to a registry that links data to samples. This is that record.\n\nWhy it is a separate document rather than fields on a dataset: one sample is measured many times, across modalities, at three institutions. Repeating its synthesis history on every dataset guarantees the copies diverge, and then nobody knows which is right. The dataset carries `sample_id`; this carries everything the id stands for.\n\nMilestone M9 -- a rate constant correlating with an independently measured catalyst property -- is a join between fitted parameters and THIS document. If the properties are not recorded here in a queryable form, that milestone becomes a spreadsheet exercise.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "sample_id",
+    "status",
+    "access_status",
+    "license"
+  ],
+  "properties": {
+    "schema_version": {
+      "$ref": "defs/common.schema.json#/$defs/semver"
+    },
+    "sample_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The lab's OWN label, verbatim -- what is written on the vial. A project-assigned relabelling that disagrees with the physical label is a scheme that gets ignored. This is the join key every dataset points at."
+    },
+    "status": {
+      "$ref": "defs/common.schema.json#/$defs/status",
+      "description": "Flag, never delete -- applies to samples too. A synthesis that failed, or a sample that was contaminated, is retained with a reason. Those are often the most informative entries in a materials series."
+    },
+    "status_reason": {
+      "description": "Required and non-empty whenever status is not `ok`. A flagged synthesis without a reason cannot inform the next attempt.",
+      "type": "string",
+      "minLength": 1
+    },
+    "catalyst_family": {
+      "description": "Material class, coarser than sample_id. The grouping key for cross-material comparison, which is what milestone M9 correlates over.",
+      "type": "string",
+      "examples": [
+        "supported vanadium oxide",
+        "Pt/Al2O3"
+      ]
+    },
+    "identifiers": {
+      "$ref": "defs/common.schema.json#/$defs/chemical_identifiers"
+    },
+    "composition": {
+      "type": "object",
+      "description": "Nominal and measured composition. Both, where both exist -- the difference between what was intended and what was made is frequently the interesting variable.",
+      "properties": {
+        "nominal": {
+          "type": "object",
+          "description": "As designed, by element or component. Units declared per entry.",
+          "additionalProperties": {
+            "type": "object",
+            "required": [
+              "value",
+              "units"
+            ],
+            "properties": {
+              "value": {
+                "type": "number"
+              },
+              "units": {
+                "type": "string",
+                "examples": [
+                  "wt%",
+                  "mol%",
+                  "at%"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "measured": {
+          "type": "object",
+          "description": "As determined, with the method named. A composition without its method is not comparable across labs.",
+          "additionalProperties": {
+            "type": "object",
+            "required": [
+              "value",
+              "units",
+              "method"
+            ],
+            "properties": {
+              "value": {
+                "type": "number"
+              },
+              "sigma": {
+                "type": "number",
+                "minimum": 0
+              },
+              "units": {
+                "type": "string"
+              },
+              "method": {
+                "type": "string",
+                "examples": [
+                  "XRF",
+                  "ICP-OES",
+                  "XPS",
+                  "EDS"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "support": {
+          "type": "string",
+          "examples": [
+            "SiO2",
+            "Al2O3",
+            "TiO2"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "synthesis": {
+      "type": "object",
+      "description": "How it was made. Enough that another lab could attempt it, which is the standard the DMSP's reuse requirement sets.",
+      "properties": {
+        "method": {
+          "type": "string",
+          "examples": [
+            "incipient wetness impregnation",
+            "grafting",
+            "solid-state"
+          ]
+        },
+        "precursors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "identifiers": {
+                "$ref": "defs/common.schema.json#/$defs/chemical_identifiers"
+              },
+              "supplier": {
+                "type": "string"
+              },
+              "lot": {
+                "type": "string",
+                "description": "Recorded because a precursor lot change is a classic unexplained-drift culprit."
+              },
+              "purity": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "thermal_treatments": {
+          "type": "array",
+          "description": "Ordered. Calcination and reduction history in sequence, because order changes the material.",
+          "items": {
+            "type": "object",
+            "required": [
+              "label",
+              "temperature_K",
+              "duration_s"
+            ],
+            "properties": {
+              "label": {
+                "type": "string",
+                "examples": [
+                  "drying",
+                  "calcination",
+                  "reduction"
+                ]
+              },
+              "temperature_K": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "ramp_K_per_min": {
+                "type": "number"
+              },
+              "duration_s": {
+                "type": "number",
+                "minimum": 0
+              },
+              "atmosphere": {
+                "type": "string",
+                "examples": [
+                  "air",
+                  "5% H2/Ar",
+                  "N2"
+                ]
+              },
+              "flow_sccm": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "date": {
+          "$ref": "defs/common.schema.json#/$defs/timestamp"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "properties": {
+      "type": "object",
+      "description": "Independently measured catalyst properties, each with its method and uncertainty. THIS is the side of the M9 join that is easy to leave until too late: 'at least one rate constant correlating with an independently measured catalyst property' requires the property to exist here, with a number and a method, not in someone's notebook.",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "value",
+          "units",
+          "method"
+        ],
+        "properties": {
+          "value": {
+            "type": "number"
+          },
+          "sigma": {
+            "type": "number",
+            "minimum": 0
+          },
+          "units": {
+            "type": "string",
+            "description": "Use \"1\" for a genuine dimensionless quantity, never omission."
+          },
+          "method": {
+            "type": "string",
+            "examples": [
+              "BET N2 physisorption",
+              "H2-TPR",
+              "XRD Rietveld",
+              "TEM",
+              "CO chemisorption"
+            ]
+          },
+          "dataset_ref": {
+            "type": "string",
+            "description": "The dataset_id this value was derived from, where one exists. Makes the property auditable rather than asserted."
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "examples": [
+        {
+          "surface_area": {
+            "value": 212.0,
+            "sigma": 4.0,
+            "units": "m^2/g",
+            "method": "BET N2 physisorption"
+          },
+          "reducibility_T_max": {
+            "value": 723.0,
+            "sigma": 8.0,
+            "units": "K",
+            "method": "H2-TPR"
+          },
+          "v_surface_density": {
+            "value": 2.3,
+            "sigma": 0.2,
+            "units": "V/nm^2",
+            "method": "XRF + BET"
+          }
+        }
+      ]
+    },
+    "characterization": {
+      "type": "array",
+      "description": "Pointers to characterization datasets -- XRD, XPS, microscopy, physisorption. Pointers rather than inlined results, because a characterization measurement is itself a dataset with units, uncertainty, and provenance.",
+      "items": {
+        "type": "object",
+        "required": [
+          "technique"
+        ],
+        "properties": {
+          "technique": {
+            "type": "string",
+            "examples": [
+              "XRD",
+              "XPS",
+              "TEM",
+              "XRF",
+              "ICP-OES",
+              "N2 physisorption",
+              "H2-TPR"
+            ]
+          },
+          "dataset_id": {
+            "type": "string"
+          },
+          "artifact_ref": {
+            "$ref": "defs/common.schema.json#/$defs/artifact_ref"
+          },
+          "summary": {
+            "type": "string",
+            "description": "One line of what it showed. The searchable form."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "parent_sample_id": {
+      "type": "string",
+      "description": "For a sample derived from another -- a split batch, a re-calcined portion, a spent sample recovered after reaction. Makes the materials lineage explicit rather than implied by a naming convention."
+    },
+    "batch_id": {
+      "type": "string",
+      "description": "The synthesis batch. Datasets inherit their batch_id from the sample they measure, and that inheritance is what makes grouped splits correct rather than approximate."
+    },
+    "quantity_g": {
+      "type": "number",
+      "minimum": 0,
+      "description": "How much exists. Relevant when planning experiments that consume it."
+    },
+    "location": {
+      "type": "string",
+      "description": "Which institution physically holds it."
+    },
+    "access_status": {
+      "$ref": "defs/common.schema.json#/$defs/access_status"
+    },
+    "embargo_until": {
+      "$ref": "defs/common.schema.json#/$defs/timestamp"
+    },
+    "license": {
+      "$ref": "defs/common.schema.json#/$defs/license_spdx"
+    },
+    "personnel": {
+      "$ref": "defs/common.schema.json#/$defs/personnel"
+    },
+    "funding": {
+      "$ref": "defs/common.schema.json#/$defs/funding"
+    },
+    "publication": {
+      "$ref": "defs/common.schema.json#/$defs/publication"
+    },
+    "project": {
+      "type": "string",
+      "description": "Which project this sample belongs to. Named in the DMSP's metadata list; matters once a lab runs more than one."
+    },
+    "objective": {
+      "$ref": "defs/common.schema.json#/$defs/objective"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Free-text narrative. Pretreatment history beyond the recorded thermal treatments, storage conditions, anything anomalous about the synthesis, and why a sample was abandoned. The DMSP asks for narrative fields explicitly."
+    },
+    "extensions": {
+      "$ref": "defs/common.schema.json#/$defs/extensions"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "flagged",
+              "failed"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "required": [
+          "status_reason"
+        ]
+      }
+    }
+  ],
+  "additionalProperties": false
+}

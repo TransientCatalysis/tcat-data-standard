@@ -33,6 +33,11 @@ _DIR_KIND = {
     "protocols": "protocol",
     "provenance": "provenance",
     "ensembles": "uncertainty-ensemble",
+    "samples": "sample",
+    "models": "model",
+    "publications": "publication",
+    "artifacts": "provenance",
+    "datasets": "dataset",
 }
 
 
@@ -52,10 +57,19 @@ def _infer_kind(path: Path) -> str | None:
         return None
     if not isinstance(doc, dict):
         return None
+    # Ordered most-specific first: a model document also carries a `metrics` key
+    # that nothing else does, but a sample carries `sample_id` which a dataset
+    # also has -- so the discriminating key has to be the unique one.
     if "calibration_id" in doc:
         return "calibration"
+    if "model_id" in doc:
+        return "model"
+    if "publication_id" in doc:
+        return "publication"
     if "artifact_id" in doc and "tool" in doc:
         return "provenance"
+    if "sample_id" in doc and "dataset_id" not in doc:
+        return "sample"
     if "dataset_id" in doc:
         return "dataset"
     if "parameter_names" in doc and "samples" in doc:

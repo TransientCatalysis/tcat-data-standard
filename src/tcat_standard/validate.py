@@ -272,6 +272,117 @@ def _advisory_checks(document: Any, kind: str, version: str) -> list[Problem]:
                 )
             )
 
+    if kind == "sample":
+        if not document.get("properties"):
+            out.append(
+                Problem(
+                    "/properties",
+                    "no independently measured catalyst properties recorded. Milestone M9 "
+                    "is a join between a fitted rate constant and a property recorded HERE; "
+                    "if it lives in a notebook, that milestone becomes a spreadsheet exercise",
+                )
+            )
+        if not (document.get("synthesis") or {}).get("precursors"):
+            out.append(Problem("/synthesis/precursors", "no precursors recorded"))
+        if not document.get("identifiers"):
+            out.append(
+                Problem(
+                    "/identifiers",
+                    "no chemical identifiers; the DMSP commits to using them when available",
+                )
+            )
+
+    if kind == "model":
+        if not document.get("limitations"):
+            out.append(
+                Problem(
+                    "/limitations",
+                    "no stated limitations on appropriate use. The DMSP requires them, and a "
+                    "model released without limits will be applied outside them by someone "
+                    "who did not fit it",
+                )
+            )
+        if not document.get("uncertainty_ref"):
+            out.append(
+                Problem(
+                    "/uncertainty_ref",
+                    "no uncertainty ensemble cited; a point estimate alone cannot be used for "
+                    "experiment design and must not be mistaken for a characterised result",
+                )
+            )
+        splits = (document.get("training_data") or {}).get("splits")
+        if not splits:
+            out.append(
+                Problem(
+                    "/training_data/splits",
+                    "no split strategy declared (TRACE-AI B2). Catalysis data has shared "
+                    "lineages and repeated conditions, so an unstated split is usually a "
+                    "leaked one",
+                )
+            )
+        elif "none" in (splits.get("grouped_by") or []):
+            out.append(
+                Problem(
+                    "/training_data/splits/grouped_by",
+                    "ungrouped split. For this project's data that is almost always leakage: "
+                    "same-batch data must stay within one split",
+                )
+            )
+        for name, metric in (document.get("metrics") or {}).items():
+            if isinstance(metric, dict) and "interval" not in metric:
+                out.append(
+                    Problem(
+                        f"/metrics/{name}",
+                        "no interval; a bare number is best-only reporting (TRACE-AI B3)",
+                    )
+                )
+        if not document.get("example_use"):
+            out.append(Problem("/example_use", "no runnable example cited (TRACE-AI D1)"))
+
+    if kind == "publication":
+        status = document.get("status")
+        if status in ("accepted", "published"):
+            if not document.get("deposits"):
+                out.append(
+                    Problem(
+                        "/deposits",
+                        "accepted or published with no deposit recorded. Supporting data is "
+                        "due no later than publication",
+                    )
+                )
+            if not document.get("reproducibility_reviewed"):
+                out.append(
+                    Problem(
+                        "/reproducibility_reviewed",
+                        "reproducibility package not marked reviewed; the DMSP requires review "
+                        "before release",
+                    )
+                )
+            unreported = [
+                d.get("doi")
+                for d in (document.get("deposits") or [])
+                if not d.get("osti_reported")
+            ]
+            if unreported:
+                out.append(
+                    Problem(
+                        "/deposits",
+                        f"{len(unreported)} deposit(s) not yet reported to DOE OSTI",
+                    )
+                )
+        figures = [
+            a for a in (document.get("artifacts") or [])
+            if a.get("role") in ("figure", "table")
+        ]
+        if status in ("accepted", "published") and not figures:
+            out.append(
+                Problem(
+                    "/artifacts",
+                    "no artifact carries role 'figure' or 'table'; those are the ones whose "
+                    "underlying data must be public at publication",
+                )
+            )
+
     if kind == "uncertainty-ensemble":
         names = document.get("parameter_names") or []
         point = document.get("point_estimate") or []
@@ -313,6 +424,9 @@ validate_calibration = _validate_kind("calibration")
 validate_provenance = _validate_kind("provenance")
 validate_uncertainty_ensemble = _validate_kind("uncertainty-ensemble")
 validate_protocol = _validate_kind("protocol")
+validate_sample = _validate_kind("sample")
+validate_model = _validate_kind("model")
+validate_publication = _validate_kind("publication")
 
 
 def validate_file(path: str | Path, kind: str, *, version: str | None = None) -> ValidationReport:

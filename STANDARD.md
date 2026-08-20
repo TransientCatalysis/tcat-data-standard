@@ -1,6 +1,6 @@
 # tcat Data Standard
 
-<!-- VERSION: 0.1.0 -->
+<!-- VERSION: 0.2.0 -->
 <!-- MAINTAINER: A. J. Medford (Georgia Tech) -->
 <!-- LAST_REVIEWED: 2026-08-20 -->
 <!--
@@ -16,7 +16,7 @@
   against main. See CONTRIBUTING.md.
 -->
 
-**Standards version:** 0.1.0
+**Standards version:** 0.2.0
 **Schema version:** 0.1.0 (`src/tcat_standard/schema/0.1.0/`)
 **Status:** draft for team review. Nothing here has been exercised against real data yet, because no real data exists yet. That is the intended moment to argue about it.
 
@@ -103,9 +103,11 @@ A field is required in 0.1.0 only when retrofitting it later would destroy infor
 | `provenance` | See §7. |
 | `protocol` | Required for every experimental modality. Carries the perturbation waveform and time base. See §8. |
 
-### Deliberately optional in 0.1.0
+### Deliberately optional
 
-`personnel`, `funding`, `publication`, `reaction_system`, `catalyst_family`, `notes`, `embargo_until`, `calibration_ref`, `time_base`. Each is defined in the schema so the field *name* is stable when it is promoted; none is enforced yet.
+`personnel`, `funding`, `publication`, `project`, `objective`, `software`, `reaction_system`, `catalyst_family`, `notes`, `embargo_until`, `calibration_ref`, `time_base`, and per-channel `identifiers`. Each is defined in the schema so the field *name* is stable when it is promoted; none is enforced.
+
+Every one of these is a field the DMSP commits to recording. They are optional rather than required because none of them is lost by being backfilled — a funding award or a chemical identifier can be added later from records that already exist, whereas a deleted failed run cannot. The validator warns where absence is likely to be an oversight.
 
 `notes` deserves a specific mention. It is where catalyst pretreatment history, reactor conditioning, failed runs, and deviations from the standard protocol belong. The DMSP asks for narrative fields explicitly, because this context is routinely essential to interpreting a catalysis experiment and routinely absent from structured fields. It is optional because a required free-text field gets filled with "n/a"; the validator warns when it is empty instead.
 
@@ -138,6 +140,8 @@ Semver on the schema.
 - **Major**: rare. Ships a migration script rather than demanding labs fix existing data.
 
 **The validator retains every old version forever.** This is structural, not a promise: versions live in `src/tcat_standard/schema/<version>/` and nothing is removed. A dataset that declares `schema_version: 0.1.0` is validated against 0.1.0 for as long as the repository exists.
+
+Retention applies from the **first tagged release**. Schema `0.1.0` is a pre-release draft under team review and has been amended in place — three document kinds were added to it after the first draft. Once it is tagged, that stops: after the tag, adding a document kind or an optional field is a minor bump into a new directory, and the old one is never touched again. Manufacturing a fake version history before anyone had used either version would have been worse than saying so.
 
 ### The escape hatch
 
@@ -213,7 +217,41 @@ A calibration is a versioned, content-addressed artifact in its own right, with 
 
 ---
 
-## [FIXED] 10. Enforcement
+## [FIXED] 10. Samples, models, and publications are documents
+
+Three kinds exist because the project's Data Management and Sharing Plan commits to them, and because each is a link the registry needs in order to answer a question that will actually be asked.
+
+### Samples
+
+One sample is measured many times, across modalities, at three institutions. Repeating its synthesis history on every dataset guarantees the copies diverge and then nobody knows which is right — so a dataset carries `sample_id`, and a `sample` document carries everything the id stands for: synthesis method, precursors with lots, ordered thermal treatments, nominal *and* measured composition, and independently measured properties.
+
+The `properties` object is the part worth planning for. Milestone M9 — a rate constant correlating with an independently measured catalyst property — is a **join** between a fitted parameter and this field. If the properties live in a notebook, that milestone becomes a spreadsheet exercise at the worst possible time.
+
+Flag-never-delete applies here too. A failed synthesis is retained with a reason; those are often the most informative entries in a materials series.
+
+### Models
+
+A fitted or trained model is a research product, distributed with its training-data references, architecture, hyperparameters, seed, metrics, uncertainty, and **limitations on appropriate use**.
+
+**One schema covers both ends of the graded palette.** A neural ODE and a reduced microkinetic model are described by the same fields. Two schemas would mean two report paths, two query surfaces, and an arbitrary line down the middle of a palette whose entire point is that the boundary moves per question.
+
+Three things the schema insists on:
+
+- **Splits are groups, not rows.** `split_assignment` lists `batch_id` or `lineage_id` values per split, so a validator can check that no group appears in two splits. That is TRACE-AI B2 made mechanical: catalysis data has shared lineages and repeated conditions, so a row-level split leaks and looks fine.
+- **Metrics declare their split, and should carry an interval.** A bare number is best-only reporting (TRACE-AI B3); the validator warns.
+- **`limitations` is warned about when empty.** A model released without stated limits gets applied outside them by someone who did not fit it.
+
+### Publications
+
+Traceability has a direction, and it is from the paper outward. A `publication` document enumerates every artifact, dataset, sample, and model the paper rests on, with the **role** each plays — `figure`, `table`, `underlying_data`, `model`, `calibration`, `validation`, `software`, `supporting`.
+
+Reconstructing that at submission means walking every artifact asking whether some figure used it. Recording it as you go makes "data available at time of publication" a query instead of an audit.
+
+By `accepted`, the data-availability statement must exist. There is no later moment at which to discover it does not.
+
+---
+
+## [FIXED] 11. Enforcement
 
 **Passing CI is the definition of ingestible.** Not a review convention, not a checklist someone remembers — a status check that fails.
 
@@ -228,7 +266,7 @@ Errors name the offending field and give its JSON pointer. A validator whose out
 
 ---
 
-## [ADAPTABLE] 11. Spoke layout
+## [ADAPTABLE] 12. Spoke layout
 
 One repository **per lab or per instrument campaign — not per dataset.** This matches who commits and who reviews. Analysis code lives in its own repositories that depend on pinned data-standard versions.
 
@@ -247,7 +285,7 @@ A lab may diverge, in writing, in its own README. The validator infers document 
 
 ---
 
-## [ADAPTABLE] 12. Naming
+## [ADAPTABLE] 13. Naming
 
 | Thing | Pattern | Example |
 |---|---|---|
@@ -262,18 +300,31 @@ A lab may diverge, in writing, in its own README. The validator infers document 
 
 ---
 
-## [ADAPTABLE] 13. Open questions
+## [ADAPTABLE] 14. Open questions
 
 These are recorded rather than guessed at. Each needs an answer from someone specific.
 
 | Question | Who | Why it matters |
 |---|---|---|
-| **AmSC/ModCon interoperability**: what does "structured for deployment on the AmSC/ModCon platform" require concretely? | DOE / Janik | The DMSP commits to it. A guessed interface is worse than a documented gap. |
+| **AmSC/ModCon**: is the position below sufficient, or is there a concrete interface specification? | DOE / Janik | See the note under this table. Tracked as a watch item rather than a blocker. |
 | Does the HPC allocation permit **outbound network access from compute nodes**? | GT / PACE | Determines whether artifact pulls can happen mid-job or must be staged in advance. |
 | Which **NSLS-II beamline and endstation**, and what does its data policy require us to retain versus link? | Frenkel | Shapes the XAS converter and whether raw beamline data enters a spoke at all. |
 | How are the **MS, IR, XAS, and reactor clocks aligned**, and to what precision? | Rioux / Frenkel | Multimodal fusion is meaningless without it. A shared `time_base` assumes an answer exists. |
 | Are exported **MS ion currents and IR spectra already background-subtracted**? | Rioux | If so, that background is a transformation and needs its own artifact, or the chain has a hole. |
-| Does the **web-accessible research database** subsume `tcat-index`, and on what timeline? | Janik | See `tcat-index/MIGRATION.md`. |
+| Is a git-backed registry accepted as the **web-accessible research database**, or is a hosted service expected? | Janik | `tcat-index` is built on the former reading. See `tcat-index/DATABASE.md` for the argument and the honest limits. |
+| Which **public repository** for publication data packages? | Medford / Janik | Needed before first submission. Criteria in `tcat-index/RELEASE.md`. |
+
+### On AmSC/ModCon
+
+The DMSP commits that "all datasets, models, and workflows developed in this project will be structured for deployment on the AmSC/ModCon platform ... includ[ing] standardized data formats, model interfaces, and digital twin workflows."
+
+No concrete specification has been provided. Rather than guess an interface — a guessed interface is worse than a documented gap, because it looks like a decision — the position taken is that the requirement is met in substance by what exists:
+
+- **Standardized data formats**: CSV, Zarr, JSON, with a published versioned JSON Schema defining every document.
+- **Model interfaces**: `model` documents declare features with units, hyperparameters, splits, metrics, and limitations; the CLI tool contract declares what each tool consumes and emits.
+- **Digital twin workflows**: pipelines are sequences of content-addressed artifact ids with provenance, reproducible from raw by construction.
+
+If a specification arrives, adapting is an **exporter reading these documents** — not a change to how data is collected. Keeping that true is the reason for the portability constraints in `tcat-index/DATABASE.md`.
 
 ---
 
@@ -281,4 +332,5 @@ These are recorded rather than guessed at. Each needs an answer from someone spe
 
 | Version | Date | Change |
 |---|---|---|
+| 0.2.0 | 2026-08-20 | Second pass, driven by a clause-by-clause audit against the project DMSP (see `DMSP-COMPLIANCE.md` alongside the spec). Adds three document kinds the DMSP commits to and the first draft lacked: **`sample`** (materials data, and the measured properties milestone M9 joins a rate constant against), **`model`** (fitted and trained models as research products, with grouped splits, metrics with intervals, and limitations on appropriate use), and **`publication`** (the data-to-publication link, and the unit the release gate operates on). Adds the last of the DMSP's enumerated metadata fields — `project`, `objective`, `software`, and per-channel `chemical_identifiers` — all optional, because none is lost by being backfilled. Schema `0.1.0` was amended in place rather than forked to `0.2.0`: it is a pre-release draft nobody has used, and manufacturing a fake version history would have been worse than saying so. Retention now explicitly begins at the first tagged release. AmSC/ModCon moved from an open question to a stated position with a watch item. |
 | 0.1.0 | 2026-08-20 | Initial draft, for team review before any real data exists. Required-field set is the infrastructure spec's §3.1 list plus the fields the DMSP commits to that would be unrecoverable if retrofitted (`sample_id`, `measurement_type`, `access_status`, `license`, `protocol`, `layer`). Units and uncertainty are per-channel rather than two top-level maps, so the inconsistent state is unrepresentable. The artifact hash rule is normative and lives here rather than in the analysis hub, because content addressing is only site-independent if the rule is shared. TRACE-AI is pinned at v2.2.0 — see `profiles/trace-ai/pin.json` for why not v2.0.0. Nothing in this version has been exercised against real instrument data. |
