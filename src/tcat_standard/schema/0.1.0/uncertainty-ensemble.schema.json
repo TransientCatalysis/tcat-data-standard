@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://transientcatalysis.github.io/tcat-data-standard/0.1.0/uncertainty-ensemble.schema.json",
+  "title": "Uncertainty ensemble",
+  "description": "Parameter uncertainty, stored as a SAMPLE rather than a summary. A covariance matrix is a derived summary artifact, not the primary record: Gaussian summaries discard exactly the correlation structure that drives experimental design. Frequentist output declares itself as a sampling representation too -- a maximum-likelihood fit emits its point estimate plus a bootstrap or Laplace ensemble in this same shape -- so experiment design consumes ONE shape regardless of how the fit was done, and there is no need for two design pathways.",
+
+  "type": "object",
+  "required": ["schema_version", "method", "method_family", "parameter_names", "n_samples", "point_estimate", "samples"],
+
+  "properties": {
+    "schema_version": { "$ref": "defs/common.schema.json#/$defs/semver" },
+
+    "method": {
+      "type": "string",
+      "description": "How the ensemble was produced. Required so that nobody mistakes an asymptotic approximation for a sampled posterior. Not a closed enum in 0.1.0 -- new methods are expected -- but must be one of the registered names or a documented extension.",
+      "minLength": 2,
+      "examples": ["laplace", "bootstrap", "hmc", "nuts", "profile_likelihood", "ensemble_mcmc", "point_estimate"]
+    },
+
+    "method_family": {
+      "type": "string",
+      "enum": ["sampled", "asymptotic", "resampled", "point"],
+      "description": "The honest coarse label. laplace is asymptotic, bootstrap is resampled, hmc is sampled, a bare optimum is point. Downstream code that must not treat an asymptotic approximation as a posterior branches on this."
+    },
+
+    "parameter_names": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 },
+      "description": "Column order of the sample array. Fixes the meaning of every column so a sample file is interpretable on its own."
+    },
+
+    "parameter_units": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Units per parameter, same order as parameter_names. Optional in 0.1.0 but strongly encouraged: a rate constant without a unit is not a rate constant."
+    },
+
+    "parameter_transform": {
+      "type": "string",
+      "enum": ["none", "log10", "ln"],
+      "default": "none",
+      "description": "Whether the stored samples are in transformed space. Kinetic parameters are routinely fit in log space; leaving this implicit is a reliable way to be wrong by many orders of magnitude."
+    },
+
+    "n_samples": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Number of rows in the sample array. Declared here so a consumer can size a computation before fetching the bytes."
+    },
+
+    "point_estimate": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "number" },
+      "description": "Same length and order as parameter_names. For a sampler, a chosen summary (posterior mean or MAP -- say which in notes). For a maximum-likelihood fit, the optimum."
+    },
+
+    "samples": {
+      "$ref": "manifest-entry.schema.json",
+      "description": "Pointer to the sample array, shape (n_samples, len(parameter_names)). Referenced indirectly like all bytes: an HMC run's samples can outgrow a repo."
+    },
+
+    "log_density": {
+      "$ref": "manifest-entry.schema.json",
+      "description": "Optional pointer to per-sample log posterior density or objective value."
+    },
+
+    "summary_ref": {
+      "$ref": "defs/common.schema.json#/$defs/artifact_ref",
+      "description": "Optional. The derived covariance or credible-interval summary computed FROM this ensemble. The direction of that arrow is deliberate."
+    },
+
+    "identifiability": {
+      "type": "object",
+      "description": "Optional. Which parameters are actually constrained by the data -- the M9 milestone is stated in terms of identifiable rate constants, so the field exists to be filled in rather than argued about later.",
+      "properties": {
+        "identifiable": { "type": "array", "items": { "type": "string" } },
+        "unidentifiable": { "type": "array", "items": { "type": "string" } },
+        "criterion": { "type": "string", "examples": ["profile likelihood", "FIM eigenvalue threshold"] },
+        "notes": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+
+    "convergence": {
+      "type": "object",
+      "description": "Optional, for sampled families: r_hat, ESS, divergences, seed.",
+      "properties": {
+        "r_hat_max": { "type": "number" },
+        "ess_min": { "type": "number" },
+        "divergences": { "type": "integer", "minimum": 0 },
+        "seed": { "type": "integer" }
+      },
+      "additionalProperties": true
+    },
+
+    "notes": {
+      "type": "string",
+      "description": "Which summary point_estimate holds (posterior mean, MAP, or optimum), and anything else a reader needs to interpret the ensemble correctly."
+    },
+    "extensions": { "$ref": "defs/common.schema.json#/$defs/extensions" }
+  },
+
+  "additionalProperties": false
+}

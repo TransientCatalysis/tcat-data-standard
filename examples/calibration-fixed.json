@@ -1,0 +1,42 @@
+{
+  "calibration_id": "cal-msq1-synthetic-2026-09-01-dd9265",
+  "schema_version": "0.1.0",
+  "instrument": {
+    "model": "Synthetic quadrupole MS",
+    "identifier": "MS-Q1-SYNTH",
+    "site": "gt"
+  },
+  "kind": "ms_sensitivity",
+  "owner": "example",
+  "entries": [
+    {
+      "valid_from": "2026-09-01T09:00:00Z",
+      "channels": {
+        "m28": {
+          "sensitivity": 1.1e-09,
+          "sensitivity_sigma": 2.8e-11,
+          "units": "A/(mol/m^3)",
+          "mz": 28,
+          "species": "CO"
+        },
+        "m32": {
+          "sensitivity": 8.4e-10,
+          "sensitivity_sigma": 2.1e-11,
+          "units": "A/(mol/m^3)",
+          "mz": 32,
+          "species": "O2"
+        },
+        "m44": {
+          "sensitivity": 1.24e-09,
+          "sensitivity_sigma": 3.1e-11,
+          "units": "A/(mol/m^3)",
+          "mz": 44,
+          "species": "CO2"
+        }
+      }
+    }
+  ],
+  "access_status": "public",
+  "license": "CC-BY-4.0",
+  "notes": "SYNTHETIC, single-entry. A fixed calibration is the degenerate case of a time-indexed one, so it is stored in the general shape: the day someone supplies a before/after bracket, a second entry is appended and no consuming code changes. m/z 28 has no CO2 fragmentation correction here; real MS work needs a fragmentation matrix, cited as its own artifact."
+}

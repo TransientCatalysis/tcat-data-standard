@@ -1,0 +1,103 @@
+# tcat-data-standard
+
+**What counts as a valid dataset for the TransientCatalysis collaboration.** Schema, validator, and ingestion contract.
+
+> **Status: draft, 0.1.0.** Nothing here has been exercised against real instrument data, because none exists yet. That is the point at which the required-field set is cheapest to argue about, so please argue about it now — see [STANDARD.md](STANDARD.md) §4 and the [open questions](STANDARD.md#adaptable-13-open-questions).
+
+This repository is deliberately small and deliberately boring. Three institutions depend on it for the answer to one question — *is this data ingestible?* — so it has to be stable. Everything that is scientific judgement lives in [`tcat-analysis`](https://github.com/TransientCatalysis/tcat-analysis) instead, where it is free to be argued about and revised.
+
+**The dependency rule has no exceptions: the analysis hub depends on the data hub, never the reverse.**
+
+---
+
+## Install
+
+```bash
+pip install git+https://github.com/TransientCatalysis/tcat-data-standard.git
+```
+
+Requires Python 3.11+. For development:
+
+```bash
+git clone https://github.com/TransientCatalysis/tcat-data-standard.git
+cd tcat-data-standard
+pip install -e ".[dev]"
+pytest
+```
+
+## Use
+
+```bash
+tcat-validate dataset manifests/prbs-run-014.json      # one document
+tcat-validate all .                                    # walk a tree, infer kind per file
+tcat-validate all . --json                             # machine-readable, for tooling
+tcat-validate versions                                 # which schema versions exist
+```
+
+Exit status is 0 only when every document passes. **Warnings never affect exit status** — the moment style advice can fail a build, people stop running the validator locally and start discovering it at the worst possible time.
+
+```python
+from tcat_standard import validate_dataset, ManifestEntry
+
+report = validate_dataset(doc)
+if not report.ok:
+    print(report.render())          # errors name the offending field and its JSON pointer
+
+# Bytes are always referenced indirectly, with a checksum.
+entry = ManifestEntry.from_file("raw/run-014.csv", repo_root=".")
+```
+
+## What is in here
+
+| Path | What it is |
+|---|---|
+| **[`STANDARD.md`](STANDARD.md)** | **The rulebook.** Start here. Sections are tagged `[FIXED]` (cannot be overridden locally) or `[ADAPTABLE]` (a default you may diverge from, in writing). |
+| `src/tcat_standard/schema/0.1.0/` | The schemas. Six document kinds plus shared definitions. Versions live in their own directories and are **never removed**. |
+| `src/tcat_standard/` | The validator, the manifest indirection, checksums, and the normative artifact-hash rule. |
+| [`profiles/trace-ai/`](profiles/trace-ai/) | How this profiles the TRACE-AI guidelines: the pinned version, a field-by-field crosswalk, and what is enforced in CI versus generated at manuscript time. |
+| `examples/` | A synthetic PRBS CO-oxidation dataset where every required field has a worked value — and whose checksum is the *real* checksum of the CSV beside it. |
+| `tests/` | 187 tests. The interesting ones assert the negative: that invalid data is actually rejected, and by name. |
+
+## The six document kinds
+
+| Kind | Describes |
+|---|---|
+| `dataset` | One measurement or derived product: identity, layer, channels, files, protocol, provenance |
+| `manifest-entry` | A pointer to bytes — exactly one of `path`, `url`, `lfs_oid`, always with a checksum |
+| `calibration` | A sensor model: time-indexed entries, per-channel sensitivity and its uncertainty |
+| `provenance` | What produced an artifact: tool, version, git sha, inputs, parameters, durability |
+| `uncertainty-ensemble` | Parameter uncertainty as a *sample*, with the method that produced it |
+| `protocol` | A named perturbation protocol plus its parameters — `prbs`, `multi_pulse`, and others |
+
+## The five ideas worth knowing before you deposit data
+
+**1. Three layers, and conversion happens once.** `raw` is instrument output, immutable and checksummed. `canonical` is tidy, with units and uncertainties explicit. `derived` is regenerable. Never commit binary instrument blobs; an `instrument-native` file is legal only in the `raw` layer and the schema enforces that.
+
+**2. A raw ion current and a derived concentration are different quantities.** The sensor model between them is a separate, cited artifact. This is the whole audit story: when someone finds an m/z 44 artifact eighteen months from now, you swap one calibration id and re-derive every affected trace — and content addressing tells you exactly which downstream fits went stale. A converter that returns concentrations has destroyed that.
+
+**3. Files are referenced indirectly, from day one.** Path plus checksum, never a filename in code. When a spectroscopy set outgrows GitHub, replace `path` with `url` and nothing downstream changes. The cost is one indirection; the cost of skipping it is open-coded paths at three institutions, which is not fixable later.
+
+**4. Flag, never delete.** `status` and `status_reason` are required. A failed run that was deleted cannot be counted in an exclusion table at manuscript time.
+
+**5. `extensions` is your escape hatch, and it is a real one.** Need to record something the schema does not have? Put it in `extensions` — the validator ignores it rather than rejecting it. Unknown *top-level* fields are rejected, which is the point: your convention lands in `extensions` on purpose rather than at the top level by accident. When the same field appears in three labs' extensions it gets promoted. [Open an issue](.github/ISSUE_TEMPLATE/schema-change.md) to start that.
+
+## Depositing data: the short path
+
+1. Create a spoke from [`tcat-spoke-template`](https://github.com/TransientCatalysis/tcat-spoke-template) — one repository **per lab or per instrument campaign, not per dataset**.
+2. Put instrument files in `raw/`, write a `dataset` document in `manifests/`.
+3. Run `tcat-validate all .` locally until it passes.
+4. Open a PR. CI runs the same validator. **Passing CI is the definition of ingestible.**
+
+If the validator rejects something it should accept, that is a bug in the standard, not in your data — [open an issue](.github/ISSUE_TEMPLATE/schema-change.md).
+
+## Licensing
+
+Dual, per the project DMSP. Python source is **MIT** ([`LICENSE`](LICENSE)); the standard text, documentation, TRACE-AI profile, schema `description` prose, and synthetic examples are **CC-BY-4.0** ([`LICENSE-DOCS`](LICENSE-DOCS)). Licensing the standard CC-BY is what lets other groups quote, adapt, and profile it — which is the point of publishing a standard.
+
+## Citing
+
+See [`CITATION.cff`](CITATION.cff). If you use this standard, please also cite TRACE-AI, which it profiles: Xin, H. *et al.*, *Chem Catalysis* (2026), [10.1016/j.checat.2026.101755](https://doi.org/10.1016/j.checat.2026.101755).
+
+## Acknowledgment
+
+Developed under the DOE Genesis Mission, DE-FOA-0003612, *Transient Kinetics and Spectroscopy for Agentic Digital Twins to Upgrade Domestic Alkane Feedstocks into Value-Added Chemicals* (Phase I).

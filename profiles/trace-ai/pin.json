@@ -1,0 +1,47 @@
+{
+  "$comment": "Pinned upstream reference. Verified against the live repository on 2026-08-20; the tag SHAs below were read from the GitHub API, not transcribed from a document.",
+
+  "checklist": {
+    "repository": "https://github.com/trace-ai-org/trace-ai-checklist",
+    "tag": "v2.2.0",
+    "commit": "961c9a960960c619151aed032c73fa4352e22e24",
+    "released": "2026-06-12",
+    "checklist_version": "2.2.0",
+    "license": "CC-BY-4.0"
+  },
+
+  "paper": {
+    "title": "Transparent reporting for agentic catalysis enabled by artificial intelligence: Community guidelines and a publication checklist",
+    "first_author": "Xin H",
+    "journal": "Chem Catalysis",
+    "year": 2026,
+    "doi": "10.1016/j.checat.2026.101755",
+    "preprint_doi": "10.26434/chemrxiv.15001239",
+    "$comment": "Cite the published version. The infrastructure spec cited the ChemRxiv preprint; the paper is now published, and two of this project's investigators (Medford, Kitchin) are co-authors on it."
+  },
+
+  "why_not_v2_0_0": [
+    "The infrastructure spec pinned v2.0.0 (2026-02-07). That release predates the accepted manuscript.",
+    "v2.1.0 (2026-04-04) revised checklist item wording across all sections A1-D3, so item text under v2.0.0 is superseded.",
+    "v2.2.0 (2026-06-12) is described upstream as 'aligned with the accepted TRACE-AI manuscript'. Pinning anything earlier means citing item text that no longer matches the paper we cite alongside it.",
+    "For the record: the spec also gave v2.0.0's commit as 5d11e14, which is not that tag. v2.0.0 is 5101e248c00a695f07d4654ffd45ea38471ec231."
+  ],
+
+  "upstream_facts_we_depend_on": {
+    "autonomy_scale": {
+      "values": ["A0", "A1", "A2", "A3", "A4", "A5"],
+      "source": "templates/autonomy-run-log-template.md",
+      "$comment": "A0-A5, six levels. The infrastructure spec said A0-A4. This project operates at A1-A2 (human-gated)."
+    },
+    "manifest_template": "templates/data-manifest-template.yaml",
+    "machine_readable_checklist": "checklist/trace-ai-checklist.json",
+    "sections": {
+      "A": "Data Management (A1-A5)",
+      "B": "Model Development (B1-B5)",
+      "C": "Workflow Integration (C1-C5)",
+      "D": "Tutorials, Notebooks, and Other Executable Artifacts (D1-D3)"
+    }
+  },
+
+  "bump_policy": "Re-pinning is a deliberate act, not a dependency update. A new upstream release requires re-reading the crosswalk in this directory and re-checking enforcement.md, because revised item wording can change what we are claiming to satisfy. Record the reason in the standard's changelog."
+}

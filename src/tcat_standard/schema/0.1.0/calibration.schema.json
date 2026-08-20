@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://transientcatalysis.github.io/tcat-data-standard/0.1.0/calibration.schema.json",
+  "title": "Calibration (sensor model)",
+  "description": "A calibration is a first-class, versioned, content-addressed artifact -- not metadata attached to a dataset. Entries are TIME-INDEXED even when there is only one, because a fixed calibration is the degenerate case of a drifting one, and code written against the general shape needs no change the day someone hands you a before/after bracket. This schema fixes the SHAPE of a valid calibration; the physics lives in the analysis hub, which is free to argue about it.",
+
+  "type": "object",
+  "required": ["calibration_id", "schema_version", "instrument", "entries"],
+
+  "properties": {
+    "calibration_id": {
+      "$ref": "defs/common.schema.json#/$defs/artifact_id",
+      "description": "Content-addressed. A calibration change produces a NEW id; it never mutates an existing artifact. That is what makes it possible to swap one id and re-derive every affected trace, and to know exactly which downstream fits went stale."
+    },
+
+    "schema_version": { "$ref": "defs/common.schema.json#/$defs/semver" },
+
+    "instrument": { "$ref": "defs/common.schema.json#/$defs/instrument" },
+
+    "kind": {
+      "type": "string",
+      "enum": ["ms_sensitivity", "ir_reference", "xas_reference", "flow", "temperature", "other"],
+      "default": "other",
+      "description": "What sort of sensor model this is. IR background subtraction and reference-spectrum selection are transformations with their own artifacts, not silent preprocessing -- so they are calibrations here, not hidden steps in a script."
+    },
+
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Time-indexed entries, expected in ascending valid_from order. A single entry is legal and is the common case at project start.",
+      "items": {
+        "type": "object",
+        "required": ["valid_from", "channels"],
+        "properties": {
+          "valid_from": { "$ref": "defs/common.schema.json#/$defs/timestamp" },
+          "valid_until": {
+            "$ref": "defs/common.schema.json#/$defs/timestamp",
+            "description": "Optional. Absent means 'until the next entry, or indefinitely'."
+          },
+          "channels": {
+            "type": "object",
+            "minProperties": 1,
+            "description": "Per-channel calibration coefficients, keyed by the same channel names the dataset uses.",
+            "additionalProperties": {
+              "type": "object",
+              "required": ["sensitivity", "units"],
+              "properties": {
+                "sensitivity": { "type": "number", "description": "Multiplicative factor mapping raw signal to the target quantity." },
+                "sensitivity_sigma": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "Uncertainty on the sensitivity. Calibration uncertainty propagates but belongs to neither data nor parameter uncertainty; it is its own artifact, cited in the chain."
+                },
+                "offset": { "type": "number", "default": 0 },
+                "offset_sigma": { "type": "number", "minimum": 0 },
+                "units": {
+                  "type": "string",
+                  "description": "Units of the sensitivity factor itself, written as target-over-source so the conversion is checkable by inspection.",
+                  "examples": ["A/(mol/m^3)", "1/(mol/m^3)"]
+                },
+                "mz": { "type": "number" },
+                "species": { "type": "string" },
+                "valid_range": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "items": { "type": "number" },
+                  "description": "Optional source-signal range over which this factor was determined. Extrapolating outside it is a judgement call that should be visible."
+                },
+                "notes": { "type": "string" }
+              },
+              "additionalProperties": false
+            }
+          },
+          "fragmentation_matrix_ref": {
+            "$ref": "defs/common.schema.json#/$defs/artifact_ref",
+            "description": "For MS: the cracking-pattern matrix, itself a separate cited artifact rather than an inline table, because it is revised independently of the sensitivity factors."
+          },
+          "background_ref": {
+            "$ref": "defs/common.schema.json#/$defs/artifact_ref",
+            "description": "For IR/XAS: the background or single-beam reference used. A cited artifact, not a silent preprocessing step."
+          },
+          "reference_spectrum_ref": {
+            "$ref": "defs/common.schema.json#/$defs/artifact_ref",
+            "description": "For XAS: the reference standard used for energy alignment or linear-combination fitting."
+          },
+          "determined_from": {
+            "type": "array",
+            "items": { "$ref": "defs/common.schema.json#/$defs/artifact_id" },
+            "description": "The calibration-gas or standard datasets this entry was fit from. Makes the calibration itself auditable."
+          },
+          "notes": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "owner": {
+      "type": "string",
+      "description": "Who owns the instrument. A calibration change is reviewed by this person -- everything downstream depends on calibration code, so it carries a tighter gate than a fitting tool.",
+      "examples": ["rioux-lab", "frenkel-group"]
+    },
+
+    "supersedes": {
+      "$ref": "defs/common.schema.json#/$defs/artifact_ref",
+      "description": "The calibration this one replaces, if any. Forms an explicit chain instead of leaving readers to sort by date."
+    },
+
+    "access_status": { "$ref": "defs/common.schema.json#/$defs/access_status" },
+    "license": { "$ref": "defs/common.schema.json#/$defs/license_spdx" },
+    "personnel": { "$ref": "defs/common.schema.json#/$defs/personnel" },
+    "notes": {
+      "type": "string",
+      "description": "How this calibration was determined and what its known limits are. The place to record that a fragmentation correction is missing, or that a factor was extrapolated outside its measured range."
+    },
+    "extensions": { "$ref": "defs/common.schema.json#/$defs/extensions" }
+  },
+
+  "additionalProperties": false
+}

@@ -1,0 +1,43 @@
+cff-version: 1.2.0
+message: "If you use this standard or validator, please cite it as below."
+title: "tcat-data-standard: schema and validator for transient-kinetics and operando-spectroscopy datasets"
+abstract: >-
+  Machine-readable definition of a valid transient-kinetics dataset, with a
+  validator that runs in CI as an ingestion gate. Profiles the TRACE-AI reporting
+  guidelines and extends them for transient kinetics: parameterised perturbation
+  protocols that are exactly regenerable, a shared time base across
+  simultaneously-acquired modalities, sensor models as versioned citable
+  artifacts, and parameter uncertainty stored as a sample rather than a summary.
+type: software
+version: 0.1.0
+date-released: "2026-08-20"
+license: MIT
+license-url: "https://github.com/TransientCatalysis/tcat-data-standard/blob/main/LICENSE"
+repository-code: "https://github.com/TransientCatalysis/tcat-data-standard"
+keywords:
+  - catalysis
+  - transient kinetics
+  - PRBS
+  - operando spectroscopy
+  - FAIR data
+  - TRACE-AI
+  - provenance
+  - content addressing
+authors:
+  - family-names: Medford
+    given-names: Andrew J.
+    email: ajm@gatech.edu
+    affiliation: "Georgia Institute of Technology"
+    orcid: "https://orcid.org/0000-0001-8311-9581"
+references:
+  - type: article
+    title: "Transparent reporting for agentic catalysis enabled by artificial intelligence: Community guidelines and a publication checklist"
+    authors:
+      - family-names: Xin
+        given-names: Hongliang
+    journal: "Chem Catalysis"
+    year: 2026
+    doi: "10.1016/j.checat.2026.101755"
+    notes: >-
+      This standard is a profile of the TRACE-AI guidelines. See
+      profiles/trace-ai/ for the pinned version and the field-by-field crosswalk.

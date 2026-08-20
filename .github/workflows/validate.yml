@@ -1,0 +1,95 @@
+name: validate
+
+# This workflow IS the ingestion gate. Spoke repositories run the same validator
+# against their own data; here it runs against the standard's own tests and
+# examples, so a schema change that would break every spoke fails in this repo
+# first rather than in three labs' CI simultaneously.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.11 is the floor we support; 3.12 catches deprecations early. PSU and
+        # BNL will be on whatever their clusters ship, so the floor matters more
+        # than the ceiling.
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
+
+      - name: Test
+        run: python -m pytest -q
+
+      - name: Validate the examples with the installed CLI
+        # Separate from pytest on purpose: this exercises the entry point a spoke
+        # actually invokes, not the library the tests import. An entry point that
+        # is broken by a packaging change passes every unit test.
+        run: |
+          tcat-validate versions
+          tcat-validate dataset examples/dataset-prbs-co-ox.json
+          tcat-validate calibration examples/calibration-fixed.json
+          tcat-validate protocol examples/protocol-prbs.json
+
+      - name: Confirm the tree-walking mode finds and checks the examples
+        run: tcat-validate all examples/ --json
+
+      - name: Confirm invalid data is actually rejected
+        # A validator that has silently stopped rejecting things still passes a
+        # suite full of positive assertions. This asserts the negative directly.
+        run: |
+          if tcat-validate dataset tests/data/dataset-missing-batch-id.json 2>/dev/null; then
+            echo "::error::validator accepted a dataset with no batch_id"
+            exit 1
+          fi
+          echo "invalid data rejected, as expected"
+
+      - name: Confirm the examples are regenerable and unchanged
+        # Catches the failure where someone edits the example JSON by hand and it
+        # drifts away from the CSV its checksum describes.
+        run: |
+          python examples/make_examples.py
+          python tests/make_fixtures.py
+          if ! git diff --quiet; then
+            echo "::error::generated examples or fixtures differ from what is committed"
+            git diff --stat
+            exit 1
+          fi
+
+  wheel:
+    # The schema tree ships as package data. If that breaks, spokes installing
+    # from git get a validator with no schemas -- which fails open, silently, and
+    # is exactly the failure this job exists to catch.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --upgrade pip build && python -m build
+      - name: Install the built wheel somewhere with no source tree
+        run: |
+          mkdir /tmp/isolated && cd /tmp/isolated
+          python -m venv v && ./v/bin/pip install "$GITHUB_WORKSPACE"/dist/*.whl
+          ./v/bin/tcat-validate versions
+          ./v/bin/python -c "
+          from tcat_standard import CURRENT_SCHEMA_VERSION, load_schema
+          assert load_schema('dataset')['\$id']
+          print('schema tree survived the wheel build:', CURRENT_SCHEMA_VERSION)
+          "

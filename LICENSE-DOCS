@@ -1,0 +1,35 @@
+Documentation, schema text, and the TRACE-AI profile in this repository are
+licensed under the Creative Commons Attribution 4.0 International License.
+
+SPDX-License-Identifier: CC-BY-4.0
+
+Copyright (c) 2026 A. J. Medford and the TransientCatalysis collaboration
+
+Full license text:  https://creativecommons.org/licenses/by/4.0/legalcode
+Human-readable deed: https://creativecommons.org/licenses/by/4.0/
+
+WHAT THIS COVERS
+  STANDARD.md, README.md, CONTRIBUTING.md, everything under profiles/, and the
+  "description" text carried inside the JSON Schema documents under
+  src/tcat_standard/schema/.
+
+WHAT IT DOES NOT COVER
+  The Python source under src/tcat_standard/ (excluding schema/), which is MIT
+  licensed -- see LICENSE.
+
+WHY TWO LICENSES
+  The DMSP for this project sets MIT as the default for research software and
+  CC-BY-4.0 for documentation, tutorials, and example workflows. The schema
+  documents sit on that boundary: they are machine-readable, but their content is
+  documentation -- normative prose about what a valid dataset is. Licensing them
+  CC-BY-4.0 is what lets the standard be quoted, adapted, and profiled by other
+  groups, which is the point of publishing a standard at all.
+
+  The synthetic example data under examples/ is also CC-BY-4.0.
+
+ATTRIBUTION
+  Xin, H. et al. "Transparent reporting for agentic catalysis enabled by
+  artificial intelligence: Community guidelines and a publication checklist."
+  Chem Catalysis (2026). DOI 10.1016/j.checat.2026.101755. The TRACE-AI
+  checklist and templates this standard profiles are themselves CC-BY-4.0; see
+  profiles/trace-ai/pin.json for the pinned version.

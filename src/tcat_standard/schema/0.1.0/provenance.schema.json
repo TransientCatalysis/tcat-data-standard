@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://transientcatalysis.github.io/tcat-data-standard/0.1.0/provenance.schema.json",
+  "title": "Provenance record",
+  "description": "Written by every tool, on every run, in an identical shape. Tools stamp their own version and the schema version into this record; nothing here is manually logged, because manual logging is the first thing to rot.",
+
+  "type": "object",
+  "required": [
+    "artifact_id",
+    "tool",
+    "inputs",
+    "parameters",
+    "data_schema_version",
+    "autonomy_level",
+    "durability",
+    "created_at",
+    "host"
+  ],
+
+  "properties": {
+    "artifact_id": { "$ref": "defs/common.schema.json#/$defs/artifact_id" },
+
+    "tool": {
+      "type": "object",
+      "description": "What ran. Stamped by the tool itself, never supplied by hand -- manual logging is the first thing to rot.",
+      "required": ["name", "version", "git_sha"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^tcat-[a-z][a-z0-9-]*$" },
+        "version": { "$ref": "defs/common.schema.json#/$defs/semver" },
+        "git_sha": {
+          "type": "string",
+          "description": "Commit of the analysis hub the tool ran from. The literal string 'dirty' is permitted and is the honest answer for a working-tree run; it also disqualifies the artifact from promotion.",
+          "pattern": "^(?:[0-9a-f]{7,40}|dirty|unknown)$"
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "inputs": {
+      "type": "array",
+      "description": "Artifact ids of every input, in the order the tool consumed them. May be empty for a tool that reads only a manifest from disk (tcat-ingest at the raw boundary).",
+      "items": { "$ref": "defs/common.schema.json#/$defs/artifact_id" }
+    },
+
+    "parameters": {
+      "type": "object",
+      "description": "Every parameter that entered the artifact id hash. This is where an applied calibration's interpolation rule is recorded, so that choice is auditable rather than buried in code.",
+      "additionalProperties": true
+    },
+
+    "data_schema_version": {
+      "$ref": "defs/common.schema.json#/$defs/semver",
+      "description": "Version of the data standard the tool validated against."
+    },
+
+    "autonomy_level": { "$ref": "defs/common.schema.json#/$defs/autonomy_level" },
+
+    "durability": {
+      "type": "string",
+      "enum": ["durable", "ephemeral"],
+      "description": "Marked at creation, never inferred later. ephemeral = solver checkpoints and intermediate residuals, garbage-collectable, never synced between institutions. durable = fitted parameters, processed datasets, calibrations."
+    },
+
+    "created_at": { "$ref": "defs/common.schema.json#/$defs/timestamp" },
+
+    "host": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Machine the tool ran on. Not part of the artifact hash -- the same computation on two machines must produce the same id -- but recorded, because it is the first thing you want when one site's result disagrees with another's.",
+      "examples": ["gt-workstation-04", "pace-phoenix-login01"]
+    },
+
+    "site": { "type": "string", "description": "Which store this artifact was first written to.", "examples": ["gt-pace", "psu-rioux", "bnl"] },
+
+    "inputs_detail": {
+      "type": "array",
+      "description": "Optional per-input annotation, for when the role of an input is not obvious from its position.",
+      "items": {
+        "type": "object",
+        "required": ["artifact_id", "role"],
+        "properties": {
+          "artifact_id": { "$ref": "defs/common.schema.json#/$defs/artifact_id" },
+          "role": { "type": "string", "examples": ["signal", "calibration", "background", "reference_spectrum"] }
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "environment": {
+      "type": "object",
+      "description": "Optional. Enough to reconstruct the run if a result is later disputed.",
+      "properties": {
+        "python": { "type": "string" },
+        "platform": { "type": "string" },
+        "packages": { "type": "object", "additionalProperties": { "type": "string" } }
+      },
+      "additionalProperties": true
+    },
+
+    "runtime_s": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Wall-clock seconds. Recorded because the AI-advantage metric is stated in wall-clock terms, so it needs to accumulate as a by-product rather than be reconstructed later."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Free text. Where a human explains something the parameters do not, such as why a run was retried."
+    },
+    "extensions": { "$ref": "defs/common.schema.json#/$defs/extensions" }
+  },
+
+  "additionalProperties": false
+}

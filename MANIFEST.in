@@ -1,0 +1,5 @@
+recursive-include src/tcat_standard/schema *.json
+include src/tcat_standard/schema/VERSION
+include STANDARD.md LICENSE LICENSE-DOCS CITATION.cff
+recursive-include profiles *
+recursive-include examples *.json

@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tcat-data-standard"
+version = "0.1.0"
+description = "Schema, validator, and ingestion contract for transient-kinetics and operando-spectroscopy datasets. The definition of a valid dataset for the TransientCatalysis collaboration."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "A. J. Medford", email = "ajm@gatech.edu" }]
+keywords = ["catalysis", "transient kinetics", "PRBS", "operando spectroscopy", "FAIR", "TRACE-AI"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Chemistry",
+]
+dependencies = [
+    "jsonschema>=4.18",
+    "referencing>=0.30",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+tcat-validate = "tcat_standard.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/TransientCatalysis/tcat-data-standard"
+Issues = "https://github.com/TransientCatalysis/tcat-data-standard/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# The schema tree is authored at the repository root and shipped as package data,
+# so an installed copy validates without needing the checkout. schema.py looks in
+# both places.
+[tool.setuptools.package-data]
+tcat_standard = ["schema/VERSION", "schema/**/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

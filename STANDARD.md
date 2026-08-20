@@ -1,0 +1,284 @@
+# tcat Data Standard
+
+<!-- VERSION: 0.1.0 -->
+<!-- MAINTAINER: A. J. Medford (Georgia Tech) -->
+<!-- LAST_REVIEWED: 2026-08-20 -->
+<!--
+  This is the rulebook for what counts as a valid dataset in the TransientCatalysis
+  collaboration. It is small on purpose: three institutions depend on it for the
+  definition of ingestible data, so it must be stable.
+
+  Sections are tagged [FIXED] or [ADAPTABLE].
+    [FIXED]      cannot be overridden locally. Changing one is a major version bump.
+    [ADAPTABLE]  a default. A lab may diverge, in writing, in its own spoke README.
+
+  To propose a change: open an issue using the schema-change template, or a PR
+  against main. See CONTRIBUTING.md.
+-->
+
+**Standards version:** 0.1.0
+**Schema version:** 0.1.0 (`src/tcat_standard/schema/0.1.0/`)
+**Status:** draft for team review. Nothing here has been exercised against real data yet, because no real data exists yet. That is the intended moment to argue about it.
+
+---
+
+## Identity
+
+This standard serves the DOE Genesis Mission Phase I project *Transient Kinetics and Spectroscopy for Agentic Digital Twins to Upgrade Domestic Alkane Feedstocks into Value-Added Chemicals* (DE-FOA-0003612), across:
+
+| Institution | Role | Data it produces |
+|---|---|---|
+| Penn State (Janik, Rioux, Hodges) | Prime. PRBS reactor kinetics, transient IR, catalyst synthesis | PRBS traces, MS, gas-phase and transient IR, characterization |
+| Brookhaven National Laboratory (Frenkel) | Modulation-excitation fast-scan XAS | Operando XAS, derived oxidation state and coordination |
+| Georgia Tech (Medford) | Agentic AI kinetic fitting and workflow integration | Fits, ensembles, designed experiments, sensor models |
+| ExxonMobil (Meyer) | Industrial partner (unfunded) | Framing; no data deposition expected |
+
+The design goal beyond this project is that the standard survives it — a transient-kinetics profile that a wider community could adopt. That ambition is the reason for the strictness below; it is much cheaper to be strict now than to retrofit a field into three institutions' historical data later.
+
+---
+
+## [FIXED] 1. The dependency rule
+
+**The analysis hub depends on the data hub. Never the reverse.** No exceptions.
+
+If a new analysis or design feature appears to require a change here, that is evidence the schema is wrong, not that the boundary should be crossed. Fusing the two means every experimental-analysis feature touches the artifact three institutions depend on for data validity, and the artifact stops being stable.
+
+Concretely: `tcat-analysis` pins a version of `tcat-data-standard`. This repository has no knowledge of `tcat-analysis` and never imports from it.
+
+---
+
+## [FIXED] 2. The three data layers
+
+| Layer | Mutability | Contents |
+|---|---|---|
+| **raw** | Immutable, checksummed | Instrument output as produced. MS ion currents with instrument-native tags. Beamline files. IR interferograms or single-beam spectra. |
+| **canonical** | Immutable once written | Tidy. Units explicit, uncertainties explicit. Converted at ingestion. |
+| **derived** | Regenerable | Concentrations, fits, posteriors, designed experiments. Always reproducible from raw plus a recorded transformation chain. |
+
+Rules:
+
+1. **Never commit binary instrument blobs.** Convert at ingestion. A file with `format: instrument-native` is legal only in the `raw` layer; the schema enforces this.
+2. **A raw ion current and a derived concentration are different quantities**, and the sensor model that maps between them is a separate, cited artifact. This is non-negotiable: it is the entire audit story. A converter that returns concentrations has folded a calibration into ingestion, and the day someone finds an m/z 44 artifact eighteen months from now there is no calibration id to swap.
+3. **Derived data is deletable.** If deleting a derived artifact loses information, it was not actually derived and the transformation chain has a gap.
+
+### File formats
+
+- **CSV** for tabular data — traces, tidy time series.
+- **Zarr** for bulk arrays — spectra, large multi-channel time series. Chunking means a large spectroscopic set can live off-repo behind the same manifest pointer.
+- **JSON** for all metadata, validated against the schemas here.
+
+---
+
+## [FIXED] 3. Indirect file references
+
+**Every dataset references its files through a manifest entry carrying a location plus a checksum. Never a direct filename in code.**
+
+A manifest entry has exactly one of `path`, `url`, or `lfs_oid`. When a set outgrows GitHub's limits, replace `path` with `url` and every downstream consumer keeps working, with the checksum proving the bytes are the same. Adding a second location alongside the first is invalid — a consumer would not know which is authoritative.
+
+The cost of following this is one indirection. The cost of not following it is open-coded paths scattered through analysis scripts at three institutions, which is not fixable after the fact. This is why the rule applies from day one rather than when it first hurts.
+
+---
+
+## [FIXED] 4. Required fields, and why each one is required now
+
+A field is required in 0.1.0 only when retrofitting it later would destroy information that cannot be recovered. Everything else is optional and gets promoted per §6.
+
+| Field | Why it cannot wait |
+|---|---|
+| `schema_version` | Data is validated against the version it was written against. Without it, a later bump silently reinterprets old data. |
+| `dataset_id` | Stable identity that survives reprocessing, which artifact ids deliberately do not. |
+| `batch_id` | TRACE-AI **B2**. Groups data that must never be split across a train/test boundary — one synthesis batch, one catalyst charge, one beamtime. A validator cannot enforce grouped splits unless this exists, and it cannot be reconstructed after the fact. |
+| `lineage_id` | TRACE-AI **B2**. Groups data sharing a provenance chain. Catalysis datasets have shared lineages, repeated conditions, and time-series structure — every one of them a leakage pathway into a fitted or trained model. |
+| `layer` | Determines what is immutable and what is regenerable. Ambiguity here makes the other two layers meaningless. |
+| `status` | TRACE-AI **A5**. **Flag, never delete.** Required in 0.1.0 rather than added later, because retrofitting it means the historical record of what failed is already gone. |
+| `status_reason` | Required whenever `status` is not `ok`. A flag without a reason cannot become an exclusion table at manuscript time. |
+| `autonomy_level` | TRACE-AI autonomy level, A0–A5. This project runs at A1–A2 (human-gated). Recording it is nearly free now and impossible later. |
+| `measurement_type` | Selects which conditional rules apply, and is the coarsest useful query key. |
+| `sample_id` | The join key between kinetics, spectroscopy, and characterization of the same material. Without it the multimodal dataset is three parallel datasets. |
+| `instrument` | Joins a dataset to the calibration that applies to it. |
+| `channels` | Units and uncertainty, per channel. See §5. |
+| `files` | The bytes, referenced indirectly. See §3. |
+| `access_status` | DMSP three-tier model (`internal`/`staged`/`public`). Drives what may be released and when. |
+| `license` | Committed in the DMSP. Unlicensed data cannot be released without going back to ask. |
+| `provenance` | See §7. |
+| `protocol` | Required for every experimental modality. Carries the perturbation waveform and time base. See §8. |
+
+### Deliberately optional in 0.1.0
+
+`personnel`, `funding`, `publication`, `reaction_system`, `catalyst_family`, `notes`, `embargo_until`, `calibration_ref`, `time_base`. Each is defined in the schema so the field *name* is stable when it is promoted; none is enforced yet.
+
+`notes` deserves a specific mention. It is where catalyst pretreatment history, reactor conditioning, failed runs, and deviations from the standard protocol belong. The DMSP asks for narrative fields explicitly, because this context is routinely essential to interpreting a catalysis experiment and routinely absent from structured fields. It is optional because a required free-text field gets filled with "n/a"; the validator warns when it is empty instead.
+
+---
+
+## [FIXED] 5. Units and uncertainty travel together
+
+Units and uncertainty are declared **per channel**, inside `channels`, and both are required for every channel.
+
+This differs from listing them as two top-level maps. Two parallel maps can drift apart — a channel present in `units` and absent from `uncertainty`, or the reverse — and that drift is exactly the implicit-convention failure the rule exists to prevent. Making them properties of one channel object makes the inconsistent state unrepresentable.
+
+Uncertainty declares its `kind` (`sigma_column`, `constant_sigma`, or `none`) and a **noise model family** (`counting`, `gaussian_homoscedastic`, `gaussian_heteroscedastic`, `baseline_drift`, `calibrated_estimate`, `unknown`). Naming the family is the point: a counting-statistics sigma and a calibrated-estimate sigma propagate differently and must not be silently interchanged.
+
+`kind: none` is legal. Some measurements genuinely have no uncertainty estimate. It must be **stated**, not left blank, and the validator warns.
+
+### Three kinds of uncertainty, kept separate
+
+1. **Data uncertainty** rides with the data — per-point sigma columns plus the declared noise model.
+2. **Parameter uncertainty** is its own artifact. **Store the sample, not the summary.** A covariance matrix is a derived summary; Gaussian summaries discard exactly the correlation structure that drives experimental design. Frequentist output declares itself as a sampling representation too, so a maximum-likelihood fit emits its point estimate plus a bootstrap or Laplace ensemble in the same shape a sampler would use — which means experiment design consumes one shape regardless of provenance, and there is no need for two design pathways. Every ensemble carries `method` and `method_family` so nobody mistakes an asymptotic approximation for a sampled posterior.
+3. **Calibration uncertainty** propagates but belongs to neither of the above. Its own artifact, cited in the chain.
+
+---
+
+## [FIXED] 6. Schema versioning, and the escape hatch
+
+Semver on the schema.
+
+- **Patch**: clarification. No structural change.
+- **Minor**: adds optional fields only. Existing data stays valid.
+- **Major**: rare. Ships a migration script rather than demanding labs fix existing data.
+
+**The validator retains every old version forever.** This is structural, not a promise: versions live in `src/tcat_standard/schema/<version>/` and nothing is removed. A dataset that declares `schema_version: 0.1.0` is validated against 0.1.0 for as long as the repository exists.
+
+### The escape hatch
+
+Every document may carry a free-form `extensions` object. **The validator ignores it rather than rejecting it.**
+
+Unknown *top-level* fields are rejected. That is the point of having a designated namespace: typos and lab-private conventions land in `extensions` on purpose, not at the top level by accident.
+
+**Promotion rule:** when the same field appears independently in **three** labs' `extensions`, it is promoted into the schema proper as an optional field. Schema follows practice; it does not predict it. Open a schema-change issue to start that conversation.
+
+---
+
+## [FIXED] 7. Artifact identity and provenance
+
+### The id grammar
+
+```
+<tool>-<dataset-short-name>-<YYYY-MM-DD>-<short-hash>
+calib-ptal2o3-co-ox-2026-03-14-a3f91c
+```
+
+The prefix is for humans and **carries no authority**; only the hash is trusted. Same discipline as git short SHAs: you read the prefix, the machine reads the digest.
+
+### The hash rule is normative and lives here
+
+The digest covers **tool name + tool version + ordered input ids + parameters**, canonicalised as specified in `tcat_standard.ids`.
+
+This rule lives in the data hub rather than the analysis hub for a specific reason. The distributed design rests on the claim that an artifact id computed at Georgia Tech is byte-identical to one computed on a cluster at Penn State, so multiple stores can agree on names without a central authority. That claim is only true if the hashing rule is shared. If each site canonicalises parameters slightly differently — key order, float formatting, how an empty input list is encoded — the same computation yields two ids, the cross-site cache never hits, and the design degrades into per-site scratch directories without anyone noticing.
+
+Consequences worth knowing:
+
+- Input **order** is significant; parameter **key order** is not.
+- `1` and `1.0` hash differently. A tool that treats them as equivalent must normalise before hashing.
+- Adding a parameter at its default value changes the hash, so tools must not inject defaults into the hashed parameter dict.
+- The tool's **git sha is recorded but not hashed.** Hashing it would mean every commit — including a docstring fix — invalidated every cached artifact, which makes the cache useless and pushes people to work around it. The version is the promise; the sha is the audit trail.
+
+### The provenance record
+
+Written by every tool, on every run, in an identical shape (`provenance.schema.json`). Every field is required. Tools **stamp their own version and the schema version**; nothing here is manually logged, because manual logging is the first thing to rot.
+
+`durability` is marked at creation and never inferred later:
+
+- **ephemeral** — solver checkpoints, intermediate residuals. Garbage-collectable, never synced between institutions.
+- **durable** — fitted parameters, processed datasets, calibrations. Pushed to the shared store.
+
+Without this distinction the project ships gigabytes of scratch between institutions.
+
+---
+
+## [FIXED] 8. Protocols: the designed thing and the run thing are the same object
+
+A candidate or executed experiment is a **named protocol plus its parameters** — never a raw time series.
+
+Transient experiments make the design space a function space rather than a vector, since one of the tunable knobs is *when transients fire*. The saving grace is that the general case is almost never needed: real transient experiments are parameterised. So the parameterisation is the representation, and each protocol declares its own parameter space (`prbs`, `pulse_train`, `temperature_ramp`, `step_change`, `multi_pulse`, `steady_state`).
+
+The same object is stored alongside executed data and emitted by experiment design. Keeping one representation is what makes closing the loop later a matter of plumbing rather than translation.
+
+**PRBS specifically requires `register_length`, `taps`, and `seed`.** Those three make the waveform exactly regenerable from metadata. Without them it can only be re-measured back out of the trace, which is both lossy and circular.
+
+Chemical-looping operation is expressed as `multi_pulse` with labelled segments (`reduction`, `purge`, `reoxidation`) and a cycle count.
+
+---
+
+## [FIXED] 9. Calibrations are artifacts, not metadata
+
+A calibration is a versioned, content-addressed artifact in its own right, with its own schema.
+
+1. **Time-indexed from the start**, even with one entry. A fixed calibration is the degenerate case of a drifting one; code written against the general shape needs no change the day someone hands you a before/after bracket. The alternative — every consumer growing a branch for the single-entry case — produces exactly the branches that break when the second entry arrives.
+2. **A derived concentration cites both** the raw artifact id **and** the calibration artifact id. That pairing is what lets one calibration id be swapped to re-derive every affected trace, and content addressing then tells you exactly which downstream fits are stale.
+3. **Never silently applied to existing artifacts.** A calibration change produces new artifacts with new ids; it does not mutate old ones. The schema enforces a content-addressed `calibration_id` so a hand-written label cannot be edited in place.
+4. **Stricter promotion gate.** Everything downstream depends on calibration code, so it gets a tighter gate than a fitting tool: reviewed by whoever owns the instrument. See `tcat-analysis/PROMOTION.md`.
+5. **Background subtraction and reference selection are transformations with their own artifacts**, not silent preprocessing. This applies to IR backgrounds, XAS reference standards, MS fragmentation matrices, and MES phase conventions alike.
+6. Calibration channels have **no per-channel escape hatch**. `extensions` exists at the document level, but a channel's fields are closed, because this is the tightest gate in the system.
+
+---
+
+## [FIXED] 10. Enforcement
+
+**Passing CI is the definition of ingestible.** Not a review convention, not a checklist someone remembers — a status check that fails.
+
+```bash
+tcat-validate dataset path/to/dataset.json
+tcat-validate all spoke-repo/            # walks a tree, infers kind per file
+```
+
+Exit status is 0 only when every document passes. **Warnings never affect exit status.** The moment style advice can fail a build, people stop running the validator locally and start discovering it at the worst possible time.
+
+Errors name the offending field and give its JSON pointer. A validator whose output is "does not match schema" gets routed around within a week.
+
+---
+
+## [ADAPTABLE] 11. Spoke layout
+
+One repository **per lab or per instrument campaign — not per dataset.** This matches who commits and who reviews. Analysis code lives in its own repositories that depend on pinned data-standard versions.
+
+Default layout (see `tcat-spoke-template`):
+
+```
+manifests/      one dataset document per dataset
+raw/            immutable, checksummed
+canonical/      converted at ingestion
+derived/        regenerable; safe to delete
+calibrations/   time-indexed, even when fixed
+protocols/      the designed thing and the run thing
+```
+
+A lab may diverge, in writing, in its own README. The validator infers document kind from these directory names, so diverging means passing `--kind` explicitly.
+
+---
+
+## [ADAPTABLE] 12. Naming
+
+| Thing | Pattern | Example |
+|---|---|---|
+| `dataset_id` | lowercase, hyphen or underscore separated | `prbs-co-ox-synthetic-001` |
+| `batch_id` | lab prefix + synthesis or campaign identifier | `psu-vox-2026-09-a` |
+| `lineage_id` | descriptive, stable across modalities | `vox-c3h8-odh-sample-14` |
+| `sample_id` | the lab's own sample label, verbatim | `PSU-VOx-SiO2-14` |
+| Instrument `identifier` | short, stable, uppercase | `MS-Q1`, `NSLS2-QAS-XAS` |
+| Artifact id prefix | short verb or noun | `conc`, `fit`, `cal`, `frag` |
+
+`sample_id` is deliberately the lab's own label rather than a project-assigned one. A relabelling scheme that disagrees with what is written on the vial is a scheme that gets ignored.
+
+---
+
+## [ADAPTABLE] 13. Open questions
+
+These are recorded rather than guessed at. Each needs an answer from someone specific.
+
+| Question | Who | Why it matters |
+|---|---|---|
+| **AmSC/ModCon interoperability**: what does "structured for deployment on the AmSC/ModCon platform" require concretely? | DOE / Janik | The DMSP commits to it. A guessed interface is worse than a documented gap. |
+| Does the HPC allocation permit **outbound network access from compute nodes**? | GT / PACE | Determines whether artifact pulls can happen mid-job or must be staged in advance. |
+| Which **NSLS-II beamline and endstation**, and what does its data policy require us to retain versus link? | Frenkel | Shapes the XAS converter and whether raw beamline data enters a spoke at all. |
+| How are the **MS, IR, XAS, and reactor clocks aligned**, and to what precision? | Rioux / Frenkel | Multimodal fusion is meaningless without it. A shared `time_base` assumes an answer exists. |
+| Are exported **MS ion currents and IR spectra already background-subtracted**? | Rioux | If so, that background is a transformation and needs its own artifact, or the chain has a hole. |
+| Does the **web-accessible research database** subsume `tcat-index`, and on what timeline? | Janik | See `tcat-index/MIGRATION.md`. |
+
+---
+
+## Changelog
+
+| Version | Date | Change |
+|---|---|---|
+| 0.1.0 | 2026-08-20 | Initial draft, for team review before any real data exists. Required-field set is the infrastructure spec's §3.1 list plus the fields the DMSP commits to that would be unrecoverable if retrofitted (`sample_id`, `measurement_type`, `access_status`, `license`, `protocol`, `layer`). Units and uncertainty are per-channel rather than two top-level maps, so the inconsistent state is unrepresentable. The artifact hash rule is normative and lives here rather than in the analysis hub, because content addressing is only site-independent if the rule is shared. TRACE-AI is pinned at v2.2.0 — see `profiles/trace-ai/pin.json` for why not v2.0.0. Nothing in this version has been exercised against real instrument data. |

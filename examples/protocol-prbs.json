@@ -1,0 +1,33 @@
+{
+  "protocol": "prbs",
+  "parameters": {
+    "species": "CO",
+    "bit_period_s": 2.0,
+    "n_bits": 127,
+    "register_length": 7,
+    "taps": [
+      7,
+      6
+    ],
+    "seed": 1,
+    "low_mol_frac": 0.005,
+    "high_mol_frac": 0.02
+  },
+  "base_conditions": {
+    "temperature_K": 473.0,
+    "pressure_kPa": 101.3,
+    "total_flow_sccm": 100.0,
+    "carrier": "He",
+    "feed_mol_frac": {
+      "O2": 0.05,
+      "He": 0.93
+    },
+    "catalyst_mass_g": 0.0502
+  },
+  "time_base": {
+    "t0": "2026-09-01T14:03:00Z",
+    "dt_s": 0.05,
+    "n_samples": 5080
+  },
+  "notes": "SYNTHETIC. Maximal-length LFSR, one full 127-bit period. The register length, taps, and seed are recorded so the waveform can be regenerated exactly rather than re-measured from the trace."
+}

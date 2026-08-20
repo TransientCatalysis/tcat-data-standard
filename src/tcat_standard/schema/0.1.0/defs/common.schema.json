@@ -1,0 +1,256 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://transientcatalysis.github.io/tcat-data-standard/0.1.0/defs/common.schema.json",
+  "title": "Shared definitions, tcat data standard 0.1.0",
+  "description": "Vocabulary shared by every tcat schema. Nothing here is a standalone document; every $def is referenced from dataset, manifest-entry, calibration, provenance, uncertainty-ensemble, or protocol.",
+
+  "$defs": {
+
+    "semver": {
+      "description": "Semantic version string. Schema versions are semver so that a minor bump can only ADD optional fields (STANDARD.md, Schema Versioning).",
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$"
+    },
+
+    "timestamp": {
+      "description": "ISO 8601 instant, UTC, with explicit offset. Naive local timestamps are rejected: three institutions in two time zones plus a synchrotron cannot align transients on a wall clock.",
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]+)?(?:Z|[+-][0-9]{2}:[0-9]{2})$"
+    },
+
+    "artifact_id": {
+      "description": "Content-addressed artifact identifier: <tool>-<dataset-short-name>-<YYYY-MM-DD>-<short-hash>. The prefix is for humans and carries no authority; only the hash is trusted (STANDARD.md, Artifact Identity).",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9a-f]{6,16}$",
+      "examples": ["calib-ptal2o3-co-ox-2026-03-14-a3f91c", "fit-vox-c3h8-odh-2026-09-01-9b12ee"]
+    },
+
+    "artifact_ref": {
+      "description": "Reference to another artifact by ID, in art:// form. Used where a record cites an artifact it does not contain.",
+      "type": "string",
+      "pattern": "^art://[a-z][a-z0-9]*(?:-[a-z0-9]+)*-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9a-f]{6,16}$",
+      "examples": ["art://frag-msq1-2026-03-14-77b201"]
+    },
+
+    "sha256": {
+      "description": "Lowercase hex SHA-256. Every byte-bearing pointer carries one; this is what makes a path swappable for a URL (STANDARD.md, Indirect File References).",
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+
+    "autonomy_level": {
+      "description": "TRACE-AI autonomy level under which the record was produced. The scale runs A0-A5; this project operates at A1-A2 (human-gated). Recorded rather than inferred, because it is nearly free now and unrecoverable later.",
+      "type": "string",
+      "enum": ["A0", "A1", "A2", "A3", "A4", "A5"]
+    },
+
+    "status": {
+      "description": "TRACE-AI checklist item A5. Flag, never delete. A failed run that is deleted cannot be counted in an exclusion table at manuscript time.",
+      "type": "string",
+      "enum": ["ok", "flagged", "failed"]
+    },
+
+    "access_status": {
+      "description": "DMSP three-tier access model. internal = project-only working data; staged = under manuscript preparation; public = released.",
+      "type": "string",
+      "enum": ["internal", "staged", "public"]
+    },
+
+    "license_spdx": {
+      "description": "SPDX identifier. DMSP defaults: CC-BY-4.0 for data and documentation, CC0-1.0 where unrestricted reuse is preferred and permitted, MIT for software.",
+      "type": "string",
+      "enum": ["CC-BY-4.0", "CC0-1.0", "MIT", "proprietary"]
+    },
+
+    "layer": {
+      "description": "Which of the three data layers this record describes. raw = instrument output as produced, immutable and checksummed. canonical = tidy, units and uncertainties explicit, immutable once written. derived = regenerable from raw plus a recorded transformation chain.",
+      "type": "string",
+      "enum": ["raw", "canonical", "derived"]
+    },
+
+    "measurement_type": {
+      "description": "Modality of the measurement or calculation. Drives which conditional requirements apply (an experimental modality must declare a protocol).",
+      "type": "string",
+      "enum": [
+        "prbs_kinetics",
+        "ms",
+        "ir_gas",
+        "ir_transient",
+        "xas_mes",
+        "steady_state",
+        "characterization",
+        "computational"
+      ]
+    },
+
+    "noise_model": {
+      "description": "Named noise model for a channel's uncertainty. Declaring the family is the point: a counting-statistics sigma and a calibrated-estimate sigma propagate differently and must not be silently interchanged.",
+      "type": "object",
+      "required": ["family"],
+      "properties": {
+        "family": {
+          "type": "string",
+          "enum": [
+            "counting",
+            "gaussian_homoscedastic",
+            "gaussian_heteroscedastic",
+            "baseline_drift",
+            "calibrated_estimate",
+            "unknown"
+          ]
+        },
+        "parameters": {
+          "type": "object",
+          "description": "Family-specific parameters, e.g. {\"sigma\": 1.2e-11} for gaussian_homoscedastic.",
+          "additionalProperties": true
+        },
+        "notes": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "channel_uncertainty": {
+      "description": "How uncertainty is carried for one channel. Either a sibling column of per-point sigmas, or a single constant sigma, or an explicit declaration that none is available -- which is legal but must be stated, not left blank.",
+      "type": "object",
+      "required": ["kind", "noise_model"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["sigma_column", "constant_sigma", "none"] },
+        "column": {
+          "type": "string",
+          "description": "Required when kind is sigma_column: the name of the column holding per-point sigma."
+        },
+        "value": {
+          "type": "number",
+          "description": "Required when kind is constant_sigma, in the channel's own units.",
+          "minimum": 0
+        },
+        "noise_model": { "$ref": "#/$defs/noise_model" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "sigma_column" } }, "required": ["kind"] },
+          "then": { "required": ["column"] }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "constant_sigma" } }, "required": ["kind"] },
+          "then": { "required": ["value"] }
+        }
+      ],
+      "additionalProperties": false
+    },
+
+    "channel": {
+      "description": "One measured or computed channel. Units and uncertainty are REQUIRED here rather than in two parallel top-level maps, so a channel cannot exist with a unit but no uncertainty (or vice versa).",
+      "type": "object",
+      "required": ["units", "quantity", "uncertainty"],
+      "properties": {
+        "units": {
+          "type": "string",
+          "description": "Explicit unit string. No implicit conventions, no dimensionless-by-omission. Use \"1\" for a genuine dimensionless quantity.",
+          "minLength": 1,
+          "examples": ["A", "mol/m^3", "Pa", "K", "1", "arb"]
+        },
+        "quantity": {
+          "type": "string",
+          "description": "What is being measured, independent of unit. This is what distinguishes a raw ion current from a derived concentration.",
+          "examples": ["ion_current", "concentration", "partial_pressure", "temperature", "mole_fraction", "absorbance", "normalized_absorption"]
+        },
+        "uncertainty": { "$ref": "#/$defs/channel_uncertainty" },
+        "mz": { "type": "number", "description": "Mass-to-charge ratio, for MS channels." },
+        "wavenumber_cm-1": { "type": "number", "description": "For a single-wavenumber IR channel." },
+        "energy_eV": { "type": "number", "description": "For a single-energy XAS channel." },
+        "species": { "type": "string", "description": "Chemical species this channel reports, where one applies." },
+        "notes": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "instrument": {
+      "description": "Model and identifier. The identifier must be stable across runs: it is the join key between a dataset and the calibration that applies to it.",
+      "type": "object",
+      "required": ["model", "identifier"],
+      "properties": {
+        "model": { "type": "string", "minLength": 1 },
+        "identifier": { "type": "string", "minLength": 1, "examples": ["MS-Q1", "PRBS-REACTOR-1", "NSLS2-QAS-XAS"] },
+        "site": {
+          "type": "string",
+          "description": "Which institution or facility holds the instrument. Free text in 0.1.0; a controlled list is a promotion candidate.",
+          "examples": ["psu", "bnl", "gt"]
+        },
+        "facility": { "type": "string", "description": "User facility and endstation, where applicable.", "examples": ["NSLS-II QAS 7-BM"] }
+      },
+      "additionalProperties": true
+    },
+
+    "time_base": {
+      "description": "The time base a transient measurement is expressed on. Named explicitly by the DMSP. Without it, two modalities acquired under the same perturbation cannot be aligned.",
+      "type": "object",
+      "required": ["t0", "dt_s", "n_samples"],
+      "properties": {
+        "t0": { "$ref": "#/$defs/timestamp", "description": "UTC instant corresponding to t = 0 of the trace." },
+        "dt_s": { "type": "number", "exclusiveMinimum": 0, "description": "Nominal sample interval in seconds. Use the irregular flag if sampling is not uniform." },
+        "n_samples": { "type": "integer", "minimum": 1 },
+        "irregular": {
+          "type": "boolean",
+          "default": false,
+          "description": "True when dt_s is nominal only and a time column carries the truth. The time column must then be declared as a channel."
+        },
+        "time_column": { "type": "string", "description": "Name of the authoritative time column, required in practice when irregular is true." }
+      },
+      "additionalProperties": false
+    },
+
+    "personnel": {
+      "description": "Who produced the record. Optional in 0.1.0; the DMSP commits to it, so it is defined now to keep the field name stable when it is promoted.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string" },
+          "orcid": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$" },
+          "institution": { "type": "string" },
+          "role": { "type": "string", "examples": ["acquired", "processed", "reviewed"] }
+        },
+        "additionalProperties": true
+      }
+    },
+
+    "funding": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["funder", "award"],
+        "properties": {
+          "funder": { "type": "string", "examples": ["US Department of Energy"] },
+          "award": { "type": "string", "examples": ["DE-FOA-0003612"] },
+          "program": { "type": "string", "examples": ["Genesis Mission"] },
+          "notes": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
+
+    "publication": {
+      "type": "object",
+      "properties": {
+        "doi": { "type": "string", "pattern": "^10\\.[0-9]{4,9}/[^\\s]+$" },
+        "preprint_doi": { "type": "string", "pattern": "^10\\.[0-9]{4,9}/[^\\s]+$" },
+        "title": { "type": "string" },
+        "repository_doi": {
+          "type": "string",
+          "description": "DOI of the public data deposit. Reported to DOE OSTI on release per the DMSP.",
+          "pattern": "^10\\.[0-9]{4,9}/[^\\s]+$"
+        }
+      },
+      "additionalProperties": true
+    },
+
+    "extensions": {
+      "description": "Free-form namespace. THE VALIDATOR IGNORES THIS OBJECT RATHER THAN REJECTING IT. When the same field appears independently in three labs' extensions, it is promoted into the schema proper. Schema follows practice; it does not predict it.",
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

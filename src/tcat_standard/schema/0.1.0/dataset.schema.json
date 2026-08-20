@@ -1,0 +1,211 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://transientcatalysis.github.io/tcat-data-standard/0.1.0/dataset.schema.json",
+  "title": "Dataset",
+  "description": "The definition of a valid tcat dataset. Passing this schema in CI is what 'ingestible' means. Fields are required here only when retrofitting them later would destroy information that cannot be recovered -- a deleted failed run, an unrecorded batch grouping, an unstated unit.",
+
+  "type": "object",
+  "required": [
+    "schema_version",
+    "dataset_id",
+    "batch_id",
+    "lineage_id",
+    "layer",
+    "status",
+    "autonomy_level",
+    "measurement_type",
+    "sample_id",
+    "instrument",
+    "channels",
+    "files",
+    "access_status",
+    "license",
+    "provenance"
+  ],
+
+  "properties": {
+    "schema_version": {
+      "$ref": "defs/common.schema.json#/$defs/semver",
+      "description": "The standard version this dataset was WRITTEN AGAINST, not the newest available. Old versions are retained forever; a dataset never has to be rewritten because the standard moved."
+    },
+
+    "dataset_id": {
+      "type": "string",
+      "description": "Stable identifier, unique within the project. Not content-addressed -- a dataset id survives reprocessing, while artifact ids do not.",
+      "pattern": "^[a-z0-9]+(?:[-_][a-z0-9]+)*$",
+      "minLength": 3
+    },
+
+    "batch_id": {
+      "type": "string",
+      "description": "REQUIRED (TRACE-AI B2). Groups data that must never be split across a train/test boundary -- one synthesis batch, one catalyst charge, one beamtime. A validator cannot enforce grouped splits unless this exists, and it cannot be reconstructed after the fact.",
+      "minLength": 1
+    },
+
+    "lineage_id": {
+      "type": "string",
+      "description": "REQUIRED (TRACE-AI B2). Groups data sharing a provenance chain -- repeated conditions, the same sample measured across modalities, a time series and its own reprocessing. Distinct from batch_id: two batches can share a lineage, and one batch can span lineages.",
+      "minLength": 1
+    },
+
+    "layer": { "$ref": "defs/common.schema.json#/$defs/layer" },
+
+    "status": { "$ref": "defs/common.schema.json#/$defs/status" },
+
+    "status_reason": {
+      "type": "string",
+      "description": "Required and non-empty whenever status is not ok. 'Flag, never delete' is only useful if the flag says why.",
+      "minLength": 1
+    },
+
+    "autonomy_level": { "$ref": "defs/common.schema.json#/$defs/autonomy_level" },
+
+    "measurement_type": { "$ref": "defs/common.schema.json#/$defs/measurement_type" },
+
+    "sample_id": {
+      "type": "string",
+      "description": "The physical catalyst sample this data came from, or a computational-system identifier for measurement_type computational. The join key between kinetics, spectroscopy, and characterization of the same material.",
+      "minLength": 1
+    },
+
+    "instrument": { "$ref": "defs/common.schema.json#/$defs/instrument" },
+
+    "channels": {
+      "type": "object",
+      "description": "One entry per measured or computed channel, keyed by column (csv) or array (zarr) name. Each entry MUST declare units and uncertainty -- see the note in defs/common.schema.json#/$defs/channel on why these are per-channel rather than two parallel top-level maps.",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "defs/common.schema.json#/$defs/channel" }
+    },
+
+    "files": {
+      "type": "array",
+      "description": "The bytes, referenced indirectly. At least one manifest entry.",
+      "minItems": 1,
+      "items": { "$ref": "manifest-entry.schema.json" }
+    },
+
+    "protocol": {
+      "$ref": "protocol.schema.json",
+      "description": "Required for every experimental modality (see the conditional block below). Carries the perturbation waveform and the time base."
+    },
+
+    "time_base": { "$ref": "defs/common.schema.json#/$defs/time_base" },
+
+    "access_status": { "$ref": "defs/common.schema.json#/$defs/access_status" },
+
+    "embargo_until": {
+      "$ref": "defs/common.schema.json#/$defs/timestamp",
+      "description": "Optional. When access_status is internal or staged, the date after which release is expected."
+    },
+
+    "license": { "$ref": "defs/common.schema.json#/$defs/license_spdx" },
+
+    "provenance": {
+      "description": "Either the provenance record inline, or the artifact id of the record in the store. Both forms are accepted so that a hand-authored raw-layer dataset does not have to invent a tool run.",
+      "oneOf": [
+        { "$ref": "provenance.schema.json" },
+        { "$ref": "defs/common.schema.json#/$defs/artifact_id" }
+      ]
+    },
+
+    "calibration_ref": {
+      "$ref": "defs/common.schema.json#/$defs/artifact_ref",
+      "description": "For a derived dataset: the calibration that produced it. A derived concentration cites BOTH its raw artifact and its calibration artifact -- that pairing is the entire audit story, and it is what lets one calibration id be swapped to re-derive every affected trace."
+    },
+
+    "reaction_system": {
+      "type": "string",
+      "description": "The reaction being studied. Free text in 0.1.0; a controlled vocabulary is deliberately deferred until practice shows what the labs actually write.",
+      "examples": ["CO oxidation", "propane oxidative dehydrogenation"]
+    },
+    "catalyst_family": {
+      "type": "string",
+      "description": "Material class, coarser than sample_id. Groups samples for cross-material comparison -- the M9 milestone correlates a rate constant against a catalyst property across variants, which needs a grouping key.",
+      "examples": ["supported vanadium oxide", "Pt/Al2O3"]
+    },
+
+    "personnel": { "$ref": "defs/common.schema.json#/$defs/personnel" },
+    "funding": { "$ref": "defs/common.schema.json#/$defs/funding" },
+    "publication": { "$ref": "defs/common.schema.json#/$defs/publication" },
+
+    "notes": {
+      "type": "string",
+      "description": "Free-text narrative. This is where catalyst pretreatment history, reactor conditioning, deviations from the standard protocol, and the reason a run went wrong belong. The DMSP asks for it explicitly because this context is routinely essential to interpreting a catalysis experiment and routinely absent from structured fields."
+    },
+
+    "extensions": { "$ref": "defs/common.schema.json#/$defs/extensions" }
+  },
+
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "enum": ["flagged", "failed"] } },
+        "required": ["status"]
+      },
+      "then": { "required": ["status_reason"] }
+    },
+    {
+      "if": {
+        "properties": {
+          "measurement_type": {
+            "enum": ["prbs_kinetics", "ms", "ir_gas", "ir_transient", "xas_mes", "steady_state"]
+          }
+        },
+        "required": ["measurement_type"]
+      },
+      "then": {
+        "required": ["protocol"],
+        "description": "An experimental measurement without a declared protocol cannot be reproduced or designed against."
+      }
+    },
+    {
+      "if": {
+        "properties": { "layer": { "const": "derived" } },
+        "required": ["layer"]
+      },
+      "then": {
+        "properties": {
+          "provenance": {
+            "description": "A derived dataset must be regenerable, so its provenance record cannot be a bare id with no chain behind it. Enforced by the validator's chain check rather than by JSON Schema alone."
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "layer": { "const": "raw" } },
+        "required": ["layer"]
+      },
+      "then": {
+        "properties": {
+          "files": {
+            "items": {
+              "properties": {
+                "format": {
+                  "description": "A raw-layer file may be instrument-native; canonical and derived layers may not.",
+                  "enum": ["csv", "zarr", "json", "instrument-native"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "files": {
+            "items": {
+              "properties": {
+                "format": {
+                  "enum": ["csv", "zarr", "json"],
+                  "description": "Canonical and derived layers hold converted data only. Convert at ingestion; never carry an instrument blob forward."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+
+  "additionalProperties": false
+}
