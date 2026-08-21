@@ -70,6 +70,7 @@ KINDS = (
     "sample",
     "model",
     "publication",
+    "spoke",
 )
 
 

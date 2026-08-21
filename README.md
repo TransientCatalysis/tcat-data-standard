@@ -91,7 +91,7 @@ The last three exist because the project's data-management plan commits to them.
 
 ## Depositing data: the short path
 
-1. Create a spoke from [`tcat-spoke-template`](https://github.com/TransientCatalysis/tcat-spoke-template) — one repository **per lab or per instrument campaign, not per dataset**.
+1. Create a spoke from [`tcat-data-spoke-template`](https://github.com/TransientCatalysis/tcat-data-spoke-template) — one repository **per lab or per instrument campaign, not per dataset**.
 2. Put instrument files in `raw/`, write a `dataset` document in `manifests/`.
 3. Run `tcat-validate all .` locally until it passes.
 4. Open a PR. CI runs the same validator. **Passing CI is the definition of ingestible.**

@@ -427,6 +427,7 @@ validate_protocol = _validate_kind("protocol")
 validate_sample = _validate_kind("sample")
 validate_model = _validate_kind("model")
 validate_publication = _validate_kind("publication")
+validate_spoke = _validate_kind("spoke")
 
 
 def validate_file(path: str | Path, kind: str, *, version: str | None = None) -> ValidationReport:

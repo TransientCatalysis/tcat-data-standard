@@ -48,6 +48,7 @@ from .validate import (
     validate_provenance,
     validate_publication,
     validate_sample,
+    validate_spoke,
     validate_uncertainty_ensemble,
 )
 
@@ -78,6 +79,7 @@ __all__ = [
     "validate_provenance",
     "validate_publication",
     "validate_sample",
+    "validate_spoke",
     "validate_uncertainty_ensemble",
     "__version__",
 ]

@@ -266,22 +266,53 @@ Errors name the offending field and give its JSON pointer. A validator whose out
 
 ---
 
-## [ADAPTABLE] 12. Spoke layout
+## [ADAPTABLE] 12. Spokes: granularity and layout are yours
 
-One repository **per lab or per instrument campaign — not per dataset.** This matches who commits and who reviews. Analysis code lives in its own repositories that depend on pinned data-standard versions.
+**A spoke is any repository whose records validate.** That is the entire definition.
 
-Default layout (see `tcat-spoke-template`):
+The contract is per-**record**, not per-repository. Nothing in this standard, the validator, or the registry assumes anything about how many spokes exist or what each one is organised around. One per lab, one per student, one per instrument campaign, one per sub-project, a monorepo holding several, or a mixture that changed as the project went — all valid, and none of them needs deciding in advance.
+
+That is deliberate rather than permissive. Whether the right unit is a lab or a campaign is not knowable before the work happens, and a standard that guessed would be forcing a decision it cannot inform. The registry (`tcat-index`) is what makes granularity a non-decision: it records which spoke holds which record, so a dataset is findable regardless of how its repository is carved up, and re-carving later is a metadata update rather than a migration.
+
+### Practical guidance, not rules
+
+Some tradeoffs worth knowing, none of them binding:
+
+| Coarser (fewer, bigger spokes) | Finer (more, smaller spokes) |
+|---|---|
+| One CI configuration, one set of permissions | Access control per lab or per student |
+| Shared history is easy to search | A repository stays small and fast |
+| One place to look | A student can be given their own without touching anyone else's |
+
+The one thing genuinely worth avoiding is **one repository per dataset** — not because it breaks anything, but because a repository is a unit of review and access control, and neither of those varies per dataset. You would get hundreds of repositories with identical permissions and no shared history, for no gain.
+
+### Declaring a layout
+
+The validator's directory-name convention is a **default**:
 
 ```
-manifests/      one dataset document per dataset
-raw/            immutable, checksummed
-canonical/      converted at ingestion
-derived/        regenerable; safe to delete
-calibrations/   time-indexed, even when fixed
-protocols/      the designed thing and the run thing
+manifests/  raw/  canonical/  derived/  calibrations/  protocols/  samples/
 ```
 
-A lab may diverge, in writing, in its own README. The validator infers document kind from these directory names, so diverging means passing `--kind` explicitly.
+A spoke that diverges declares its layout in `.tcat-spoke.json` at its root, and `tcat-validate all` believes it:
+
+```json
+{
+  "standard_version": "0.1.0",
+  "granularity": "campaign",
+  "layout": {
+    "dataset": ["2026-09-campaign/measurements", "2026-11-campaign/measurements"],
+    "calibration": ["2026-09-campaign"],
+    "sample": ["materials"]
+  },
+  "exclude": ["scratch", "notebooks"],
+  "strict": false
+}
+```
+
+Everything in it is optional except `standard_version`. With no manifest at all, kind is inferred from directory names and then from each document's own contents — so an unconventional spoke validates without a manifest too; the manifest just makes the intent explicit and lets `exclude` and `strict` be set.
+
+`strict: true` turns an unrecognised JSON file from a skip into an error. Off by default, because a spoke legitimately holds configuration and working notes, and forcing every JSON file to be a valid document would make people keep their real files somewhere the validator never sees.
 
 ---
 
