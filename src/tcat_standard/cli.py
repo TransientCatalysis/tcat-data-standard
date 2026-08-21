@@ -172,9 +172,13 @@ def main(argv: list[str] | None = None) -> int:
 
     reports: list[ValidationReport] = []
     skipped: list[Path] = []
+    # Hoisted to sit with the other accumulators: the reporting tail below reads `strict`
+    # on every path, including single-document validation, which never enters the `all`
+    # branch. Left inside that branch it is an UnboundLocalError on `tcat-validate
+    # calibration <file>`.
+    strict = False
 
     if args.kind == "all":
-        strict = False
         for root in args.paths:
             manifest = _load_spoke_manifest(root)
             declared = _declared_layout(manifest, root if root.is_dir() else root.parent)
