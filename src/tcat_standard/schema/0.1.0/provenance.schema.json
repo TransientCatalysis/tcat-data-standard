@@ -22,10 +22,31 @@
 
     "tool": {
       "type": "object",
-      "description": "What ran. Stamped by the tool itself, never supplied by hand -- manual logging is the first thing to rot.",
+      "description": "What ran. Stamped by the tool itself, never supplied by hand -- manual logging is the first thing to rot. A conforming tool is named tcat-<verb>; anything else must set conforming to false, which is the state every spoke passes through while bootstrapping and every legacy deposit stays in.",
       "required": ["name", "version", "git_sha"],
+      "allOf": [
+        {
+          "if": {
+            "not": { "properties": { "conforming": { "const": false } }, "required": ["conforming"] }
+          },
+          "then": {
+            "properties": {
+              "name": {
+                "pattern": "^tcat-[a-z][a-z0-9-]*$",
+                "description": "A conforming tool's declared name. To record something else, set conforming: false."
+              }
+            }
+          }
+        }
+      ],
       "properties": {
-        "name": { "type": "string", "pattern": "^tcat-[a-z][a-z0-9-]*$" },
+        "conforming": {
+          "type": "boolean",
+          "default": true,
+          "description": "False when this artifact was produced by something that does not implement the tool contract -- a lab conversion script, a spreadsheet, a hand deposit. Recording it as a flag rather than allowing any name silently is what keeps the question answerable: 'what in this store was never produced by a conforming tool?' is a query someone will need at release time, and it must not require reading notes fields to answer. Such an artifact carries no cache guarantee and no reproducibility claim beyond what its notes say.",
+          "examples": [false]
+        },
+        "name": { "type": "string", "minLength": 1 },
         "version": { "$ref": "defs/common.schema.json#/$defs/semver" },
         "git_sha": {
           "type": "string",

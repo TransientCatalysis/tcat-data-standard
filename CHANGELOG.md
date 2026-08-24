@@ -37,6 +37,14 @@ made now and circulated for the team to overrule.
   about.
 - **`sample.properties[].reference`** for values taken from an external
   publication or SI rather than measured under this award.
+- **`provenance.tool.conforming`.** The tool name had to match `tcat-<verb>`,
+  which no artifact predating a conforming tool can satisfy — and the first real
+  canonical data was converted by a lab script, as every spoke's first data will
+  be. Setting `conforming: false` permits any name; leaving it unset still
+  demands a `tcat-` one, so the flag cannot be used to duck the naming rule while
+  keeping its guarantees. Recorded as a queryable field rather than waived in a
+  notes string, because "what here was never produced by a conforming tool?" is a
+  question release review has to be able to ask.
 - Validator: waveform violations name the missing field rather than emitting
   `oneOf`'s "not valid under any of the given schemas".
 

@@ -66,6 +66,25 @@ def test_tool_name_must_be_a_tcat_tool():
     assert not validate_provenance(doc).ok
 
 
+def test_a_non_conforming_producer_must_say_so():
+    """Every spoke bootstraps with a lab script before a conforming tool exists,
+    and legacy deposits stay that way forever. The name is allowed to be
+    anything only once the record admits what produced it."""
+    doc = copy.deepcopy(PROVENANCE)
+    doc["tool"]["name"] = "convert_workbook.py"
+    doc["tool"]["conforming"] = False
+    assert validate_provenance(doc).ok
+
+
+def test_conforming_true_still_demands_a_tcat_name():
+    """Otherwise the flag would be a way to opt out of the naming rule while
+    still claiming the guarantees that come with it."""
+    doc = copy.deepcopy(PROVENANCE)
+    doc["tool"]["name"] = "convert_workbook.py"
+    doc["tool"]["conforming"] = True
+    assert not validate_provenance(doc).ok
+
+
 def test_dirty_working_tree_is_recordable():
     """The honest answer for a working-tree run. Recording 'dirty' is better than
     recording a sha that does not describe the code that ran -- and it is what
