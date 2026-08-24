@@ -135,13 +135,16 @@ def build_protocol(n_samples: int) -> dict:
         "protocol": "prbs",
         "parameters": {
             "species": "CO",
-            "bit_period_s": BIT_PERIOD_S,
-            "n_bits": N_BITS,
-            "register_length": REGISTER_LENGTH,
-            "taps": TAPS,
-            "seed": SEED,
             "low_mol_frac": LOW_MOL_FRAC,
             "high_mol_frac": HIGH_MOL_FRAC,
+            "waveform": {
+                "form": "lfsr",
+                "register_length": REGISTER_LENGTH,
+                "taps": TAPS,
+                "seed": SEED,
+                "bit_period_s": BIT_PERIOD_S,
+                "n_bits": N_BITS,
+            },
         },
         "base_conditions": {
             "temperature_K": 473.0,
@@ -153,9 +156,11 @@ def build_protocol(n_samples: int) -> dict:
         },
         "time_base": {"t0": T0, "dt_s": DT_S, "n_samples": n_samples},
         "notes": (
-            "SYNTHETIC. Maximal-length LFSR, one full 127-bit period. The register "
-            "length, taps, and seed are recorded so the waveform can be regenerated "
-            "exactly rather than re-measured from the trace."
+            "SYNTHETIC. Maximal-length LFSR, one full 127-bit period, declared under "
+            "the lfsr waveform form: register length, taps, and seed are recorded so "
+            "the waveform can be regenerated exactly rather than re-measured from the "
+            "trace. Real legacy runs often cannot do this -- see the recorded and "
+            "reconstructed forms."
         ),
     }
 

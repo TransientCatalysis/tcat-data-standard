@@ -245,6 +245,13 @@
             "type": "string",
             "description": "The dataset_id this value was derived from, where one exists. Makes the property auditable rather than asserted."
           },
+          "reference": {
+            "type": "string",
+            "description": "External source this value was taken from -- a DOI, or a citation of the publication or SI that reports it. For values that predate the project and have no dataset here: a site density read out of a paper's supporting information is a different kind of claim from one measured under this award, and the difference must survive in the record.",
+            "examples": [
+              "10.1021/acscatal.4c05869 (SI, CO chemisorption)"
+            ]
+          },
           "notes": {
             "type": "string"
           }

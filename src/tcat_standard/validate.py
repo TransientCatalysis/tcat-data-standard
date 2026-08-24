@@ -174,6 +174,61 @@ def _manifest_location_problem(entry: Any, pointer: str) -> Problem | None:
     )
 
 
+_WAVEFORM_REQUIRED = {
+    "lfsr": ("register_length", "taps", "seed", "bit_period_s", "n_bits"),
+    "recorded": ("switch_times_s",),
+    "reconstructed": ("tracer_channel", "reason"),
+}
+
+
+def _waveform_problems(protocol: Any, prefix: str) -> list[Problem]:
+    """Name the missing waveform field.
+
+    A oneOf failure reports only "not valid under any of the given schemas",
+    which is exactly the kind of error the standard promises not to emit: the
+    reader is left to work out which of three forms they were writing and what
+    it wanted. The schema stays the authority on validity; this says which field
+    is missing.
+    """
+    out: list[Problem] = []
+    if not isinstance(protocol, dict) or protocol.get("protocol") != "prbs":
+        return out
+    params = protocol.get("parameters")
+    if not isinstance(params, dict) or "waveform" not in params:
+        return out
+    wave = params["waveform"]
+    at = f"{prefix}/parameters/waveform"
+    if not isinstance(wave, dict):
+        return out
+
+    form = wave.get("form")
+    if form is None:
+        out.append(
+            Problem(
+                f"{at}/form",
+                "waveform has no form: must be one of lfsr (a generator spec), "
+                "recorded (the executed switch schedule), or reconstructed "
+                "(recovered from a tracer, with the reason it had to be)",
+            )
+        )
+        return out
+    if form not in _WAVEFORM_REQUIRED:
+        out.append(
+            Problem(
+                f"{at}/form",
+                f"unknown waveform form {form!r}: expected lfsr, recorded, or reconstructed",
+            )
+        )
+        return out
+
+    for field in _WAVEFORM_REQUIRED[form]:
+        if field not in wave:
+            out.append(
+                Problem(f"{at}/{field}", f"waveform form {form!r} requires {field}")
+            )
+    return out
+
+
 def _structural_errors(document: Any, kind: str) -> list[Problem]:
     """Errors phrased for a human, for rules JSON Schema states unreadably.
 
@@ -195,12 +250,50 @@ def _structural_errors(document: Any, kind: str) -> list[Problem]:
             p = _manifest_location_problem(entry, f"/files/{i}")
             if p:
                 out.append(p)
+        out.extend(_waveform_problems(document.get("protocol"), "/protocol"))
+
+    if kind == "protocol":
+        out.extend(_waveform_problems(document, ""))
 
     if kind == "uncertainty-ensemble":
         p = _manifest_location_problem(document.get("samples"), "/samples")
         if p:
             out.append(p)
 
+    return out
+
+
+def _time_base_advice(time_base: Any, channels: Any) -> list[Problem]:
+    """Advice about a time base, for any document that carries one.
+
+    Advisory rather than structural because both gaps are legal states of real
+    legacy data: the point is that they be visible, not that they be rejected.
+    """
+    out: list[Problem] = []
+    if not isinstance(time_base, dict):
+        return out
+
+    if "t0" not in time_base and not time_base.get("t0_absent_reason"):
+        out.append(
+            Problem(
+                "/time_base",
+                "no absolute t0 and no t0_absent_reason: without one of the two, "
+                "nothing records whether this trace can be aligned to another modality",
+            )
+        )
+
+    if time_base.get("kind") == "per_channel" and isinstance(channels, dict):
+        for name, ch in channels.items():
+            if not isinstance(ch, dict) or ch.get("quantity") == "time":
+                continue
+            if not ch.get("time_column"):
+                out.append(
+                    Problem(
+                        f"/channels/{name}/time_column",
+                        "time base is per_channel but this channel names no time_column, "
+                        "so which timestamps apply to it is left to the reader to guess",
+                    )
+                )
     return out
 
 
@@ -257,6 +350,7 @@ def _advisory_checks(document: Any, kind: str, version: str) -> list[Problem]:
                 out.append(
                     Problem(f"/channels/{name}/uncertainty/noise_model", "noise model is 'unknown'")
                 )
+        out.extend(_time_base_advice(document.get("time_base"), document.get("channels")))
 
     if kind == "calibration":
         entries = document.get("entries") or []
@@ -271,6 +365,22 @@ def _advisory_checks(document: Any, kind: str, version: str) -> list[Problem]:
                     "time-indexed one; no action needed",
                 )
             )
+        if document.get("kind") == "ms_sensitivity":
+            for i, entry in enumerate(entries):
+                if not isinstance(entry, dict):
+                    continue
+                mentions = "fragment" in (entry.get("notes") or "").lower() or "fragment" in (
+                    document.get("notes") or ""
+                ).lower()
+                if not entry.get("fragmentation_matrix_ref") and not mentions:
+                    out.append(
+                        Problem(
+                            f"/entries/{i}/fragmentation_matrix_ref",
+                            "MS sensitivity calibration that neither cites a fragmentation "
+                            "matrix nor says why none applies; on a shared m/z an uncorrected "
+                            "cracking contribution is indistinguishable from signal",
+                        )
+                    )
 
     if kind == "sample":
         if not document.get("properties"):

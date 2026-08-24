@@ -19,7 +19,7 @@
 
     "kind": {
       "type": "string",
-      "enum": ["ms_sensitivity", "ir_reference", "xas_reference", "flow", "temperature", "other"],
+      "enum": ["ms_sensitivity", "ms_fragmentation", "xas_reference", "ir_reference", "flow", "temperature", "other"],
       "default": "other",
       "description": "What sort of sensor model this is. IR background subtraction and reference-spectrum selection are transformations with their own artifacts, not silent preprocessing -- so they are calibrations here, not hidden steps in a script."
     },
@@ -30,7 +30,11 @@
       "description": "Time-indexed entries, expected in ascending valid_from order. A single entry is legal and is the common case at project start.",
       "items": {
         "type": "object",
-        "required": ["valid_from", "channels"],
+        "required": ["valid_from"],
+        "anyOf": [
+          { "required": ["channels"] },
+          { "required": ["matrix"] }
+        ],
         "properties": {
           "valid_from": { "$ref": "defs/common.schema.json#/$defs/timestamp" },
           "valid_until": {
@@ -71,6 +75,12 @@
               },
               "additionalProperties": false
             }
+          },
+          "matrix": {
+            "type": "object",
+            "description": "For kind = ms_fragmentation: the cracking pattern itself. Keys are \"<contributing species>-><affected channel>\", values the fraction of the contributor's signal appearing on that channel -- so \"CO2->CO\": 0.0883 means 8.83% of the CO2 signal lands on m/z 28. A partial pattern is legal and normal: labs measure the splits that matter to them, and a full matrix is the same shape grown. This is the artifact that fragmentation_matrix_ref points AT.",
+            "minProperties": 1,
+            "additionalProperties": { "type": "number" }
           },
           "fragmentation_matrix_ref": {
             "$ref": "defs/common.schema.json#/$defs/artifact_ref",

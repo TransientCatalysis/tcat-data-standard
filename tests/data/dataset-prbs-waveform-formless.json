@@ -86,7 +86,6 @@
       "low_mol_frac": 0.005,
       "high_mol_frac": 0.02,
       "waveform": {
-        "form": "lfsr",
         "register_length": 7,
         "taps": [
           7,
@@ -121,6 +120,7 @@
     "n_samples": 5080
   },
   "access_status": "public",
+  "license": "CC-BY-4.0",
   "provenance": {
     "artifact_id": "canon-prbs-co-ox-synthetic-2026-09-01-8cf5d3",
     "tool": {

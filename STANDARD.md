@@ -198,7 +198,13 @@ Transient experiments make the design space a function space rather than a vecto
 
 The same object is stored alongside executed data and emitted by experiment design. Keeping one representation is what makes closing the loop later a matter of plumbing rather than translation.
 
-**PRBS specifically requires `register_length`, `taps`, and `seed`.** Those three make the waveform exactly regenerable from metadata. Without them it can only be re-measured back out of the trace, which is both lossy and circular.
+**A PRBS protocol must declare a `waveform`, in one of three forms.** What all three deliver is the ability to reconstruct the actual perturbation; what differs is how much of it survived.
+
+- `lfsr` — `register_length`, `taps`, `seed`, `bit_period_s`, `n_bits`. Three integers regenerate the sequence exactly.
+- `recorded` — the executed `switch_times_s`. A randomised-dwell train has no generator state to record, so the schedule as run *is* the reproducible object.
+- `reconstructed` — a `tracer_channel` and the `reason` no better record exists. The inlet is recovered from an inert tracer.
+
+The third form exists because the alternative is worse. The first real dataset in this project is a randomised-dwell train whose valve schedule was never logged; requiring an LFSR seed would have meant either rejecting it or writing a fiction. A fit built on a tracer-reconstructed inlet inherits that reconstruction's assumptions, and the record has to show it — the sequence label the instrument writes does not, since it is routinely copied across runs it does not describe.
 
 Chemical-looping operation is expressed as `multi_pulse` with labelled segments (`reduction`, `purge`, `reoxidation`) and a cycle count.
 

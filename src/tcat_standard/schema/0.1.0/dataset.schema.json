@@ -115,6 +115,31 @@
       "$ref": "defs/common.schema.json#/$defs/artifact_ref",
       "description": "For a derived dataset: the calibration that produced it. A derived concentration cites BOTH its raw artifact and its calibration artifact -- that pairing is the entire audit story, and it is what lets one calibration id be swapped to re-derive every affected trace."
     },
+    "corrections_applied": {
+      "type": "array",
+      "description": "Transformations already baked into these numbers before the standard ever saw them. Instrument software and lab spreadsheets routinely apply a fragmentation split, a background subtraction, or a linear calibration and then hand over the result under the same name as the raw signal. Unrecorded, that is unrecoverable in both directions: a pipeline re-applies the correction, or an analyst assumes raw counts and never applies it at all. Listing a correction here is not an endorsement of it -- it is the statement of what would have to be undone.",
+      "items": {
+        "type": "object",
+        "required": ["name", "description"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "examples": ["ms_fragmentation_split", "linear_calibration", "background_subtraction"]
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "What was done, specifically enough that someone could reverse it or decide not to."
+          },
+          "artifact_ref": {
+            "$ref": "defs/common.schema.json#/$defs/artifact_ref",
+            "description": "The calibration or reference artifact that defines the correction, where one exists. Absent means the correction was applied by software whose coefficients are not themselves an artifact here -- worth knowing."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
     "reaction_system": {
       "type": "string",
       "description": "The reaction being studied. Free text in 0.1.0; a controlled vocabulary is deliberately deferred until practice shows what the labs actually write.",

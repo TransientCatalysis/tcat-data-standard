@@ -253,6 +253,14 @@
         "notes": {
           "type": "string"
         },
+        "time_column": {
+          "type": "string",
+          "description": "Name of the time channel this channel is sampled on, when channels do not share one. A scanning quadrupole MS visits its masses in sequence, so each species is timestamped at its own acquisition instant -- for a 5-mass scan at 283.82 ms the stagger is 56.76 ms per mass. Forcing those onto one time column would misdate every species but the first. The named column must itself be declared as a channel with quantity \"time\".",
+          "examples": [
+            "co_time_s",
+            "o2_time_s"
+          ]
+        },
         "identifiers": {
           "$ref": "#/$defs/chemical_identifiers",
           "description": "Chemical identifiers for this channel's species. The DMSP commits to common chemical identifiers 'when available' for interoperability; free-text `species` is fine for a lab, and an identifier is what makes the channel joinable outside one."
@@ -304,23 +312,36 @@
       "description": "The time base a transient measurement is expressed on. Named explicitly by the DMSP. Without it, two modalities acquired under the same perturbation cannot be aligned.",
       "type": "object",
       "required": [
-        "t0",
         "dt_s",
         "n_samples"
       ],
       "properties": {
         "t0": {
           "$ref": "#/$defs/timestamp",
-          "description": "UTC instant corresponding to t = 0 of the trace."
+          "description": "UTC instant corresponding to t = 0 of the trace. Required in spirit and requested of every new acquisition; optional in the schema only because legacy exports exist that discarded it, and those must be describable without inventing one. State t0_absent_reason instead when it is genuinely unavailable."
         },
         "dt_s": {
           "type": "number",
           "exclusiveMinimum": 0,
-          "description": "Nominal sample interval in seconds. Use the irregular flag if sampling is not uniform."
+          "description": "Nominal sample interval in seconds. Use the irregular flag if sampling is not uniform. Under kind = per_channel this is the nominal full-scan cycle interval, not the spacing of any one channel."
         },
         "n_samples": {
           "type": "integer",
           "minimum": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "shared",
+            "per_channel"
+          ],
+          "default": "shared",
+          "description": "Whether all channels share one time column (shared) or each carries its own (per_channel). Under per_channel every non-time channel must declare its time_column."
+        },
+        "t0_absent_reason": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Why no absolute t0 exists. A fabricated wall-clock is worse than a stated absence: it silently licenses a cross-modality alignment that was never measured."
         },
         "irregular": {
           "type": "boolean",
@@ -329,7 +350,7 @@
         },
         "time_column": {
           "type": "string",
-          "description": "Name of the authoritative time column, required in practice when irregular is true."
+          "description": "Name of the authoritative time column, required in practice when irregular is true and kind is shared. Under kind = per_channel the channels name their own instead."
         }
       },
       "additionalProperties": false

@@ -100,12 +100,43 @@ def test_computational_data_need_not():
     assert validate_dataset(load("dataset-computational-no-protocol.json")).ok
 
 
-def test_prbs_protocol_requires_a_seed():
-    """Register length, taps, and seed are what make the waveform regenerable.
+def test_an_lfsr_waveform_requires_a_seed():
+    """Register length, taps, and seed are what make an LFSR waveform regenerable.
     Without the seed it can only be re-measured from the trace."""
     report = validate_dataset(load("dataset-prbs-no-seed.json"))
     assert not report.ok
     assert any("seed" in p.message for p in report.errors)
+
+
+def test_a_waveform_must_say_which_form_it_is():
+    """The discriminator is what tells a reader whether the authoritative record
+    is a generator spec, an executed schedule, or a tracer reconstruction."""
+    report = validate_dataset(load("dataset-prbs-waveform-formless.json"))
+    assert not report.ok
+
+
+def test_a_waveform_may_be_a_recorded_schedule():
+    """A randomised-dwell train has no generator state to record. The executed
+    switch times are the reproducible thing, so they are a first-class form."""
+    doc = load("dataset-valid.json")
+    doc["protocol"]["parameters"]["waveform"] = {
+        "form": "recorded",
+        "switch_times_s": [0.0, 6.5, 8.6, 12.9],
+        "initial_level": "low",
+    }
+    assert validate_dataset(doc).ok
+
+
+def test_a_waveform_may_admit_it_was_reconstructed():
+    """Legacy data whose valve schedule was never logged is a legal state -- it
+    just has to say so, rather than leaving the field blank."""
+    doc = load("dataset-valid.json")
+    doc["protocol"]["parameters"]["waveform"] = {
+        "form": "reconstructed",
+        "tracer_channel": "m40",
+        "reason": "valve controller logged no schedule; inlet recovered from the Ar tracer",
+    }
+    assert validate_dataset(doc).ok
 
 
 # ---- units and uncertainty travel together ----------------------------

@@ -110,10 +110,12 @@ def test_the_prbs_sequence_is_regenerable_from_recorded_parameters(examples_dir)
     from make_examples import lfsr_sequence
 
     params = json.loads((examples_dir / "protocol-prbs.json").read_text(encoding="utf-8"))["parameters"]
-    seq = lfsr_sequence(params["register_length"], params["taps"], params["seed"], params["n_bits"])
+    wave = params["waveform"]
+    assert wave["form"] == "lfsr"
+    seq = lfsr_sequence(wave["register_length"], wave["taps"], wave["seed"], wave["n_bits"])
 
-    assert len(seq) == params["n_bits"]
+    assert len(seq) == wave["n_bits"]
     assert set(seq) == {0, 1}
     # A maximal-length LFSR visits every non-zero state exactly once per period,
     # so a full period is balanced to within one bit.
-    assert abs(sum(seq) - params["n_bits"] // 2) <= 1
+    assert abs(sum(seq) - wave["n_bits"] // 2) <= 1

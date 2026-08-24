@@ -3,6 +3,43 @@
 Package and schema versions move together in 0.x. They will decouple once the
 schema stabilises and the validator keeps changing without it.
 
+## Unreleased — 2026-08-24
+
+First contact with real data. Every change below was forced by a specific thing
+in PSU's CO-oxidation PRBS export or in Kitchin's fit of it; none was designed in
+the abstract. Schema `0.1.0` is amended in place rather than forked, per
+`STANDARD.md` §6 — nothing has been tagged and no data was written against it.
+That window closes at the first tagged release, which is why these are being
+made now and circulated for the team to overrule.
+
+- **PRBS `waveform` replaces the flat LFSR fields.** Three forms — `lfsr`,
+  `recorded`, `reconstructed` — discriminated by `form`. The real experiment is a
+  randomised-dwell binary train ("6sMAX_50Pulses") with no LFSR anywhere, and its
+  valve schedule was never logged. The old required set could not describe it
+  truthfully. `parameters.label` is added for the operator's own sequence name,
+  explicitly untrusted: in the export at hand the identical label appears on all
+  five runs, at five different temperatures.
+- **Per-channel time bases.** A channel may name its own `time_column`, and
+  `time_base.kind` may be `per_channel`. A scanning quadrupole visits its masses
+  in sequence — at 283.82 ms across 5 masses, 56.76 ms apart — so each species is
+  timestamped at its own acquisition instant. One shared time column would
+  misdate every species but the first.
+- **`t0` is no longer required**, but its absence must be explained via
+  `t0_absent_reason` (advisory). The export carries elapsed milliseconds only. A
+  fabricated wall-clock is worse than a stated absence: it silently licenses a
+  cross-modality alignment that was never measured.
+- **`corrections_applied` on a dataset.** Records transformations already baked
+  into the numbers — the workbook's fraction sheets have the MS fragmentation
+  split applied already. Unrecorded, that is unrecoverable in both directions.
+- **`ms_fragmentation` calibrations** may carry the cracking pattern inline as a
+  `matrix`. An entry now needs either `channels` or `matrix`. An `ms_sensitivity`
+  calibration that cites no fragmentation matrix and never mentions why is warned
+  about.
+- **`sample.properties[].reference`** for values taken from an external
+  publication or SI rather than measured under this award.
+- Validator: waveform violations name the missing field rather than emitting
+  `oneOf`'s "not valid under any of the given schemas".
+
 ## 0.2.0 — 2026-08-20
 
 Second pass, driven by a clause-by-clause audit against the project Data

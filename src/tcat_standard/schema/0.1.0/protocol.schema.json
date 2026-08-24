@@ -52,16 +52,59 @@
         "properties": {
           "parameters": {
             "type": "object",
-            "required": ["species", "bit_period_s", "n_bits", "register_length", "seed", "low_mol_frac", "high_mol_frac"],
+            "required": ["species", "low_mol_frac", "high_mol_frac", "waveform"],
             "properties": {
               "species": { "type": "string", "description": "Which inlet species is modulated." },
-              "bit_period_s": { "type": "number", "exclusiveMinimum": 0 },
-              "n_bits": { "type": "integer", "minimum": 1 },
-              "register_length": { "type": "integer", "minimum": 2, "description": "LFSR register length. With seed and taps, this makes the sequence exactly reproducible." },
-              "taps": { "type": "array", "items": { "type": "integer", "minimum": 1 }, "description": "LFSR feedback tap positions." },
-              "seed": { "type": "integer", "minimum": 1, "description": "LFSR seed. Required: an unrecorded seed makes the perturbation waveform unreproducible." },
               "low_mol_frac": { "type": "number", "minimum": 0, "maximum": 1 },
-              "high_mol_frac": { "type": "number", "minimum": 0, "maximum": 1 }
+              "high_mol_frac": { "type": "number", "minimum": 0, "maximum": 1 },
+              "waveform": {
+                "type": "object",
+                "description": "How the binary switching sequence is specified. Three forms, because real practice has three and only one of them is an LFSR. What every form must deliver is the ability to reconstruct the actual perturbation: an LFSR needs three integers, a randomised-dwell train needs its executed schedule, and a legacy run that logged neither needs to say so rather than leave the question blank. Discriminated by `form` so a reader never has to guess which fields are authoritative.",
+                "oneOf": [
+                  {
+                    "title": "LFSR-generated",
+                    "type": "object",
+                    "required": ["form", "register_length", "taps", "seed", "bit_period_s", "n_bits"],
+                    "properties": {
+                      "form": { "const": "lfsr" },
+                      "register_length": { "type": "integer", "minimum": 2, "description": "LFSR register length. With seed and taps, this makes the sequence exactly reproducible." },
+                      "taps": { "type": "array", "items": { "type": "integer", "minimum": 1 }, "description": "LFSR feedback tap positions." },
+                      "seed": { "type": "integer", "minimum": 1, "description": "LFSR seed. Required in this form: an unrecorded seed makes the perturbation waveform unreproducible." },
+                      "bit_period_s": { "type": "number", "exclusiveMinimum": 0 },
+                      "n_bits": { "type": "integer", "minimum": 1 }
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "title": "Recorded schedule",
+                    "type": "object",
+                    "required": ["form", "switch_times_s"],
+                    "properties": {
+                      "form": { "const": "recorded" },
+                      "switch_times_s": {
+                        "type": "array",
+                        "minItems": 2,
+                        "items": { "type": "number", "minimum": 0 },
+                        "description": "Executed valve-switch instants, seconds from t = 0, ascending. The schedule as run, not as planned -- this is the form for a randomised-dwell train, where the dwell times are drawn once and no generator state reproduces them."
+                      },
+                      "initial_level": { "type": "string", "enum": ["low", "high"], "description": "Level held before the first switch." }
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "title": "Reconstructed from a tracer",
+                    "type": "object",
+                    "required": ["form", "tracer_channel", "reason"],
+                    "properties": {
+                      "form": { "const": "reconstructed" },
+                      "tracer_channel": { "type": "string", "description": "Channel carrying the inert tracer from which the inlet waveform is recovered.", "examples": ["ar_frac"] },
+                      "reason": { "type": "string", "minLength": 1, "description": "Why no generator spec or executed schedule exists. Recording the gap is the point: a fit built on a tracer-reconstructed inlet inherits that reconstruction's assumptions, and a reader must be able to see so." }
+                    },
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "label": { "type": "string", "description": "Operator's own name for the sequence, verbatim. Kept because it is often the only handle the lab uses, but never trusted as metadata: it is routinely copied across runs it does not describe." }
             },
             "additionalProperties": true
           }

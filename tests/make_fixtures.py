@@ -133,10 +133,17 @@ def main() -> None:
     doc["protocol"]["time_base"]["t0"] = "2026-09-01 14:03:00"
     (DATA / "dataset-naive-timestamp.json").write_text(json.dumps(doc, indent=2) + "\n")
 
-    # A PRBS protocol with no seed: the waveform becomes unreproducible.
+    # An lfsr waveform with no seed: the sequence becomes unreproducible.
     doc = copy.deepcopy(base)
-    doc["protocol"]["parameters"].pop("seed")
+    doc["protocol"]["parameters"]["waveform"].pop("seed")
     (DATA / "dataset-prbs-no-seed.json").write_text(json.dumps(doc, indent=2) + "\n")
+
+    # A waveform with no form. Without the discriminator nothing says which
+    # fields are authoritative, so the reader cannot tell a generator spec from
+    # an executed schedule.
+    doc = copy.deepcopy(base)
+    doc["protocol"]["parameters"]["waveform"].pop("form")
+    (DATA / "dataset-prbs-waveform-formless.json").write_text(json.dumps(doc, indent=2) + "\n")
 
     written = sorted(p.name for p in DATA.glob("*.json"))
     print(f"wrote {len(written)} fixtures to tests/data/")
