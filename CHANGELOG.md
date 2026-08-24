@@ -48,6 +48,47 @@ made now and circulated for the team to overrule.
 - Validator: waveform violations name the missing field rather than emitting
   `oneOf`'s "not valid under any of the given schemas".
 
+### `model-spec`: a mechanism is an artifact, not a registry name
+
+A new document kind, and the one change here that is a re-think rather than a
+correction.
+
+A specific mechanism had been named in the analysis hub's `models` capability
+registry, where adding a name costs a pull request and changing its meaning is
+breaking. That is right for a **method** vocabulary -- `laplace`,
+`hold_constant`, `d-optimal` -- which is small, stable, and shared. It is wrong
+for **mechanisms**: they are combinatorially many, they are generated
+automatically by discovery and reduction, and comparing competing ones is the
+science rather than a maintenance event. A registry entry per candidate puts a
+pull request in front of every hypothesis.
+
+The standard had already made this exact call once, for calibrations: "a
+first-class, versioned, content-addressed artifact -- not metadata attached to a
+dataset". A mechanism is the same shape of thing -- revised independently,
+depended on by many results, and its revision has to be able to say what went
+stale. So it is an artifact too, and content addressing supplies what the
+registry was protecting: two specifications differing anywhere hash differently,
+so they cannot collide, and nobody has to coordinate to guarantee it.
+
+- `model-spec.schema.json` covers a mechanism (`family: microkinetic`), a
+  network architecture (`neural_ode`, `rnn`) or a term library
+  (`sparse_regression`) -- so the M3 neural baseline is described the same way,
+  its seed included.
+- Each step declares `reversible` explicitly, required rather than defaulted: an
+  unstated reversibility is the difference between an eight- and a
+  ten-parameter fit, and a default would silently pick one. A `constraint` block
+  records a reverse constant fixed by thermodynamic closure instead of fitted.
+- `free_parameters` declares the packing order and bounds, because those belong
+  to the hypothesis -- two implementations using different ones are not
+  producing comparable fits. An advisory warns when the count disagrees with
+  what the steps imply.
+- Two examples ship deliberately as a PAIR: the same five-step CO oxidation
+  network with steps 4 and 5 irreversible, and with them reversible under a
+  thermodynamic closure. Eight free constants against nine. They exist to make
+  mechanism comparison demonstrable rather than assertable.
+- Distinct from `model`, which is a FITTED model -- trained parameters, training
+  data, metrics. This is the hypothesis before any of that exists.
+
 ## 0.2.0 — 2026-08-20
 
 Second pass, driven by a clause-by-clause audit against the project Data

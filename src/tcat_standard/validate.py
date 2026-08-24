@@ -382,6 +382,40 @@ def _advisory_checks(document: Any, kind: str, version: str) -> list[Problem]:
                         )
                     )
 
+    if kind == "model-spec":
+        body = document.get("mechanism")
+        declared = document.get("free_parameters")
+        if isinstance(body, dict) and isinstance(declared, list):
+            implied = 0
+            for step in body.get("steps") or []:
+                if not isinstance(step, dict):
+                    continue
+                implied += 1
+                if step.get("reversible") and not step.get("constraint"):
+                    implied += 1
+            if implied != len(declared):
+                out.append(
+                    Problem(
+                        "/free_parameters",
+                        f"{len(declared)} parameters declared but the steps imply "
+                        f"{implied} free rate constants. Legitimate when the model "
+                        "carries parameters that are not rate constants (a site "
+                        "density, a calibration scale) -- but if it does not, one of "
+                        "the two is wrong, and a fit would pack the vector one way "
+                        "while a reader interprets it the other",
+                    )
+                )
+        if document.get("parameter_transform", "none") == "none" and body:
+            out.append(
+                Problem(
+                    "/parameter_transform",
+                    "no parameter transform declared for a microkinetic model. Rate "
+                    "constants span decades; fitting them linearly is usually a "
+                    "mistake, and an interval reported in the wrong space means "
+                    "something else entirely",
+                )
+            )
+
     if kind == "sample":
         if not document.get("properties"):
             out.append(
@@ -536,6 +570,7 @@ validate_uncertainty_ensemble = _validate_kind("uncertainty-ensemble")
 validate_protocol = _validate_kind("protocol")
 validate_sample = _validate_kind("sample")
 validate_model = _validate_kind("model")
+validate_model_spec = _validate_kind("model-spec")
 validate_publication = _validate_kind("publication")
 validate_spoke = _validate_kind("spoke")
 

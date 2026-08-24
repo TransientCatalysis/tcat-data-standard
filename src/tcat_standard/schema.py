@@ -69,6 +69,7 @@ KINDS = (
     "protocol",
     "sample",
     "model",
+    "model-spec",
     "publication",
     "spoke",
 )

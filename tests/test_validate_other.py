@@ -227,3 +227,109 @@ def test_base_conditions_require_temperature_and_pressure():
 def test_unknown_protocol_names_are_rejected():
     doc = {"protocol": "chirp", "parameters": {}, "base_conditions": {"temperature_K": 573.0, "pressure_kPa": 101.3}}
     assert not validate_protocol(doc).ok
+
+
+# ---- model specifications ----------------------------------------------
+#
+# The argument these tests defend: a mechanism is an ARTIFACT, not a name in a
+# capability registry. Registries suit method vocabularies -- few, stable,
+# shared. Mechanisms are combinatorially many, are generated automatically by
+# discovery and reduction, and comparing competing ones is the science. A
+# registry entry per candidate would put a pull request in front of every
+# hypothesis.
+
+
+def _spec(name):
+    import json
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent / "examples"
+    return json.loads((root / name).read_text(encoding="utf-8"))
+
+
+def test_both_example_specifications_are_valid():
+    from tcat_standard import validate_model_spec
+
+    for name in ("model-spec-co-ox-irreversible.json", "model-spec-co-ox-reversible.json"):
+        report = validate_model_spec(_spec(name))
+        assert report.ok, report.render()
+
+
+def test_the_two_variants_really_are_different_models():
+    """Not a tautology. They describe the same five steps and differ in three
+    fields, and that difference is eight free parameters against ten. If the
+    schema let them look identical, a comparison between them would be
+    meaningless."""
+    a = _spec("model-spec-co-ox-irreversible.json")
+    b = _spec("model-spec-co-ox-reversible.json")
+
+    assert a["mechanism"]["steps"][3]["reversible"] is False
+    assert b["mechanism"]["steps"][3]["reversible"] is True
+    assert "constraint" not in a["mechanism"]["steps"][3]
+    assert b["mechanism"]["steps"][3]["constraint"]["kind"] == "thermodynamic_closure"
+    # Eight against nine: step 4 gains a reverse constant in b, but it is FIXED
+    # by the closure rather than fitted, so it costs no free parameter -- while
+    # step 5's reverse does. Getting this count wrong in either direction is how
+    # a comparison between the two silently stops being fair.
+    assert len(a["free_parameters"]) == 8
+    assert len(b["free_parameters"]) == 9
+
+
+def test_a_microkinetic_specification_must_carry_a_mechanism():
+    from tcat_standard import validate_model_spec
+
+    doc = _spec("model-spec-co-ox-irreversible.json")
+    doc.pop("mechanism")
+    report = validate_model_spec(doc)
+    assert not report.ok
+    assert any("mechanism" in p.message for p in report.errors)
+
+
+def test_a_step_must_declare_its_reversibility():
+    """Required rather than defaulted, because an unstated reversibility is the
+    difference between an eight-parameter and a ten-parameter fit -- and a
+    default would silently pick one."""
+    from tcat_standard import validate_model_spec
+
+    doc = _spec("model-spec-co-ox-irreversible.json")
+    doc["mechanism"]["steps"][0].pop("reversible")
+    report = validate_model_spec(doc)
+    assert not report.ok
+    assert any("reversible" in p.message for p in report.errors)
+
+
+def test_a_neural_specification_needs_an_architecture_not_a_mechanism():
+    """The same document kind covers the M3 baseline. A trained network's
+    architecture is as much 'what was fitted' as a mechanism is, and it has been
+    exactly as likely to live only in a script."""
+    from tcat_standard import validate_model_spec
+
+    doc = {
+        "schema_version": "0.1.0",
+        "spec_id": "co-ox-lstm-baseline",
+        "family": "rnn",
+        "name": "LSTM baseline",
+    }
+    assert not validate_model_spec(doc).ok
+
+    doc["architecture"] = {"layers": [{"kind": "lstm", "hidden": 8, "layers": 4}], "seed": 11}
+    assert validate_model_spec(doc).ok
+
+
+def test_two_specifications_differing_anywhere_get_different_ids():
+    """What content addressing buys, and what the registry was protecting: two
+    mechanisms cannot collide on one id, and nobody has to coordinate to
+    guarantee it."""
+    from tcat_standard import make_artifact_id
+
+    a = _spec("model-spec-co-ox-irreversible.json")
+    b = _spec("model-spec-co-ox-reversible.json")
+
+    def ident(doc):
+        return make_artifact_id(
+            tool="spec", name=doc["spec_id"], when="2026-09-01",
+            tool_name="tcat-spec", tool_version="0.1.0", inputs=[],
+            parameters={"specification": doc["mechanism"]},
+        )
+
+    assert ident(a) != ident(b)
+    assert ident(a) == ident(a)

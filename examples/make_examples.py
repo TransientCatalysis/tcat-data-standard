@@ -538,6 +538,147 @@ def build_publication(dataset_id: str, model_id: str) -> dict:
     }
 
 
+
+# ---------------------------------------------------------- model specs
+
+#: The five-step LH CO oxidation network, shared by both variants below. Only
+#: the reversibility of the last two steps differs between them -- which is the
+#: entire point of the pair: it is the smallest real disagreement between two
+#: published treatments of one mechanism, and it changes the free-parameter
+#: count from eight to ten.
+_CO_OX_STEPS = [
+    ("CO + * -> CO*", "S1 CO adsorption"),
+    ("O2 + * -> O2*", "S2 O2 adsorption"),
+    ("O2* + * -> 2 O*", "S3 O2 dissociation"),
+    ("CO* + O* -> CO2* + *", "S4 surface reaction"),
+    ("CO2* -> CO2 + *", "S5 CO2 desorption"),
+]
+
+
+def _co_ox_mechanism(reversible_last_two: bool, closure: bool) -> dict:
+    steps = []
+    for i, (equation, name) in enumerate(_CO_OX_STEPS):
+        step = {
+            "equation": equation,
+            "name": name,
+            "reversible": True if i < 3 else reversible_last_two,
+        }
+        if closure and i == 3:
+            step["constraint"] = {
+                "kind": "thermodynamic_closure",
+                "source": "NIST Shomate polynomials for CO, O2, CO2",
+                "notes": "The reverse constant is derived from the other nine plus the "
+                         "overall equilibrium constant, so it is not a free parameter.",
+            }
+        steps.append(step)
+    return {
+        "sites": [{"name": "*", "density": 1.0}],
+        "gas": [{"name": "CO"}, {"name": "O2"}, {"name": "CO2"}],
+        "adsorbates": [
+            {"name": "CO*", "site": "*", "composition": {"C": 1, "O": 1}},
+            {"name": "O2*", "site": "*", "composition": {"O": 2}},
+            {"name": "O*", "site": "*", "composition": {"O": 1}},
+            {"name": "CO2*", "site": "*", "composition": {"C": 1, "O": 2}},
+        ],
+        "steps": steps,
+        "activity_basis": "mole_fraction",
+        "gas_constant_J_per_mol_K": 8.314,
+    }
+
+
+#: Per-constant log10 bounds. These belong to the SPECIFICATION, not to a
+#: fitting script: they are part of what the hypothesis asserts is physically
+#: reachable, and two implementations of one mechanism that use different bounds
+#: are not producing comparable fits. Wide enough not to shape the answer,
+#: narrow enough to keep an optimiser out of regions where the coverage ODEs
+#: stop being integrable at a useful timestep.
+_LOG10_BOUNDS = {
+    "k1": (-2.0, 8.0),    # adsorption, per mole fraction
+    "k_1": (-4.0, 8.0),   # desorption
+    "k2": (-2.0, 8.0),
+    "k_2": (-4.0, 8.0),
+    "k3": (-2.0, 8.0),    # dissociation
+    "k_3": (-6.0, 6.0),   # recombination, second order in a small coverage
+    "k4": (-2.0, 9.0),    # surface reaction, the fast step
+    "k5": (-2.0, 9.0),    # product desorption
+    "k_5": (-6.0, 6.0),   # product readsorption, expected small
+}
+
+
+def _free_parameters(names) -> list[dict]:
+    return [
+        {
+            "name": n,
+            "units": "log10(1/(mol_frac s))" if n in ("k1", "k2") else "log10(1/s)",
+            "bounds": list(_LOG10_BOUNDS.get(n, (-6.0, 9.0))),
+        }
+        for n in names
+    ]
+
+
+def build_model_spec_irreversible() -> dict:
+    return {
+        "schema_version": "0.1.0",
+        "spec_id": "co-ox-5step-irreversible-45",
+        "family": "microkinetic",
+        "name": "CO oxidation, five-step LH, steps 4 and 5 irreversible",
+        "description": (
+            "Eight free rate constants. Steps 4 and 5 carry no reverse rate, which is "
+            "a reasonable approximation when CO2 readsorption is negligible at the "
+            "conditions of interest."
+        ),
+        "parameter_transform": "log10",
+        "mechanism": _co_ox_mechanism(reversible_last_two=False, closure=False),
+        "free_parameters": _free_parameters(
+            ["k1", "k_1", "k2", "k_2", "k3", "k_3", "k4", "k5"]
+        ),
+        "reaction_system": "CO oxidation",
+        "access_status": "public",
+        "license": "CC-BY-4.0",
+        "notes": (
+            "One of a PAIR of examples that exist to show mechanism comparison working. "
+            "Its sibling, co-ox-5step-reversible-closure, describes the same chemistry "
+            "with steps 4 and 5 reversible and a thermodynamic closure on step 4. Two "
+            "specifications, two artifact ids, two fits, one comparison -- and no "
+            "registry entry, no pull request, and no possibility of the two colliding."
+        ),
+    }
+
+
+def build_model_spec_reversible() -> dict:
+    spec = {
+        "schema_version": "0.1.0",
+        "spec_id": "co-ox-5step-reversible-closure",
+        "family": "microkinetic",
+        "name": "CO oxidation, five-step LH, fully reversible with thermodynamic closure",
+        "description": (
+            "Ten free rate constants, with the reverse of step 4 fixed by thermodynamic "
+            "closure rather than fitted. This is the treatment in the PSU MATLAB."
+        ),
+        "derived_from": "art://" + "spec-co-ox-5step-irreversible-45-2026-09-01-000000",
+        "derivation": "steps 4 and 5 made reversible; thermodynamic closure added to step 4",
+        "parameter_transform": "log10",
+        "mechanism": _co_ox_mechanism(reversible_last_two=True, closure=True),
+        # Nine, not ten: step 4's reverse constant is fixed by the closure rather
+        # than fitted. PSU's MATLAB additionally fits a total site density, which
+        # in this formulation is folded into the fitted scale factor instead.
+        "free_parameters": _free_parameters(
+            ["k1", "k_1", "k2", "k_2", "k3", "k_3", "k4", "k5", "k_5"]
+        ),
+        "reaction_system": "CO oxidation",
+        "access_status": "public",
+        "license": "CC-BY-4.0",
+        "notes": (
+            "The sibling of co-ox-5step-irreversible-45. THE POINT OF THE PAIR: these "
+            "two differ in three fields and are two different models. Under a capability "
+            "registry they would have needed two curated names and a pull request each; "
+            "as content-addressed artifacts they are simply two ids, and a fit records "
+            "which one it used."
+        ),
+    }
+    return spec
+
+
 def main() -> None:
     csv_path = write_csv()
     entry = ManifestEntry.from_file(csv_path, repo_root=REPO, format="csv", media_type="text/csv")
@@ -553,6 +694,8 @@ def main() -> None:
         parameters={"model": "lh-two-site", "method": "laplace"},
     )
     sample = build_sample()
+    spec_irreversible = build_model_spec_irreversible()
+    spec_reversible = build_model_spec_reversible()
     model = build_model(ensemble_ref, dataset["dataset_id"])
     publication = build_publication(dataset["dataset_id"], model["model_id"])
 
@@ -562,6 +705,8 @@ def main() -> None:
         ("protocol-prbs.json", protocol),
         ("sample-synthetic.json", sample),
         ("model-lh-two-site.json", model),
+        ("model-spec-co-ox-irreversible.json", spec_irreversible),
+        ("model-spec-co-ox-reversible.json", spec_reversible),
         ("publication-example.json", publication),
     ):
         (HERE / name).write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")

@@ -45,6 +45,8 @@ _DIR_KIND = {
     "ensembles": "uncertainty-ensemble",
     "samples": "sample",
     "models": "model",
+    "specs": "model-spec",
+    "mechanisms": "model-spec",
     "publications": "publication",
     "artifacts": "provenance",
     "datasets": "dataset",
@@ -108,6 +110,8 @@ def _infer_kind(
         return "calibration"
     if "model_id" in doc:
         return "model"
+    if "spec_id" in doc and "family" in doc:
+        return "model-spec"
     if "publication_id" in doc:
         return "publication"
     if "artifact_id" in doc and "tool" in doc:
