@@ -541,17 +541,31 @@ def build_publication(dataset_id: str, model_id: str) -> dict:
 
 # ---------------------------------------------------------- model specs
 
-#: The five-step LH CO oxidation network, shared by both variants below. Only
-#: the reversibility of the last two steps differs between them -- which is the
-#: entire point of the pair: it is the smallest real disagreement between two
-#: published treatments of one mechanism, and it changes the free-parameter
-#: count from eight to ten.
+#: The five-step LH CO oxidation network, shared by three of the four variants
+#: below. What differs between them is the reversibility of the last two steps
+#: and whether step 4's reverse is a free parameter -- the smallest real
+#: disagreements between published treatments of one mechanism, and they move
+#: the free-parameter count from eight to ten.
+#:
+#: The fourth variant is a different NETWORK, not a different parameterisation:
+#: an Eley-Rideal route with no adsorbed CO2 at all. Together the four are a
+#: comparison set that costs four files and no code.
 _CO_OX_STEPS = [
     ("CO + * -> CO*", "S1 CO adsorption"),
     ("O2 + * -> O2*", "S2 O2 adsorption"),
     ("O2* + * -> 2 O*", "S3 O2 dissociation"),
     ("CO* + O* -> CO2* + *", "S4 surface reaction"),
     ("CO2* -> CO2 + *", "S5 CO2 desorption"),
+]
+
+#: The Eley-Rideal network: the surface reaction releases CO2 directly, so there
+#: is no CO2* intermediate and no desorption step. Structurally simpler than the
+#: LH set rather than a reparameterisation of it.
+_CO_OX_ER_STEPS = [
+    ("CO + * -> CO*", "S1 CO adsorption"),
+    ("O2 + * -> O2*", "S2 O2 adsorption"),
+    ("O2* + * -> 2 O*", "S3 O2 dissociation"),
+    ("CO* + O* -> CO2 + 2 *", "S4 surface reaction with direct release"),
 ]
 
 
@@ -586,6 +600,31 @@ def _co_ox_mechanism(reversible_last_two: bool, closure: bool) -> dict:
     }
 
 
+def _co_ox_er_mechanism() -> dict:
+    """The Eley-Rideal network. No CO2* adsorbate, no desorption step.
+
+    Steps 1-3 are reversible as in the LH set; the release step is not, because
+    a reverse would be a gas-phase molecule striking an adsorbed oxygen and there
+    is no evidence in this data to fit one.
+    """
+    steps = [
+        {"equation": equation, "name": name, "reversible": i < 3}
+        for i, (equation, name) in enumerate(_CO_OX_ER_STEPS)
+    ]
+    return {
+        "sites": [{"name": "*", "density": 1.0}],
+        "gas": [{"name": "CO"}, {"name": "O2"}, {"name": "CO2"}],
+        "adsorbates": [
+            {"name": "CO*", "site": "*", "composition": {"C": 1, "O": 1}},
+            {"name": "O2*", "site": "*", "composition": {"O": 2}},
+            {"name": "O*", "site": "*", "composition": {"O": 1}},
+        ],
+        "steps": steps,
+        "activity_basis": "mole_fraction",
+        "gas_constant_J_per_mol_K": 8.314,
+    }
+
+
 #: Per-constant log10 bounds. These belong to the SPECIFICATION, not to a
 #: fitting script: they are part of what the hypothesis asserts is physically
 #: reachable, and two implementations of one mechanism that use different bounds
@@ -600,6 +639,7 @@ _LOG10_BOUNDS = {
     "k3": (-2.0, 8.0),    # dissociation
     "k_3": (-6.0, 6.0),   # recombination, second order in a small coverage
     "k4": (-2.0, 9.0),    # surface reaction, the fast step
+    "k_4": (-6.0, 6.0),   # reverse surface reaction; expected small, like k_5
     "k5": (-2.0, 9.0),    # product desorption
     "k_5": (-6.0, 6.0),   # product readsorption, expected small
 }
@@ -679,6 +719,88 @@ def build_model_spec_reversible() -> dict:
     return spec
 
 
+def build_model_spec_reversible_full() -> dict:
+    """The honest ten-parameter arm: step 4's reverse is FITTED, not closed.
+
+    Exists because the closure variant's reverse constant is not currently a
+    number anyone computes -- `mechanism.from_document` gives a constrained step
+    no reverse constant at all, and no implementation of thermodynamic closure
+    exists in the toolchain. So the closure arm runs today with step 4 effectively
+    irreversible, and this is the variant that actually tests whether the data
+    supports a reverse surface reaction.
+
+    It also has a property none of the others do: net CO2 production can go
+    NEGATIVE, because CO2 readsorption is free. That is the case where a censored
+    likelihood stops being a no-op on a floor of zero.
+    """
+    return {
+        "schema_version": "0.1.0",
+        "spec_id": "co-ox-5step-reversible-full",
+        "family": "microkinetic",
+        "name": "CO oxidation, five-step LH, fully reversible, no closure",
+        "description": (
+            "Ten free rate constants, including the reverse of step 4. The same "
+            "network as co-ox-5step-reversible-closure, but with step 4's reverse "
+            "fitted rather than derived -- so it is the arm that asks whether the "
+            "data can determine it."
+        ),
+        "derived_from": "art://" + "spec-co-ox-5step-reversible-closure-2026-09-01-000000",
+        "derivation": "thermodynamic closure removed from step 4; k_4 becomes a free parameter",
+        "parameter_transform": "log10",
+        "mechanism": _co_ox_mechanism(reversible_last_two=True, closure=False),
+        "free_parameters": _free_parameters(
+            ["k1", "k_1", "k2", "k_2", "k3", "k_3", "k4", "k_4", "k5", "k_5"]
+        ),
+        "reaction_system": "CO oxidation",
+        "access_status": "public",
+        "license": "CC-BY-4.0",
+        "notes": (
+            "Completes the reversibility ladder at eight, nine and ten free "
+            "constants over one network, which is what makes a BIC comparison "
+            "mean something: each rung buys one parameter, and the ranking says "
+            "whether the datum paid for it."
+        ),
+    }
+
+
+def build_model_spec_eley_rideal() -> dict:
+    """A different NETWORK, not a different parameterisation.
+
+    The surface reaction releases CO2 directly, so there is no adsorbed CO2 and
+    no desorption step. Seven free constants over four steps. Included because a
+    comparison set made only of reversibility variants tests one axis; this one
+    asks whether the CO2 transient can distinguish a route with a bound product
+    intermediate from one without.
+    """
+    return {
+        "schema_version": "0.1.0",
+        "spec_id": "co-ox-4step-eley-rideal",
+        "family": "microkinetic",
+        "name": "CO oxidation, four-step, direct CO2 release",
+        "description": (
+            "Seven free rate constants over four steps. The surface reaction releases "
+            "gas-phase CO2 in one step, so CO2* and its desorption do not exist. "
+            "Structurally simpler than the LH variants rather than a "
+            "reparameterisation of them."
+        ),
+        "derived_from": "art://" + "spec-co-ox-5step-irreversible-45-2026-09-01-000000",
+        "derivation": "steps 4 and 5 merged into a single direct-release step; CO2* removed",
+        "parameter_transform": "log10",
+        "mechanism": _co_ox_er_mechanism(),
+        "free_parameters": _free_parameters(
+            ["k1", "k_1", "k2", "k_2", "k3", "k_3", "k4"]
+        ),
+        "reaction_system": "CO oxidation",
+        "access_status": "public",
+        "license": "CC-BY-4.0",
+        "notes": (
+            "The set's control on network topology rather than on parameter count. "
+            "Removing CO2* removes a state as well as a constant: seven against the "
+            "irreversible LH arm's eight, over four steps rather than five."
+        ),
+    }
+
+
 def main() -> None:
     csv_path = write_csv()
     entry = ManifestEntry.from_file(csv_path, repo_root=REPO, format="csv", media_type="text/csv")
@@ -696,6 +818,8 @@ def main() -> None:
     sample = build_sample()
     spec_irreversible = build_model_spec_irreversible()
     spec_reversible = build_model_spec_reversible()
+    spec_reversible_full = build_model_spec_reversible_full()
+    spec_eley_rideal = build_model_spec_eley_rideal()
     model = build_model(ensemble_ref, dataset["dataset_id"])
     publication = build_publication(dataset["dataset_id"], model["model_id"])
 
@@ -707,6 +831,8 @@ def main() -> None:
         ("model-lh-two-site.json", model),
         ("model-spec-co-ox-irreversible.json", spec_irreversible),
         ("model-spec-co-ox-reversible.json", spec_reversible),
+        ("model-spec-co-ox-reversible-full.json", spec_reversible_full),
+        ("model-spec-co-ox-eley-rideal.json", spec_eley_rideal),
         ("publication-example.json", publication),
     ):
         (HERE / name).write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
