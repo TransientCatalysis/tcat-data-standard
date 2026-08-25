@@ -361,6 +361,12 @@ def _time_base_advice(time_base: Any, channels: Any) -> list[Problem]:
         for name, ch in channels.items():
             if not isinstance(ch, dict) or ch.get("quantity") == "time":
                 continue
+            # An exact channel is bookkeeping -- a scan counter, an index, a
+            # censoring flag -- not a quantity observed at an instant, so asking
+            # which timestamps apply to it has no answer to be missing.
+            if (ch.get("uncertainty") or {}).get(
+                    "noise_model", {}).get("family") == "exact":
+                continue
             if not ch.get("time_column"):
                 out.append(
                     Problem(

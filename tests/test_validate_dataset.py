@@ -384,3 +384,19 @@ def test_an_exact_channel_is_not_nagged_about_missing_uncertainty(valid_dataset)
     }
     warnings = validate_dataset(doc).warnings
     assert not any(w.pointer == "/channels/flag/uncertainty" for w in warnings)
+
+
+def test_an_exact_channel_is_not_asked_which_clock_it_is_on(valid_dataset):
+    """A scan counter or a censoring flag is bookkeeping, not a quantity observed
+    at an instant, so 'which timestamps apply to it' has no answer to be
+    missing."""
+    doc = copy.deepcopy(valid_dataset)
+    doc["time_base"]["kind"] = "per_channel"
+    doc["channels"]["counter"] = {
+        "units": "1", "quantity": "scan_index",
+        "uncertainty": {"kind": "none", "noise_model": {"family": "exact"}},
+    }
+    warnings = validate_dataset(doc).warnings
+    assert not any(w.pointer == "/channels/counter/time_column" for w in warnings)
+    # and a real measurement channel is still asked
+    assert any(w.pointer.endswith("/time_column") for w in warnings)
