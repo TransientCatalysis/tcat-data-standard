@@ -1,0 +1,150 @@
+{
+  "version": "2.2.0",
+  "date": "2026-06-12",
+  "items": [
+    {
+      "id": "A1",
+      "section": "Data Management",
+      "text": "Describe semantic and numerical harmonization steps and any unresolved issues when using multi-source data and heterogeneous data types (e.g., raw files, spreadsheets, literature).",
+      "status": null,
+      "evidence": null,
+      "notes": null
+    },
+    {
+      "id": "A2",
+      "section": "Data Management",
+      "text": "Provide processing code that regenerates the ML-ready dataset from source data, and state how dataset equivalence is checked (e.g., record counts, IDs).",
+      "status": null,
+      "evidence": null,
+      "notes": null
+    },
+    {
+      "id": "A3",
+      "section": "Data Management",
+      "text": "Define all input features or descriptors and their generation pipeline.",
+      "status": null,
+      "evidence": null,
+      "notes": null
+    },
+    {
+      "id": "A4",
+      "section": "Data Management",
+      "text": "Provide dataset identifiers, access details, and core metadata sufficient for reuse.",
+      "status": null,
+      "evidence": null,
+      "notes": null
+    },
+    {
+      "id": "A5",
+      "section": "Data Management",
+      "text": "State the policy on negative, failed, or suboptimal experiments and include them when informative.",
+      "status": null,
+      "evidence": null,
+      "notes": null
+    },
+    {
+      "id": "B1",
+      "section": "Model Development",
+      "text": "Document the full model specification (architecture, hyperparameters, objective, versions).",
+      "status": null,
+      "evidence": null,
+      "notes": null
+    },
+    {
+      "id": "B2",
+      "section": "Model Development",
+      "text": "Describe data-splitting strategies implemented to prevent information leakage.",
+      "status": null,
+      "evidence": null,
+      "notes": null
+    },
+    {
+      "id": "B3",
+      "section": "Model Development",
+      "text": "Report performance metrics with appropriate uncertainty (e.g., confidence intervals) to avoid best-only reporting.",
+      "status": null,
+      "evidence": null,
+      "notes": null
+    },
+    {
+      "id": "B4",
+      "section": "Model Development",
+      "text": "Justify the choice of metrics and explicitly examine trade-offs for multi-objective tasks.",
+      "status": null,
+      "evidence": null,
+      "notes": null
+    },
+    {
+      "id": "B5",
+      "section": "Model Development",
+      "text": "Describe the uncertainty quantification method, its calibration, and how it is used in analysis or decision-making.",
+      "status": null,
+      "evidence": null,
+      "notes": null
+    },
+    {
+      "id": "C1",
+      "section": "Workflow Integration",
+      "text": "Specify the agent policy, constraints, and acquisition or reward functions, and provide configuration details or pseudocode with versioning, including sources of stochasticity and parameters fixed across runs.",
+      "status": null,
+      "evidence": null,
+      "notes": null
+    },
+    {
+      "id": "C2",
+      "section": "Workflow Integration",
+      "text": "Declare the level of autonomy and human oversight, and document any interventions or overrides during the campaign, including their frequency, rationale, and impact.",
+      "status": null,
+      "evidence": null,
+      "notes": null
+    },
+    {
+      "id": "C3",
+      "section": "Workflow Integration",
+      "text": "Define stopping criteria and anomaly or failure-handling procedures, and report any aborted runs, exclusions, or post hoc corrections.",
+      "status": null,
+      "evidence": null,
+      "notes": null
+    },
+    {
+      "id": "C4",
+      "section": "Workflow Integration",
+      "text": "Describe safety bounds, interlocks, and shutdown mechanisms, and explain how unsafe actions are prevented.",
+      "status": null,
+      "evidence": null,
+      "notes": null
+    },
+    {
+      "id": "C5",
+      "section": "Workflow Integration",
+      "text": "Maintain a traceable record of the campaign trajectory, with summaries or representative segments when full detail is impractical, sufficient to support statistical reproducibility of agent behavior.",
+      "status": null,
+      "evidence": null,
+      "notes": null
+    },
+    {
+      "id": "D1",
+      "section": "Tutorials, Notebooks, and Executable Artifacts",
+      "text": "Provide executable tutorials or notebooks illustrating key elements of data management, model development, and workflow integration.",
+      "status": null,
+      "evidence": null,
+      "notes": null
+    },
+    {
+      "id": "D2",
+      "section": "Tutorials, Notebooks, and Executable Artifacts",
+      "text": "Link each tutorial or notebook to the relevant manuscript sections and checklist items, including versioning information where feasible.",
+      "status": null,
+      "evidence": null,
+      "notes": null
+    },
+    {
+      "id": "D3",
+      "section": "Tutorials, Notebooks, and Executable Artifacts",
+      "text": "Document the execution environment required to run the tutorials (e.g., container images, lockfiles, or environment specifications) to mitigate dependency and API drift.",
+      "status": null,
+      "evidence": null,
+      "notes": null
+    }
+  ]
+}

@@ -40,7 +40,7 @@ where = ["src"]
 # so an installed copy validates without needing the checkout. schema.py looks in
 # both places.
 [tool.setuptools.package-data]
-tcat_standard = ["schema/VERSION", "schema/**/*.json"]
+tcat_standard = ["schema/VERSION", "schema/**/*.json", "profiles/**/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
