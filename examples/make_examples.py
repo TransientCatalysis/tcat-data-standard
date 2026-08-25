@@ -580,9 +580,20 @@ def _co_ox_mechanism(reversible_last_two: bool, closure: bool) -> dict:
         if closure and i == 3:
             step["constraint"] = {
                 "kind": "thermodynamic_closure",
-                "source": "NIST Shomate polynomials for CO, O2, CO2",
+                # The tag names the exact vendored data an implementation must
+                # compute from -- a closure whose thermochemistry moved would
+                # otherwise put two computations on one artifact id. Two sources
+                # because dG(T) needs both: an enthalpy anchor AND S(T)/Cp(T);
+                # neither alone yields a dG at reaction temperature.
+                "source": "CODATA (Cox, Wagman et al. 1984) formation enthalpies "
+                          "+ NIST Shomate S(T), H(T)-H(298.15) for CO, O2, CO2 "
+                          "[gas-thermo-codata-shomate-2026-08-25]",
                 "notes": "The reverse constant is derived from the other nine plus the "
-                         "overall equilibrium constant, so it is not a free parameter.",
+                         "overall equilibrium constant. The adsorbate free energies "
+                         "cancel around the closure cycle, so the gas-phase tables "
+                         "anchor it and the fitted constants of the other reversible "
+                         "steps carry the adsorbate thermochemistry implicitly -- "
+                         "fitted, not looked up.",
             }
         steps.append(step)
     return {
