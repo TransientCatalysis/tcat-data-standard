@@ -275,14 +275,14 @@
       "additionalProperties": false
     },
     "censoring": {
-      "description": "A channel is CENSORED when its recorded value is a bound rather than a measurement. Spreadsheet and instrument pipelines routinely clamp a background-subtracted signal at zero, and the result is indistinguishable from a genuine zero once written to a CSV -- so a fit treats a clamp as an exact observation and every parameter it informs is biased toward the bound. Recording the bound makes the points identifiable; naming a flag_column makes them addressable point by point, which is what a likelihood needs in order to treat them as inequalities instead of equalities.",
+      "description": "A channel is CENSORED when its recorded value is a bound rather than a measurement. Spreadsheet and instrument pipelines routinely clamp a background-subtracted signal at zero, and the result is indistinguishable from a genuine zero once written to a CSV -- so a fit treats the clamp as an exact observation and every parameter it informs is pulled toward it, one-directionally, hardest where the true value is smallest.\n\nRead the bound as a statement about the ESTIMATOR, not about the quantity. A calibrated channel holds sensitivity x (signal - background), which is a noisy estimator of a physical quantity and not the quantity itself; its realisations fall below zero whenever the true value is near zero, and that is correct behaviour for an estimator rather than an impossible reading. `lower_bound` names the floor the data was clamped TO -- no recorded value lies below it -- and a value sitting on that floor says the estimate fell at or below it. Replacing such an estimate with the floor makes the channel a biased estimator of whatever a model predicts for it.\n\nRecording the bound makes the points identifiable; naming a flag_column makes them addressable point by point, which is what a likelihood needs in order to treat them as inequalities instead of equalities. Where the pre-clamp value is still recoverable upstream, re-deriving it is better than modelling the censoring: see `recoverable`.",
       "type": "object",
       "required": ["kind"],
       "properties": {
         "kind": {
           "type": "string",
           "enum": ["none", "left_clipped", "right_clipped", "interval"],
-          "description": "none is the honest default and says the question was considered. left_clipped: values at lower_bound mean 'at most this'. right_clipped: values at upper_bound mean 'at least this'. interval: both."
+          "description": "none is the honest default and says the question was considered. left_clipped: the data was clamped up to a floor, so a value sitting on lower_bound means the underlying estimate fell at or below it. right_clipped: clamped down to a ceiling, so a value on upper_bound means the estimate was at or above it. interval: both."
         },
         "lower_bound": {
           "type": "number",
