@@ -115,8 +115,10 @@
             "gaussian_heteroscedastic",
             "baseline_drift",
             "calibrated_estimate",
+            "exact",
             "unknown"
-          ]
+          ],
+          "description": "\"exact\" is for channels that carry no measurement noise because they are not measurements -- a censoring flag, a row counter, an index. It is distinct from an uncertainty `kind` of \"none\", which says a sigma is unavailable; this says there is none to have. Keeping them apart stops a bookkeeping column from being reported as a channel with missing uncertainty forever."
         },
         "parameters": {
           "type": "object",
@@ -255,17 +257,73 @@
         },
         "time_column": {
           "type": "string",
-          "description": "Name of the time channel this channel is sampled on, when channels do not share one. A scanning quadrupole MS visits its masses in sequence, so each species is timestamped at its own acquisition instant -- for a 5-mass scan at 283.82 ms the stagger is 56.76 ms per mass. Forcing those onto one time column would misdate every species but the first. The named column must itself be declared as a channel with quantity \"time\".",
+          "description": "Name of the time channel this channel is sampled on, when channels do not share one. A scanning quadrupole MS visits its masses in sequence, so each species is acquired at its own instant -- for a 5-mass scan at 283.82 ms the stagger is 56.76 ms per mass. Forcing those onto one time column would misdate every species but the first. Note that such a stamp is often DERIVED (one logged clock minus k * scan_speed / n_masses) rather than logged per mass; that makes it a model of the acquisition, not a measurement of it, and `notes` is the place to say which. The named column must itself be declared as a channel with quantity \"time\".",
           "examples": [
             "co_time_s",
             "o2_time_s"
           ]
+        },
+        "censoring": {
+          "$ref": "#/$defs/censoring",
+          "description": "Whether this channel's values are bounded by the processing that produced them rather than by the measurement."
         },
         "identifiers": {
           "$ref": "#/$defs/chemical_identifiers",
           "description": "Chemical identifiers for this channel's species. The DMSP commits to common chemical identifiers 'when available' for interoperability; free-text `species` is fine for a lab, and an identifier is what makes the channel joinable outside one."
         }
       },
+      "additionalProperties": false
+    },
+    "censoring": {
+      "description": "A channel is CENSORED when its recorded value is a bound rather than a measurement. Spreadsheet and instrument pipelines routinely clamp a background-subtracted signal at zero, and the result is indistinguishable from a genuine zero once written to a CSV -- so a fit treats a clamp as an exact observation and every parameter it informs is biased toward the bound. Recording the bound makes the points identifiable; naming a flag_column makes them addressable point by point, which is what a likelihood needs in order to treat them as inequalities instead of equalities.",
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["none", "left_clipped", "right_clipped", "interval"],
+          "description": "none is the honest default and says the question was considered. left_clipped: values at lower_bound mean 'at most this'. right_clipped: values at upper_bound mean 'at least this'. interval: both."
+        },
+        "lower_bound": {
+          "type": "number",
+          "description": "Required when kind is left_clipped or interval. Values equal to it are bounds, not measurements."
+        },
+        "upper_bound": {
+          "type": "number",
+          "description": "Required when kind is right_clipped or interval."
+        },
+        "flag_column": {
+          "type": "string",
+          "description": "Name of a companion channel holding 1 where this channel's value was censored and 0 where it was measured. Without it, censored points can only be found by comparing against the bound -- which silently also catches values that genuinely landed on it."
+        },
+        "fraction_censored": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Fraction of this channel's points that are censored. Cheap to compute at write time, and it is the number that tells a reader whether this is a footnote or the dominant feature of the data."
+        },
+        "recoverable": {
+          "type": "boolean",
+          "description": "Whether the pre-censoring value can still be recovered from an upstream artifact. True changes the remedy from 'model it' to 're-derive it'."
+        },
+        "notes": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "kind": { "enum": ["left_clipped", "interval"] } },
+            "required": ["kind"]
+          },
+          "then": { "required": ["lower_bound"] }
+        },
+        {
+          "if": {
+            "properties": { "kind": { "enum": ["right_clipped", "interval"] } },
+            "required": ["kind"]
+          },
+          "then": { "required": ["upper_bound"] }
+        }
+      ],
       "additionalProperties": false
     },
     "instrument": {

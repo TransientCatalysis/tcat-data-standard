@@ -71,6 +71,40 @@
                   "items": { "type": "number" },
                   "description": "Optional source-signal range over which this factor was determined. Extrapolating outside it is a judgement call that should be visible."
                 },
+                "pressure_normalization": {
+                  "type": "object",
+                  "description": "Correct this channel for drift in the analyser's own pressure before applying the sensitivity. A quadrupole's count rate tracks chamber pressure, so a sensitivity determined at one pressure misreads at another; the correction is referenced to the pressure at which the factor was determined.",
+                  "required": ["reference_pressure", "pressure_channel", "units"],
+                  "properties": {
+                    "reference_pressure": { "type": "number", "exclusiveMinimum": 0, "description": "Pressure at which `sensitivity` was determined." },
+                    "pressure_channel": { "type": "string", "description": "Name of the dataset channel carrying the measured analyser pressure." },
+                    "units": { "type": "string", "minLength": 1, "examples": ["Torr", "Pa"] },
+                    "form": {
+                      "type": "string",
+                      "enum": ["linear_scale", "ratio"],
+                      "default": "linear_scale",
+                      "description": "linear_scale: x * (1 + (p_ref - p)/p_ref), the first-order form legacy spreadsheets use. ratio: x * p_ref/p, exact proportionality. They agree to first order and diverge as p departs from p_ref, so which one was applied is not a detail."
+                    },
+                    "notes": { "type": "string" }
+                  },
+                  "additionalProperties": false
+                },
+                "baseline": {
+                  "type": "object",
+                  "description": "A baseline subtracted from this channel that depends on ANOTHER channel, plus a constant. Distinct from a cracking split: a split apportions a known fragmentation of one species onto another mass, whereas this absorbs whatever empirical, signal-tracking background a lab has fitted -- reagent impurity, detector artefact, flow-correlated offset. Keeping the two apart matters because a split is a property of the molecule and transfers between instruments, while a baseline is a property of this rig on this day and does not.",
+                  "required": ["intercept"],
+                  "properties": {
+                    "source_channel": { "type": "string", "description": "Channel whose signal drives the slope term. Omit for a constant-only baseline." },
+                    "slope": { "type": "number", "default": 0, "description": "Subtracted amount per unit of source_channel." },
+                    "intercept": { "type": "number", "description": "Constant subtracted." },
+                    "notes": { "type": "string" }
+                  },
+                  "additionalProperties": false
+                },
+                "floor": {
+                  "type": "number",
+                  "description": "Value below which the corrected signal is clamped. Declaring it here is what lets a dataset carry a matching `censoring` block instead of presenting clamped points as measurements. A calibration that clamps and does not say so is the failure this field exists to make impossible."
+                },
                 "notes": { "type": "string" }
               },
               "additionalProperties": false
@@ -81,6 +115,20 @@
             "description": "For kind = ms_fragmentation: the cracking pattern itself. Keys are \"<contributing species>-><affected channel>\", values the fraction of the contributor's signal appearing on that channel -- so \"CO2->CO\": 0.0883 means 8.83% of the CO2 signal lands on m/z 28. A partial pattern is legal and normal: labs measure the splits that matter to them, and a full matrix is the same shape grown. This is the artifact that fragmentation_matrix_ref points AT.",
             "minProperties": 1,
             "additionalProperties": { "type": "number" }
+          },
+          "declared_unused": {
+            "type": "object",
+            "description": "Coefficients an upstream export DECLARED but did not apply, keyed like `matrix`. Legacy spreadsheets accumulate these: a parameter cell is edited, the formula that once referenced it is replaced by a hard-coded literal, and the two drift apart with nothing to flag it. `matrix` must always carry what was actually applied -- that is what a re-derivation has to reproduce. This field exists so the declared value survives the discrepancy instead of being silently dropped, because which of the two is physically right is a question for the instrument's owner, not for whoever noticed.",
+            "minProperties": 1,
+            "additionalProperties": {
+              "type": "object",
+              "required": ["value", "reason"],
+              "properties": {
+                "value": { "type": "number" },
+                "reason": { "type": "string", "minLength": 1, "description": "How the discrepancy was established -- specific enough to re-check, e.g. which cell declared it and how many rows used something else." }
+              },
+              "additionalProperties": false
+            }
           },
           "fragmentation_matrix_ref": {
             "$ref": "defs/common.schema.json#/$defs/artifact_ref",

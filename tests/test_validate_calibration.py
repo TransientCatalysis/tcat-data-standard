@@ -112,3 +112,81 @@ def test_unknown_channel_fields_are_rejected(valid_calibration):
     doc = copy.deepcopy(valid_calibration)
     doc["entries"][0]["channels"]["m44"]["fudge"] = 1.02
     assert not validate_calibration(doc).ok
+
+
+# ------------------------------------------- the shape real MS calibration has
+
+
+def _first_channel(doc: dict) -> dict:
+    return next(iter(doc["entries"][0]["channels"].values()))
+
+
+def test_a_pressure_normalized_channel_validates(valid_calibration):
+    """A quadrupole's count rate tracks chamber pressure, so a sensitivity
+    determined at one pressure misreads at another. Real MS calibrations carry
+    the correction; the schema has to be able to express it."""
+    doc = copy.deepcopy(valid_calibration)
+    _first_channel(doc)["pressure_normalization"] = {
+        "reference_pressure": 8.017269059266212e-07,
+        "pressure_channel": "pressure_torr",
+        "units": "Torr",
+        "form": "linear_scale",
+    }
+    assert validate_calibration(doc).ok
+
+
+def test_pressure_normalization_must_name_the_channel_it_reads(valid_calibration):
+    doc = copy.deepcopy(valid_calibration)
+    _first_channel(doc)["pressure_normalization"] = {
+        "reference_pressure": 8.0e-07, "units": "Torr",
+    }
+    report = validate_calibration(doc)
+    assert not report.ok
+    assert "pressure_channel" in report.render()
+
+
+def test_a_signal_dependent_baseline_validates(valid_calibration):
+    """Distinct from a cracking split: a split is a property of the molecule and
+    transfers between instruments, a baseline is a property of this rig."""
+    doc = copy.deepcopy(valid_calibration)
+    _first_channel(doc)["baseline"] = {
+        "source_channel": "co_counts", "slope": 0.0016255058062666825,
+        "intercept": 104.29568912164723,
+    }
+    assert validate_calibration(doc).ok
+
+
+def test_a_declared_floor_is_surfaced_as_advice(valid_calibration):
+    """A calibration that clamps and does not say so is what makes a clamp
+    indistinguishable from a measurement three artifacts downstream."""
+    doc = copy.deepcopy(valid_calibration)
+    _first_channel(doc)["floor"] = 0.0
+    report = validate_calibration(doc)
+    assert report.ok
+    assert any("censoring block" in w.message for w in report.warnings)
+
+
+def test_a_declared_but_unapplied_coefficient_survives_and_warns(valid_calibration):
+    """The workbook this came from declares CO->O = 0.005905 in a parameter cell
+    and hard-codes 0.0106 in 33,498 of 33,528 formula rows. `matrix` must carry
+    what was applied; the declared value has to survive somewhere or the
+    discrepancy is lost the moment anyone transcribes the parameter block."""
+    doc = copy.deepcopy(valid_calibration)
+    entry = doc["entries"][0]
+    entry["matrix"] = {"CO->O": 0.0106}
+    entry["declared_unused"] = {
+        "CO->O": {"value": 0.005905,
+                  "reason": "declared at W2; referenced by 1 of 1118 formula rows"},
+    }
+    report = validate_calibration(doc)
+    assert report.ok
+    assert any("0.005905" in w.message for w in report.warnings)
+
+
+def test_a_declared_unused_entry_must_say_how_it_was_established(valid_calibration):
+    """'They disagree' is not a work item. Which cell, and how many rows, is."""
+    doc = copy.deepcopy(valid_calibration)
+    doc["entries"][0]["declared_unused"] = {"CO->O": {"value": 0.005905}}
+    report = validate_calibration(doc)
+    assert not report.ok
+    assert "reason" in report.render()

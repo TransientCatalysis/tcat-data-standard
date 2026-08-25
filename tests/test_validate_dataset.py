@@ -289,3 +289,98 @@ def test_report_renders_readably():
     text = validate_dataset(load("dataset-missing-batch-id.json"), source="x.json").render()
     assert text.startswith("FAIL")
     assert "batch_id" in text
+
+
+# --------------------------------------------------------------- censoring
+
+
+def _censored(valid_dataset, censoring: dict, *, add_flag=True) -> dict:
+    doc = copy.deepcopy(valid_dataset)
+    if add_flag:
+        doc["channels"]["m44_censored"] = {
+            "units": "1",
+            "quantity": "censoring_flag",
+            "uncertainty": {"kind": "none", "noise_model": {"family": "exact"}},
+        }
+    doc["channels"]["m44"]["censoring"] = censoring
+    return doc
+
+
+def test_a_censored_channel_is_valid(valid_dataset):
+    """Censoring is a legal, common state of real data. Declaring it must not
+    cost the declarer a validation failure, or nobody declares it."""
+    doc = _censored(valid_dataset, {
+        "kind": "left_clipped", "lower_bound": 0.0,
+        "flag_column": "m44_censored", "fraction_censored": 0.184,
+    })
+    assert validate_dataset(doc).ok
+
+
+def test_left_clipped_censoring_must_state_its_bound(valid_dataset):
+    """'Clipped' without the value clipped at is not actionable: a reader still
+    cannot tell which points are bounds."""
+    report = validate_dataset(_censored(valid_dataset, {"kind": "left_clipped"}))
+    assert not report.ok
+    assert "lower_bound" in report.render()
+
+
+def test_a_flag_column_naming_no_channel_is_an_error(valid_dataset):
+    """A dangling reference looks satisfied until something follows it, which is
+    exactly when it is most expensive to discover."""
+    doc = _censored(valid_dataset, {
+        "kind": "left_clipped", "lower_bound": 0.0, "flag_column": "not_a_channel",
+    }, add_flag=False)
+    report = validate_dataset(doc)
+    assert not report.ok
+    assert "not_a_channel" in report.render()
+
+
+def test_a_time_column_naming_no_channel_is_an_error(valid_dataset):
+    doc = copy.deepcopy(valid_dataset)
+    doc["channels"]["m44"]["time_column"] = "ghost_time_s"
+    report = validate_dataset(doc)
+    assert not report.ok
+    assert "ghost_time_s" in report.render()
+
+
+def test_censoring_without_a_flag_column_warns_but_does_not_fail(valid_dataset):
+    """Warnings never fail CI. The moment style advice can block a merge, people
+    stop running the validator locally."""
+    doc = _censored(valid_dataset, {"kind": "left_clipped", "lower_bound": 0.0},
+                    add_flag=False)
+    report = validate_dataset(doc)
+    assert report.ok
+    assert any("flag column" in w.message for w in report.warnings)
+
+
+def test_a_substantial_censored_fraction_is_surfaced(valid_dataset):
+    doc = _censored(valid_dataset, {
+        "kind": "left_clipped", "lower_bound": 0.0,
+        "flag_column": "m44_censored", "fraction_censored": 0.184,
+    })
+    report = validate_dataset(doc)
+    assert report.ok
+    assert any("18.4%" in w.message for w in report.warnings)
+
+
+def test_a_negligible_censored_fraction_is_not_surfaced(valid_dataset):
+    """Warning on every censored channel regardless of size would train readers
+    to ignore the warning that matters."""
+    doc = _censored(valid_dataset, {
+        "kind": "left_clipped", "lower_bound": 0.0,
+        "flag_column": "m44_censored", "fraction_censored": 0.001,
+    })
+    assert not any("bound rather than a measurement" in w.message
+                   for w in validate_dataset(doc).warnings)
+
+
+def test_an_exact_channel_is_not_nagged_about_missing_uncertainty(valid_dataset):
+    """A flag column has no sigma to be missing. Warning about it forever trains
+    readers to skip the warning that means a real measurement lost its."""
+    doc = copy.deepcopy(valid_dataset)
+    doc["channels"]["flag"] = {
+        "units": "1", "quantity": "censoring_flag",
+        "uncertainty": {"kind": "none", "noise_model": {"family": "exact"}},
+    }
+    warnings = validate_dataset(doc).warnings
+    assert not any(w.pointer == "/channels/flag/uncertainty" for w in warnings)

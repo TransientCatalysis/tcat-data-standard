@@ -251,6 +251,7 @@ def _structural_errors(document: Any, kind: str) -> list[Problem]:
             if p:
                 out.append(p)
         out.extend(_waveform_problems(document.get("protocol"), "/protocol"))
+        out.extend(_channel_reference_errors(document.get("channels")))
 
     if kind == "protocol":
         out.extend(_waveform_problems(document, ""))
@@ -260,6 +261,80 @@ def _structural_errors(document: Any, kind: str) -> list[Problem]:
         if p:
             out.append(p)
 
+    return out
+
+
+def _channel_reference_errors(channels: Any) -> list[Problem]:
+    """Channel fields that name another channel must name one that exists.
+
+    An error rather than advice, and deliberately not the same judgement as
+    `_time_base_advice`: that function warns when a channel names NO time
+    column, which is a gap a reader can see. This one catches a name that
+    resolves to nothing, which a reader cannot -- the reference looks satisfied
+    right up until something tries to follow it.
+    """
+    out: list[Problem] = []
+    if not isinstance(channels, dict):
+        return out
+
+    for name, ch in channels.items():
+        if not isinstance(ch, dict):
+            continue
+        referring = [("time_column", ch.get("time_column"))]
+        censoring = ch.get("censoring")
+        if isinstance(censoring, dict):
+            referring.append(("censoring/flag_column", censoring.get("flag_column")))
+        for field, target in referring:
+            if target is None:
+                continue
+            if target not in channels:
+                out.append(
+                    Problem(
+                        f"/channels/{name}/{field}",
+                        f"names channel {target!r}, which is not declared in "
+                        f"/channels (declared: {', '.join(sorted(channels)) or 'none'})",
+                    )
+                )
+    return out
+
+
+def _censoring_advice(channels: Any) -> list[Problem]:
+    """Advice about censored channels.
+
+    Advisory because a censored channel is legal and common -- the point is that
+    a reader, and a fitting tool, can see it. The fraction threshold exists
+    because censoring changes from a footnote to the dominant feature of a
+    dataset somewhere in this range, and nobody computes the number by hand.
+    """
+    out: list[Problem] = []
+    if not isinstance(channels, dict):
+        return out
+
+    for name, ch in channels.items():
+        if not isinstance(ch, dict):
+            continue
+        censoring = ch.get("censoring")
+        if not isinstance(censoring, dict) or censoring.get("kind") in (None, "none"):
+            continue
+        if not censoring.get("flag_column"):
+            out.append(
+                Problem(
+                    f"/channels/{name}/censoring/flag_column",
+                    "channel is censored but names no flag column, so censored points "
+                    "can only be found by comparing against the bound -- which also "
+                    "catches values that genuinely landed on it",
+                )
+            )
+        fraction = censoring.get("fraction_censored")
+        if isinstance(fraction, (int, float)) and fraction >= 0.05:
+            out.append(
+                Problem(
+                    f"/channels/{name}/censoring/fraction_censored",
+                    f"{fraction:.1%} of this channel is a bound rather than a "
+                    "measurement; a least-squares fit will treat every one of those "
+                    "as an exact observation unless it reads the censoring block",
+                )
+            )
     return out
 
 
@@ -342,7 +417,11 @@ def _advisory_checks(document: Any, kind: str, version: str) -> list[Problem]:
             )
         for name, ch in (document.get("channels") or {}).items():
             unc = (ch or {}).get("uncertainty") or {}
-            if unc.get("kind") == "none":
+            family = (unc.get("noise_model") or {}).get("family")
+            # An exact channel -- a flag, an index -- has no sigma to be missing.
+            # Warning about it forever would train readers to skip the warning
+            # that means a real measurement lost its uncertainty.
+            if unc.get("kind") == "none" and family != "exact":
                 out.append(
                     Problem(f"/channels/{name}/uncertainty", "channel declares no uncertainty")
                 )
@@ -351,9 +430,33 @@ def _advisory_checks(document: Any, kind: str, version: str) -> list[Problem]:
                     Problem(f"/channels/{name}/uncertainty/noise_model", "noise model is 'unknown'")
                 )
         out.extend(_time_base_advice(document.get("time_base"), document.get("channels")))
+        out.extend(_censoring_advice(document.get("channels")))
 
     if kind == "calibration":
         entries = document.get("entries") or []
+        for i, entry in enumerate(entries):
+            if not isinstance(entry, dict):
+                continue
+            for target, detail in (entry.get("declared_unused") or {}).items():
+                out.append(
+                    Problem(
+                        f"/entries/{i}/declared_unused/{target}",
+                        f"this export declared {target} = "
+                        f"{(detail or {}).get('value')!r} and applied something else; "
+                        "which value is physically right is a question for the "
+                        "instrument owner",
+                    )
+                )
+            for name, ch in (entry.get("channels") or {}).items():
+                if isinstance(ch, dict) and ch.get("floor") is not None:
+                    out.append(
+                        Problem(
+                            f"/entries/{i}/channels/{name}/floor",
+                            f"clamps at {ch['floor']!r}; datasets derived through it should "
+                            "carry a matching censoring block on this channel, or the clamp "
+                            "becomes indistinguishable from a measurement downstream",
+                        )
+                    )
         stamps = [e.get("valid_from") for e in entries if isinstance(e, dict)]
         if stamps != sorted(stamps):
             out.append(Problem("/entries", "entries are not in ascending valid_from order"))
