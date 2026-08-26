@@ -72,6 +72,7 @@ KINDS = (
     "model-spec",
     "publication",
     "spoke",
+    "campaign",
 )
 
 

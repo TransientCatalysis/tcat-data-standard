@@ -493,6 +493,36 @@ def build_model(ensemble_ref: str, dataset_id: str) -> dict:
     }
 
 
+def build_campaign(dataset_id: str, model_id: str) -> dict:
+    """A synthetic campaign record: the STUDY as a registrable object.
+
+    Tools produce artifacts; provenance explains each one; the campaign is the
+    composition -- these datasets, these competing fits, this designed next
+    experiment, held together by the question they answer. Members use the same
+    {ref, kind, role} shape as publication.artifacts, deliberately, so one
+    reference-checking implementation covers both.
+    """
+    return {
+        "schema_version": "0.1.0",
+        "campaign_id": "example-synthetic-prbs",
+        "title": "SYNTHETIC EXAMPLE -- not a real study",
+        "description": "Can the synthetic PRBS trace determine the two-site "
+                       "model's constants? Exists to exercise the schema.",
+        "status": "active",
+        "milestone": "M3",
+        "spokes": ["tcat-data-standard (examples)", "tcat-analysis"],
+        "artifacts": [
+            {"ref": dataset_id, "kind": "dataset", "role": "measured campaign"},
+            {"ref": model_id, "kind": "model", "role": "baseline fit"},
+            {"ref": SAMPLE_ID, "kind": "sample", "role": "catalyst"},
+            {"ref": "10.5281/zenodo.0000000", "kind": "external",
+             "role": "reference dataset",
+             "notes": "External members are named, never implied."},
+        ],
+        "notes": "SYNTHETIC. Every id here points at the sibling examples.",
+    }
+
+
 def build_publication(dataset_id: str, model_id: str) -> dict:
     """A synthetic publication record, showing the traceability direction.
 
@@ -832,6 +862,7 @@ def main() -> None:
     spec_reversible_full = build_model_spec_reversible_full()
     spec_eley_rideal = build_model_spec_eley_rideal()
     model = build_model(ensemble_ref, dataset["dataset_id"])
+    campaign = build_campaign(dataset["dataset_id"], model["model_id"])
     publication = build_publication(dataset["dataset_id"], model["model_id"])
 
     for name, doc in (
@@ -845,6 +876,7 @@ def main() -> None:
         ("model-spec-co-ox-reversible-full.json", spec_reversible_full),
         ("model-spec-co-ox-eley-rideal.json", spec_eley_rideal),
         ("publication-example.json", publication),
+        ("campaign-example.json", campaign),
     ):
         (HERE / name).write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
         print(f"wrote examples/{name}")

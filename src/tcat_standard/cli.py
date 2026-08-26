@@ -48,6 +48,7 @@ _DIR_KIND = {
     "specs": "model-spec",
     "mechanisms": "model-spec",
     "publications": "publication",
+    "campaigns": "campaign",
     "artifacts": "provenance",
     "datasets": "dataset",
 }
@@ -114,6 +115,8 @@ def _infer_kind(
         return "model-spec"
     if "publication_id" in doc:
         return "publication"
+    if "campaign_id" in doc:
+        return "campaign"
     if "artifact_id" in doc and "tool" in doc:
         return "provenance"
     if "sample_id" in doc and "dataset_id" not in doc:

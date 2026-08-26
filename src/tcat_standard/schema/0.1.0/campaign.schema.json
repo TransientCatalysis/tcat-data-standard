@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://transientcatalysis.github.io/tcat-data-standard/schema/0.1.0/campaign.schema.json",
+  "title": "Campaign",
+  "description": "A named study: the set of artifacts that together answer one question. Tools produce artifacts and provenance chains explain each one, but the STUDY -- these datasets, these calibrations, these competing fits, this designed next experiment, as one unit with a goal -- was previously nobody's record; it existed only as whatever a pipeline script happened to do. A campaign record makes the composition itself registrable, checkable, and diagrammable. DRAFT (2026-08): added on the real-data-revision branch for the September meeting to accept or overrule, alongside the other changes the real data forced.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "campaign_id",
+    "title",
+    "status",
+    "artifacts"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "The schema version this document was written against."
+    },
+    "campaign_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$",
+      "description": "Stable, human-chosen identifier, e.g. 'coox-b29-prbs'. Not content-addressed: a campaign accretes members over its life, and its identity is the QUESTION, not the bytes."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable name of the study."
+    },
+    "description": {
+      "type": "string",
+      "description": "What question this campaign exists to answer, in a sentence or two."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "planned",
+        "active",
+        "complete",
+        "abandoned"
+      ],
+      "description": "abandoned is a legal, honest state; deleting the record of a study that fizzled is how the same dead end gets explored twice."
+    },
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The campaign's members, each with the role it plays. Same shape as publication.artifacts, deliberately: one referencing convention means one implementation of reference-checking (tcat-index's referenced_ids) covers both. List the ROOTS -- fits, designs, reports; their full lineage is reachable through provenance and does not need re-listing.",
+      "items": {
+        "type": "object",
+        "required": [
+          "ref",
+          "role"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "ref": {
+            "type": "string",
+            "description": "An artifact id, an art:// reference, a dataset_id, or a model_id."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "artifact",
+              "dataset",
+              "sample",
+              "model",
+              "calibration",
+              "ensemble",
+              "protocol",
+              "external"
+            ],
+            "description": "Which registry to resolve `ref` against. 'external' names something outside this project, which must still be named rather than implied."
+          },
+          "role": {
+            "type": "string",
+            "minLength": 1,
+            "description": "What this member IS to the campaign: 'baseline fit', 'topology control', 'designed next experiment'. Free text; the roles are the campaign's own vocabulary."
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "milestone": {
+      "type": "string",
+      "description": "The project milestone this campaign serves, e.g. 'M3', when there is one."
+    },
+    "spokes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "The repositories whose data and tools this campaign runs on, e.g. ['tcat-data-psu-coox', 'tcat-analysis-coox']. Informational; the authoritative per-artifact attribution is provenance tool.spoke."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Anything a future reader needs that no structured field carries."
+    },
+    "extensions": {
+      "$ref": "defs/common.schema.json#/$defs/extensions"
+    }
+  }
+}

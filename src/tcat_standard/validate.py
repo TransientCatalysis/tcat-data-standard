@@ -682,6 +682,7 @@ validate_model = _validate_kind("model")
 validate_model_spec = _validate_kind("model-spec")
 validate_publication = _validate_kind("publication")
 validate_spoke = _validate_kind("spoke")
+validate_campaign = _validate_kind("campaign")
 
 
 def validate_file(path: str | Path, kind: str, *, version: str | None = None) -> ValidationReport:
