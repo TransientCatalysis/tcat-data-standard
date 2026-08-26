@@ -386,6 +386,47 @@
     },
     "extensions": {
       "$ref": "defs/common.schema.json#/$defs/extensions"
+    },
+    "thermodynamics": {
+      "type": "object",
+      "description": "OPTIONAL, and it changes what the free parameters ARE. When present with parameterisation 'arrhenius-detailed-balance', the specification's free parameters are physical: (log10A, Ea) per step and (dH_ads, dS_ads) per adsorbate; every reverse rate constant follows from detailed balance against the named gas-phase thermochemistry, and a conforming fit treats all provided runs JOINTLY across temperature. This block lives in the SPECIFICATION because the parameterisation is a property of the hypothesis, not of the fitting code -- switching between per-temperature and thermodynamically-consistent treatments is a different spec id, not a different tool. DRAFT (2026-08): real-data-revision branch, for the September meeting.",
+      "required": [
+        "parameterisation",
+        "gas_parents",
+        "gas_data_source"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "parameterisation": {
+          "type": "string",
+          "enum": [
+            "arrhenius-detailed-balance"
+          ],
+          "description": "The only implemented value. Per-temperature fitting is the ABSENCE of this block, not an enum value -- a spec without it keeps today's meaning unchanged."
+        },
+        "gas_parents": {
+          "type": "object",
+          "description": "Per adsorbate: the gas species (with stoichiometry) its formation enthalpy and entropy are measured RELATIVE to, e.g. {'CO*': {'CO': 1}, 'O*': {'O2': 0.5}}. The parent choice defines what dH_ads MEANS, so it is specification content; implementations must check it balances the adsorbate's declared composition.",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          }
+        },
+        "gas_data_source": {
+          "type": "string",
+          "description": "The tag of the vendored gas-phase thermochemistry the closure computes from, e.g. 'gas-thermo-codata-shomate-2026-08-25'. Hashed into every fit through this document's artifact id; an implementation whose vendored data does not match must refuse."
+        },
+        "pressure_Pa": {
+          "type": "number",
+          "description": "Reactor pressure for the mole-fraction/standard-state correction. Default 101325."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Anything else a reader needs about the thermodynamic treatment."
+        }
+      }
     }
   },
   "allOf": [

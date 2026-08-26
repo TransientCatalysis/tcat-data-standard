@@ -523,6 +523,60 @@ def build_campaign(dataset_id: str, model_id: str) -> dict:
     }
 
 
+def build_model_spec_thermo() -> dict:
+    """The thermodynamically consistent variant: physical parameters, joint fit.
+
+    Same five-step network as the fully reversible spec, but the free
+    parameters are (log10A, Ea) per step and (dH_ads, dS_ads) per adsorbate;
+    every reverse constant follows from detailed balance against the named
+    gas-phase source, and a conforming fit treats all runs JOINTLY across
+    temperature. Entropy of adsorption is bounded NON-POSITIVE -- physics as a
+    bound, not a preference. Switching to or from this treatment is a
+    different spec id, never a different tool.
+    """
+    step_bounds = {"log10A": [-2.0, 12.0], "Ea": [0.0, 250.0]}
+    ads_bounds = {"dH": [-300.0, 50.0], "dS": [-250.0, 0.0]}
+    free = []
+    for i in range(1, 6):
+        free.append({"name": f"log10A_k{i}", "units": "log10(1/s or 1/(mol_frac s))",
+                     "bounds": step_bounds["log10A"]})
+        free.append({"name": f"Ea_k{i}", "units": "kJ/mol",
+                     "bounds": step_bounds["Ea"]})
+    for ads in ("CO*", "O2*", "O*", "CO2*"):
+        free.append({"name": f"dH_{ads}", "units": "kJ/mol", "bounds": ads_bounds["dH"],
+                     "description": f"Adsorption enthalpy of {ads} relative to its gas parent."})
+        free.append({"name": f"dS_{ads}", "units": "J/(mol K)", "bounds": ads_bounds["dS"],
+                     "description": "Non-positive by physics: adsorption loses entropy."})
+    return {
+        "schema_version": "0.1.0",
+        "spec_id": "co-ox-5step-thermo-consistent",
+        "family": "microkinetic",
+        "name": "CO oxidation, five-step LH, thermodynamically consistent joint fit",
+        "description": "Arrhenius forward constants and fitted adsorption "
+                       "thermochemistry; every reverse from detailed balance. "
+                       "One model across all campaign temperatures.",
+        "derived_from": "art://spec-co-ox-5step-irreversible-45-2026-09-01-000000",
+        "derivation": "reparameterised in (log10A, Ea, dH_ads, dS_ads); all five steps reversible via detailed balance",
+        "parameter_transform": "none",
+        "thermodynamics": {
+            "parameterisation": "arrhenius-detailed-balance",
+            "gas_parents": {"CO*": {"CO": 1}, "O2*": {"O2": 1},
+                            "O*": {"O2": 0.5}, "CO2*": {"CO2": 1}},
+            "gas_data_source": "gas-thermo-codata-shomate-2026-08-25",
+            "pressure_Pa": 101325.0,
+            "notes": "Gas tables cancel out of every pure adsorption step and "
+                     "enter once, as the overall reaction dG(T).",
+        },
+        "mechanism": _co_ox_mechanism(reversible_last_two=True, closure=False),
+        "free_parameters": free,
+        "reaction_system": "CO oxidation",
+        "access_status": "public",
+        "license": "CC-BY-4.0",
+        "notes": "The physical constants this project is ultimately after (M9) "
+                 "are these parameters, not per-temperature rate constants.",
+    }
+
+
 def build_publication(dataset_id: str, model_id: str) -> dict:
     """A synthetic publication record, showing the traceability direction.
 
@@ -862,6 +916,7 @@ def main() -> None:
     spec_reversible_full = build_model_spec_reversible_full()
     spec_eley_rideal = build_model_spec_eley_rideal()
     model = build_model(ensemble_ref, dataset["dataset_id"])
+    spec_thermo = build_model_spec_thermo()
     campaign = build_campaign(dataset["dataset_id"], model["model_id"])
     publication = build_publication(dataset["dataset_id"], model["model_id"])
 
@@ -875,6 +930,7 @@ def main() -> None:
         ("model-spec-co-ox-reversible.json", spec_reversible),
         ("model-spec-co-ox-reversible-full.json", spec_reversible_full),
         ("model-spec-co-ox-eley-rideal.json", spec_eley_rideal),
+        ("model-spec-co-ox-thermo.json", spec_thermo),
         ("publication-example.json", publication),
         ("campaign-example.json", campaign),
     ):
