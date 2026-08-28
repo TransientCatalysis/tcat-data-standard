@@ -106,7 +106,17 @@
         "O2": 0.05,
         "He": 0.93
       },
-      "catalyst_mass_g": 0.0502
+      "catalyst_mass_g": 0.0502,
+      "bed": {
+        "length_mm": 10.0,
+        "diameter_mm": 4.0,
+        "void_fraction": 0.6,
+        "particle_diameter_um": 100.0,
+        "catalyst_density_kg_per_m3": 2000.0,
+        "site_density_umol_per_g": 6.0,
+        "source": "SYNTHETIC, chosen to be plausible for a lab microreactor.",
+        "notes": "Present so the axial reactor model has something to run against in the examples. A real record must state where each number was measured -- for the CO-oxidation campaigns they existed only inside analysis code, which is the gap this block closes."
+      }
     },
     "time_base": {
       "t0": "2026-09-01T14:03:00Z",

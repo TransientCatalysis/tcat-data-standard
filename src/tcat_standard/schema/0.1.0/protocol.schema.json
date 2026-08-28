@@ -33,7 +33,24 @@
           "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 }
         },
         "catalyst_mass_g": { "type": "number", "exclusiveMinimum": 0 },
-        "bed_volume_cm3": { "type": "number", "exclusiveMinimum": 0 }
+        "bed_volume_cm3": { "type": "number", "exclusiveMinimum": 0 },
+        "bed": {
+          "type": "object",
+          "description": "Packed-bed geometry. MEASURED, so it belongs to the experiment rather than to any model -- but a reactor model cannot be evaluated without it, and none of it existed in any record before: for the CO-oxidation campaigns these numbers lived only in PSU's MATLAB drivers, which is also why the analysis spoke's residence-time bound had no traceable input. `bed_volume_cm3` above is kept and unused; state length and diameter instead, which determine it and also the velocity. DRAFT (2026-08): axial-PDE branch, for the September meeting.",
+          "additionalProperties": false,
+          "properties": {
+            "length_mm": { "type": "number", "exclusiveMinimum": 0, "description": "Packed length of the bed along the flow direction." },
+            "diameter_mm": { "type": "number", "exclusiveMinimum": 0, "description": "Internal diameter of the tube." },
+            "void_fraction": { "type": "number", "exclusiveMinimum": 0, "maximum": 1, "description": "Gas volume fraction. COMPUTE it from the loaded masses and densities rather than quoting a handbook value: a bed diluted with wool is far more open than a packed one, and the reference implementation's own driver carries a commented-out literal from an undiluted bed that is wrong here by half the gas holdup." },
+            "particle_diameter_um": { "type": "number", "exclusiveMinimum": 0, "description": "Effective particle diameter. For a physical mixture, the volume-weighted harmonic mean of the components' diameters -- the average that preserves specific surface, which is what the dispersion correlation's mechanical term scales with." },
+            "diluent": { "type": "string", "description": "What the catalyst is dispersed in, e.g. 'aluminium wool', 'quartz wool'. It usually dominates the bed volume, so it sets the void fraction and the residence time." },
+            "diluent_density_kg_per_m3": { "type": "number", "exclusiveMinimum": 0 },
+            "catalyst_density_kg_per_m3": { "type": "number", "exclusiveMinimum": 0 },
+            "site_density_umol_per_g": { "type": "number", "exclusiveMinimum": 0, "description": "Active sites per gram, from a named measurement -- record the method in the sample's `properties`. Under an axial reactor model this is NOT fitted: it sets the coupling between surface rate and gas, so the scale factor a gradientless fit leaves degenerate with the desorption constant comes from here instead." },
+            "source": { "type": "string", "description": "Where these values came from, when it is not the instrument export. Anything transcribed out of analysis code rather than measured into a record should say so here." },
+            "notes": { "type": "string" }
+          }
+        }
       },
       "additionalProperties": true
     },

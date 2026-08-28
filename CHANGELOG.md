@@ -3,6 +3,56 @@
 Package and schema versions move together in 0.x. They will decouple once the
 schema stabilises and the validator keeps changing without it.
 
+## Unreleased — 2026-08-27
+
+The reactor model. Forced by reading milestone M3 closely: it says *reproduce the
+published PSU CO-oxidation fit within stated uncertainty*, PSU's fit is a
+one-dimensional axially-dispersed packed bed at 101 nodes, and every `model-spec`
+written against this schema so far describes what reacts and is silent about where.
+A rate constant is not portable between a bed and a point, so with the reactor
+unstated the milestone could not be evaluated — a disagreement would be
+unattributable between the fit and the reactor. Both blocks below are additive and
+optional; **no existing document changes meaning, and no existing artifact id
+changes** (checked: the three shipped model-spec examples hash identically before
+and after).
+
+- **`reactor` block on `model-spec`.** Optional. Its absence is the gradientless
+  treatment — catalyst sees one gas composition, gas is an input rather than a
+  state, observable is a per-site rate times a fitted scale — which is what a spec
+  without it has always meant. With `kind: axially-dispersed-packed-bed` the gas
+  becomes a state with an axial coordinate and the observable becomes the outlet
+  composition. Carries the discretisation (`nodes`, `convection`, `outlet`,
+  `velocity`), the correlation-set tag it was fitted against, and how the unlogged
+  inlet is reconstructed.
+
+  It lives in the *specification* rather than in a capability registry for the
+  reason `thermodynamics` does: the treatment is a property of the hypothesis, not
+  of the fitting code, so it must be hashed through input 0. And a registry entry is
+  a bare name — it could not carry the node count or the stencil, and a hashed name
+  beside unhashed numbers is the failure `CONTRACT.md` §2 calls the worst one
+  available.
+
+- **`bed` block on the protocol's `base_conditions`.** Packed length, diameter, void
+  fraction, effective particle diameter, diluent and densities, site density. This
+  is measured geometry and belongs to the experiment, not to the model — but a
+  reactor model cannot run without it, and for the CO-oxidation campaigns **it
+  existed nowhere in any record**: the numbers lived only inside PSU's MATLAB
+  drivers. `bed_volume_cm3` already existed and was used by none of the 32 records;
+  it is kept, and length and diameter are preferable because they also fix the
+  velocity.
+
+  The `void_fraction` description says to compute it from the loaded masses rather
+  than quote a handbook figure, which is not pedantry: the reference driver carries
+  a commented-out `0.5716` from an undiluted bed above the line that computes
+  `0.853` for the wool-diluted one, and taking the literal would put the gas holdup
+  out by half.
+
+Both are DRAFT on branch `axial-PDE`, for the September meeting to accept or
+overrule. `SPEC-DELTAS.md` deltas 34–35 carry the evidence, including what the
+implementation measured: the axial CO\* gradient is about 0.4 of a monolayer across
+the bed at the peak of a pulse, and modelling the velocity as constant leaves the
+outlet oxygen response wrong by 3.96% of its range against 0.18%.
+
 ## Unreleased — 2026-08-24
 
 First contact with real data. Every change below was forced by a specific thing

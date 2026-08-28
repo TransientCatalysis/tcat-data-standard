@@ -153,6 +153,20 @@ def build_protocol(n_samples: int) -> dict:
             "carrier": "He",
             "feed_mol_frac": {"O2": 0.05, "He": 0.93},
             "catalyst_mass_g": 0.0502,
+            "bed": {
+                "length_mm": 10.0,
+                "diameter_mm": 4.0,
+                "void_fraction": 0.60,
+                "particle_diameter_um": 100.0,
+                "catalyst_density_kg_per_m3": 2000.0,
+                "site_density_umol_per_g": 6.0,
+                "source": "SYNTHETIC, chosen to be plausible for a lab microreactor.",
+                "notes": "Present so the axial reactor model has something to run "
+                         "against in the examples. A real record must state where "
+                         "each number was measured -- for the CO-oxidation campaigns "
+                         "they existed only inside analysis code, which is the gap "
+                         "this block closes.",
+            },
         },
         "time_base": {"t0": T0, "dt_s": DT_S, "n_samples": n_samples},
         "notes": (
@@ -523,6 +537,79 @@ def build_campaign(dataset_id: str, model_id: str) -> dict:
     }
 
 
+def build_model_spec_axial() -> dict:
+    """The same five-step network, fitted in a bed instead of at a point.
+
+    Everything about the mechanism is identical to the fully reversible spec; the
+    only difference is the `reactor` block, and that is the point. A constant fitted
+    under a gradientless model is not the same quantity as one fitted under a
+    dispersed plug-flow model, so the two have to be different spec ids -- otherwise
+    two incomparable fits could collide on one artifact id.
+
+    Two consequences show up in `free_parameters`. The gas activity is a PARTIAL
+    PRESSURE here rather than a mole fraction, because that is the basis the
+    reference implementation's constants are quoted on and the units of every
+    adsorption constant depend on it. And there is no scale factor: a gradientless
+    fit needs one and cannot separate it from k5, while a bed model gets it from the
+    measured site density in the protocol's `bed` block.
+    """
+    names = ["k1", "k_1", "k2", "k_2", "k3", "k_3", "k4", "k_4", "k5", "k_5"]
+    free = []
+    for n in names:
+        adsorption = n in ("k1", "k2", "k_5")
+        free.append({
+            "name": n,
+            "units": "log10(mol/(kg s Pa))" if adsorption else "log10(mol/(kg s))",
+            "bounds": [-12.0, 6.0],
+            "description": ("Per kilogram of catalyst, on a partial-pressure basis -- "
+                            "the reference implementation's units, so that fitted "
+                            "values are directly comparable with its published ones."),
+        })
+    return {
+        "schema_version": "0.1.0",
+        "spec_id": "co-ox-5step-axial-dispersed",
+        "family": "microkinetic",
+        "name": "CO oxidation, five-step LH, axially-dispersed packed bed",
+        "description": "The five-step network in a one-dimensional dispersed bed: "
+                       "gas is a state with an axial coordinate, the observable is "
+                       "the outlet composition, and the site count comes from the "
+                       "bed rather than from a fitted scale factor.",
+        "derived_from": "art://spec-co-ox-5step-reversible-full-2026-09-01-000000",
+        "derivation": "same mechanism, evaluated in an axially-dispersed packed bed "
+                      "rather than a gradientless point reactor",
+        "parameter_transform": "log10",
+        "reactor": {
+            "kind": "axially-dispersed-packed-bed",
+            "nodes": 21,
+            "convection": "upwind2",
+            "outlet": "psu",
+            "velocity": "psu-variable",
+            "dispersion": "edwards-richardson-fuller-wilke",
+            "inlet_reconstruction": {
+                "method": "tracer-shift",
+                "tracer": "Ar",
+                "notes": "The valve schedule is not logged, so the inlet is recovered "
+                         "from the co-fed inert tracer displaced by one empty-bed "
+                         "residence time. Section 1.4 asks the rig to log the "
+                         "schedule, which would let this become 'declared'.",
+            },
+            "notes": "21 nodes rather than the reference's 101: the outlet is "
+                     "converged there with a second-order upwind stencil, and the "
+                     "binding constraint is the timestep, not the grid. Note the "
+                     "explicit expansion correction carries a Courant condition, so "
+                     "REFINING the grid at fixed dt can destabilise it.",
+        },
+        "mechanism": _co_ox_mechanism(reversible_last_two=True, closure=False,
+                                      activity_basis="partial_pressure"),
+        "free_parameters": free,
+        "reaction_system": "CO oxidation",
+        "access_status": "public",
+        "license": "CC-BY-4.0",
+        "notes": "DRAFT (2026-08), axial-PDE branch. The reactor block is what the "
+                 "September meeting is being asked to accept or overrule.",
+    }
+
+
 def build_model_spec_thermo() -> dict:
     """The thermodynamically consistent variant: physical parameters, joint fit.
 
@@ -653,7 +740,8 @@ _CO_OX_ER_STEPS = [
 ]
 
 
-def _co_ox_mechanism(reversible_last_two: bool, closure: bool) -> dict:
+def _co_ox_mechanism(reversible_last_two: bool, closure: bool,
+                     activity_basis: str = "mole_fraction") -> dict:
     steps = []
     for i, (equation, name) in enumerate(_CO_OX_STEPS):
         step = {
@@ -690,7 +778,10 @@ def _co_ox_mechanism(reversible_last_two: bool, closure: bool) -> dict:
             {"name": "CO2*", "site": "*", "composition": {"C": 1, "O": 2}},
         ],
         "steps": steps,
-        "activity_basis": "mole_fraction",
+        # The basis is part of the mechanism because it fixes the UNITS of every
+        # rate constant that touches a gas species. The axial variant declares
+        # partial pressure so its constants are comparable with the reference's.
+        "activity_basis": activity_basis,
         "gas_constant_J_per_mol_K": 8.314,
     }
 
@@ -917,6 +1008,7 @@ def main() -> None:
     spec_eley_rideal = build_model_spec_eley_rideal()
     model = build_model(ensemble_ref, dataset["dataset_id"])
     spec_thermo = build_model_spec_thermo()
+    spec_axial = build_model_spec_axial()
     campaign = build_campaign(dataset["dataset_id"], model["model_id"])
     publication = build_publication(dataset["dataset_id"], model["model_id"])
 
@@ -931,6 +1023,7 @@ def main() -> None:
         ("model-spec-co-ox-reversible-full.json", spec_reversible_full),
         ("model-spec-co-ox-eley-rideal.json", spec_eley_rideal),
         ("model-spec-co-ox-thermo.json", spec_thermo),
+        ("model-spec-co-ox-axial.json", spec_axial),
         ("publication-example.json", publication),
         ("campaign-example.json", campaign),
     ):

@@ -427,6 +427,89 @@
           "description": "Anything else a reader needs about the thermodynamic treatment."
         }
       }
+    },
+    "reactor": {
+      "type": "object",
+      "description": "OPTIONAL, and it changes what the MODEL PREDICTS. Its absence is the gradientless treatment -- the catalyst sees one gas composition, there is no axial coordinate, and the observable is a per-site rate times a fitted scale -- which is what a spec without this block has always meant, unchanged. When present with kind 'axially-dispersed-packed-bed', the gas becomes a STATE with a spatial coordinate, the model predicts outlet mole fractions rather than a scaled rate, and the site-count scale factor stops being a free parameter because the bed supplies it. This block lives in the SPECIFICATION and not in a capability registry for two reasons. A rate constant fitted under one reactor model is not the same quantity as one fitted under another, so the reactor is part of what the hypothesis asserts and has to be hashed with it. And a registry entry is a bare name: it could not carry the node count or the discretisation, and a hashed name beside unhashed numbers is the failure mode CONTRACT.md section 2 calls the worst one available. Bed GEOMETRY is deliberately NOT here -- that is measured, belongs to the experiment, and rides on the protocol's `bed` block. DRAFT (2026-08): axial-PDE branch, for the September meeting.",
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "axially-dispersed-packed-bed"
+          ],
+          "description": "The only implemented value. The gradientless treatment is the ABSENCE of this block, not an enum value, so no existing specification changes meaning."
+        },
+        "nodes": {
+          "type": "integer",
+          "minimum": 3,
+          "description": "Axial nodes, inlet included. Hashed: it is a discretisation choice that moves the answer. The reference implementation uses 101; on the B29 bed the outlet is converged by about 21 with a second-order upwind scheme, and the binding constraint is the timestep rather than the grid."
+        },
+        "convection": {
+          "type": "string",
+          "enum": [
+            "upwind2",
+            "upwind1",
+            "centred"
+          ],
+          "description": "Convective stencil. 'upwind2' is the reference implementation's. 'upwind1' adds numerical dispersion of u*dz/2, which competes with the physical coefficient on a coarse grid -- available so that can be measured rather than argued."
+        },
+        "outlet": {
+          "type": "string",
+          "enum": [
+            "psu",
+            "convective"
+          ],
+          "description": "Outlet closure. Both hold dC/dz = 0 in the dispersion term. 'psu' additionally drops the convective term in the last cell, reproducing the reference exactly -- that cell then has no outflow, so it is not conservative, though a uniform field still satisfies it and both closures share a steady state. 'convective' keeps the outflow."
+        },
+        "velocity": {
+          "type": "string",
+          "enum": [
+            "psu-variable",
+            "frozen"
+          ],
+          "description": "Whether the superficial velocity responds to the injector pulse. Opening the injector raises the total molar flow and dilutes the carrier, so 'frozen' does not merely blur the oxygen response, it removes most of it. Hashed because it changes the prediction, not the cost."
+        },
+        "dispersion": {
+          "type": "string",
+          "enum": [
+            "edwards-richardson-fuller-wilke"
+          ],
+          "description": "Tag for the correlation set the axial dispersion coefficient is computed from: tortuosity-corrected molecular diffusion plus a mechanical term at particle Peclet 2, with Fuller binary diffusivities combined by Wilke's rule. Named rather than numeric because it is computed, not fitted -- and an implementation whose correlations differ must refuse rather than compute something else under this document's id."
+        },
+        "inlet_reconstruction": {
+          "type": "object",
+          "description": "How the unlogged inlet is recovered. Part of the hypothesis: the inlet is an input to every fitted constant, so two reconstructions are not comparable fits.",
+          "required": [
+            "method"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "method": {
+              "type": "string",
+              "enum": [
+                "tracer-shift",
+                "declared"
+              ],
+              "description": "'tracer-shift' recovers the inlet from a co-fed inert tracer displaced by one empty-bed residence time -- exact for plug flow, approximate in a dispersing bed, and what the reference does. 'declared' uses a logged valve schedule, which is what section 1.4 asks the reactor to start recording and would retire this whole block."
+            },
+            "tracer": {
+              "type": "string",
+              "description": "The inert species co-fed with the pulsed stream, e.g. 'Ar'. A tracer in the CARRIER measures nothing about the switching."
+            },
+            "notes": {
+              "type": "string"
+            }
+          }
+        },
+        "notes": {
+          "type": "string",
+          "description": "Anything else a reader needs about the reactor treatment."
+        }
+      }
     }
   },
   "allOf": [
