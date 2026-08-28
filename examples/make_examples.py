@@ -610,6 +610,167 @@ def build_model_spec_axial() -> dict:
     }
 
 
+def _axial_reactor(rate_basis: str, note: str) -> dict:
+    """The reactor block shared by the axial spec family.
+
+    One function so the family stays a FAMILY: same bed treatment, same
+    discretisation, differing only in mechanism and units. A drifted copy here
+    would be two subtly different reactors under similar-looking names, which is
+    exactly the ambiguity the block exists to remove.
+    """
+    return {
+        "kind": "axially-dispersed-packed-bed",
+        "nodes": 21,
+        "convection": "upwind2",
+        "outlet": "psu",
+        "velocity": "psu-variable",
+        "dispersion": "edwards-richardson-fuller-wilke",
+        "rate_basis": rate_basis,
+        "inlet_reconstruction": {
+            "method": "tracer-shift",
+            "tracer": "Ar",
+        },
+        "notes": note,
+    }
+
+
+def build_model_spec_axial_irreversible() -> dict:
+    """Notebook 1's baseline mechanism, in the bed. The one-variable A/B.
+
+    Same eight constants, same bounds, same mole-fraction basis, and per-site
+    rates -- so every fitted constant is UNIT-IDENTICAL to the gradientless
+    baseline's and the comparison between the two reactors is a subtraction,
+    not a conversion. What disappears is the fitted scale factor: the bed's
+    measured site density supplies the coupling the gradientless fit had to
+    estimate, which also removes its documented degeneracy with k5.
+    """
+    return {
+        "schema_version": "0.1.0",
+        "spec_id": "co-ox-5step-irrev-axial",
+        "family": "microkinetic",
+        "name": "CO oxidation, five-step LH, irreversible steps 4-5, axial bed",
+        "description": (
+            "The eight-constant irreversible network evaluated in a "
+            "one-dimensional axially-dispersed packed bed. Identical hypothesis "
+            "to co-ox-5step-irreversible-45 except for where it reacts."
+        ),
+        "derived_from": "art://" + "spec-co-ox-5step-irreversible-45-2026-09-01-000000",
+        "derivation": "same mechanism, evaluated in an axially-dispersed packed bed",
+        "parameter_transform": "log10",
+        "reactor": _axial_reactor(
+            "per-site",
+            "Per-site rates on the mole-fraction basis: constants unit-identical "
+            "to the gradientless treatment's, so the reactor comparison needs no "
+            "unit conversion.",
+        ),
+        "mechanism": _co_ox_mechanism(reversible_last_two=False, closure=False),
+        "free_parameters": _free_parameters(
+            ["k1", "k_1", "k2", "k_2", "k3", "k_3", "k4", "k5"]
+        ),
+        "reaction_system": "CO oxidation",
+        "access_status": "public",
+        "license": "CC-BY-4.0",
+        "notes": (
+            "DRAFT (2026-08), axial-PDE branch. The A/B partner of "
+            "co-ox-5step-irreversible-45: fit both to the same runs and the "
+            "difference in the constants is the reactor model, attributably."
+        ),
+    }
+
+
+def build_model_spec_axial_psu() -> dict:
+    """PSU's own treatment: nine constants, k_4 closed, partial pressures, per kg.
+
+    This is the M3 comparator. The milestone reads "reproduce the published PSU
+    CO-oxidation fit within stated uncertainty", their per-temperature fits carry
+    nlparci intervals, and comparing against them honestly means fitting the same
+    free-parameter set in the same units -- per kilogram of catalyst, on a
+    partial-pressure activity basis, with step 4's reverse fixed by detailed
+    balance rather than fitted.
+    """
+    free = []
+    for n in ["k1", "k_1", "k2", "k_2", "k3", "k_3", "k4", "k5", "k_5"]:
+        adsorption = n in ("k1", "k2", "k_5")
+        free.append({
+            "name": n,
+            "units": "log10(mol/(kg s Pa))" if adsorption else "log10(mol/(kg s))",
+            "bounds": [-12.0, 6.0],
+            "description": ("Per kilogram of catalyst on a partial-pressure "
+                            "basis -- the reference implementation's units, so "
+                            "fitted values compare directly with its published "
+                            "intervals."),
+        })
+    return {
+        "schema_version": "0.1.0",
+        "spec_id": "co-ox-5step-psu-axial",
+        "family": "microkinetic",
+        "name": "CO oxidation, five-step LH, PSU treatment in the axial bed",
+        "description": (
+            "Nine free rate constants with step 4's reverse closed by detailed "
+            "balance, in the one-dimensional dispersed bed -- the published PSU "
+            "fit's own free-parameter set, units, and reactor."
+        ),
+        "derived_from": "art://" + "spec-co-ox-5step-irreversible-45-2026-09-01-000000",
+        "derivation": ("reversible with thermodynamic closure on step 4, "
+                       "partial-pressure basis, axially-dispersed packed bed"),
+        "parameter_transform": "log10",
+        "reactor": _axial_reactor(
+            "per-catalyst-mass",
+            "Per-kilogram rates on the partial-pressure basis, matching the "
+            "reference implementation so fitted constants compare directly "
+            "against its published nlparci intervals.",
+        ),
+        "mechanism": _co_ox_mechanism(reversible_last_two=True, closure=True,
+                                      activity_basis="partial_pressure"),
+        "free_parameters": free,
+        "reaction_system": "CO oxidation",
+        "access_status": "public",
+        "license": "CC-BY-4.0",
+        "notes": (
+            "DRAFT (2026-08), axial-PDE branch. The M3 comparator: same free "
+            "set, same closure, same units, same reactor as the published fit, "
+            "so 'within stated uncertainty' is checkable constant by constant."
+        ),
+    }
+
+
+def build_model_spec_axial_thermo() -> dict:
+    """The thermodynamically consistent joint fit, in the bed.
+
+    Same 18 physical parameters as co-ox-5step-thermo-consistent -- (log10A, Ea)
+    per step, (dH_ads, dS_ads <= 0) per adsorbate, every reverse from detailed
+    balance -- with the same mole-fraction basis and per-site rates, so the
+    fitted thermochemistry MEANS the same thing under both reactors and the
+    joint-fit comparison is parameter-by-parameter. The gradientless variant's
+    19th parameter, the shared scale, does not exist here: the bed supplies it.
+    """
+    spec = build_model_spec_thermo()
+    spec = json.loads(json.dumps(spec))          # deep copy; never mutate a sibling
+    spec["spec_id"] = "co-ox-5step-thermo-axial"
+    spec["name"] = ("CO oxidation, five-step LH, thermodynamically consistent "
+                    "joint fit in the axial bed")
+    spec["description"] = (
+        "Arrhenius forward constants and fitted adsorption thermochemistry, "
+        "every reverse from detailed balance, evaluated in a one-dimensional "
+        "axially-dispersed packed bed. One model across all campaign "
+        "temperatures, with the reactor at the manuscript's fidelity."
+    )
+    spec["derived_from"] = "art://" + "spec-co-ox-5step-thermo-consistent-2026-09-01-000000"
+    spec["derivation"] = ("the thermodynamically consistent parameterisation, "
+                          "evaluated in an axially-dispersed packed bed")
+    spec["reactor"] = _axial_reactor(
+        "per-site",
+        "Per-site rates on the mole-fraction basis: the (dH, dS) parameters "
+        "mean exactly what the gradientless joint fit's mean, so the two "
+        "posteriors are comparable parameter by parameter.",
+    )
+    spec["notes"] = (
+        "DRAFT (2026-08), axial-PDE branch. The physical constants M9 asks for, "
+        "fitted under the reactor model M3 is stated against."
+    )
+    return spec
+
+
 def build_model_spec_thermo() -> dict:
     """The thermodynamically consistent variant: physical parameters, joint fit.
 
@@ -1009,6 +1170,9 @@ def main() -> None:
     model = build_model(ensemble_ref, dataset["dataset_id"])
     spec_thermo = build_model_spec_thermo()
     spec_axial = build_model_spec_axial()
+    spec_axial_irrev = build_model_spec_axial_irreversible()
+    spec_axial_psu = build_model_spec_axial_psu()
+    spec_axial_thermo = build_model_spec_axial_thermo()
     campaign = build_campaign(dataset["dataset_id"], model["model_id"])
     publication = build_publication(dataset["dataset_id"], model["model_id"])
 
@@ -1024,6 +1188,9 @@ def main() -> None:
         ("model-spec-co-ox-eley-rideal.json", spec_eley_rideal),
         ("model-spec-co-ox-thermo.json", spec_thermo),
         ("model-spec-co-ox-axial.json", spec_axial),
+        ("model-spec-co-ox-axial-irreversible.json", spec_axial_irrev),
+        ("model-spec-co-ox-axial-psu.json", spec_axial_psu),
+        ("model-spec-co-ox-axial-thermo.json", spec_axial_thermo),
         ("publication-example.json", publication),
         ("campaign-example.json", campaign),
     ):

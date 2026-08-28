@@ -465,6 +465,14 @@
           ],
           "description": "Outlet closure. Both hold dC/dz = 0 in the dispersion term. 'psu' additionally drops the convective term in the last cell, reproducing the reference exactly -- that cell then has no outflow, so it is not conservative, though a uniform field still satisfies it and both closures share a steady state. 'convective' keeps the outflow."
         },
+        "rate_basis": {
+          "type": "string",
+          "enum": [
+            "per-catalyst-mass",
+            "per-site"
+          ],
+          "description": "What one unit of reaction rate means, and therefore the units of every rate constant. 'per-catalyst-mass' (the default, and the reference implementation's): rates in mol/(kg s), coverages evolving as r/Ct. 'per-site': rates as turnover frequencies (1/s), coverages evolving as r directly, with the bed's measured site density entering only the gas-coupling factor -- which makes the constants unit-identical to the gradientless treatment's and directly comparable across the two reactors. Hashed through the specification body like everything else here; two specs differing only in rate basis are different hypotheses about what the numbers mean."
+        },
         "velocity": {
           "type": "string",
           "enum": [

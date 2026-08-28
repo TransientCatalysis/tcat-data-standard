@@ -47,6 +47,17 @@ and after).
   `0.853` for the wool-diluted one, and taking the literal would put the gas holdup
   out by half.
 
+- **`rate_basis` on the `reactor` block** (2026-08-28). What one unit of rate
+  means, and therefore the units of every constant: `per-catalyst-mass` (the
+  reference implementation's mol/(kg s), the default) or `per-site` (turnover
+  frequencies, with the bed's measured site density moved into the gas-coupling
+  factor). Added because the axial spec family needs both: the PSU-comparison
+  variant must carry their units so "within stated uncertainty" is checkable
+  constant by constant, while the notebook-comparison variants must carry the
+  gradientless treatment's units so the reactor comparison is a subtraction.
+  The two are the same physics related by exact scalars, and a regression test
+  holds the integrated fields identical under the conversion.
+
 Both are DRAFT on branch `axial-PDE`, for the September meeting to accept or
 overrule. `SPEC-DELTAS.md` deltas 34–35 carry the evidence, including what the
 implementation measured: the axial CO\* gradient is about 0.4 of a monolayer across
