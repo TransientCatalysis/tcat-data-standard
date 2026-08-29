@@ -3,6 +3,39 @@
 Package and schema versions move together in 0.x. They will decouple once the
 schema stabilises and the validator keeps changing without it.
 
+## Unreleased — 2026-08-29
+
+Uncertainty stops being conditional by accident (branch `axial-reworked`;
+`SPEC-DELTAS.md` 36–38 implemented). All additive and optional on 0.1.0, each
+field's ABSENCE stated to mean exactly what every existing document meant —
+**no existing document changes meaning, and no existing artifact id changes**
+(the additions are all optional properties; nothing regenerates an existing
+example's bytes except the new example files themselves).
+
+- **`conditioning` block on `uncertainty-ensemble`** — `kind`
+  (`conditional`/`marginalized`/`profiled`), `held_fixed`, `marginalized`,
+  `prior_source`, in GUM's vocabulary (Type A / Type B / combined standard
+  uncertainty, JCGM 100:2008). Absence = `conditional`, the silent
+  pre-existing meaning, now readable. Plus `parameter_roles` (absence = all
+  `interest`), `nuisance_budget` (the ranked ask list; `sigma_nuisance` is
+  nullable ON PURPOSE — an unstated Type B routes to the prior-free envelope,
+  never an invented number), `components` (mixtures over competing
+  structures), and `approximation` (quadratic vs profiled vs sampled —
+  orthogonal to `method_family`, which erases exactly that distinction).
+- **Calibration sigmas grow to the whole chain**: `reference_pressure_sigma`
+  in `pressure_normalization`, `slope_sigma`/`intercept_sigma` in `baseline`,
+  a `matrix_sigma` map parallel to `matrix` (the `declared_unused` shape), and
+  a record-sourced `priors` map (PEtab's priorDistribution vocabulary) for
+  coefficients whose record carries disagreeing values.
+- **`bed.uncertainty` on the protocol** — a map keyed by sibling field names
+  (promotion to `{value, sigma}` would break every existing record); a key
+  naming no sibling is a structural ERROR, same rule as channel references.
+- First `uncertainty-ensemble` example (`examples/uncertainty-ensemble-example.json`
+  + its seeded samples CSV), with the conditioning block filled in as a model
+  of saying-out-loud.
+- Advisory checks: `parameter_roles` length, marginalized-with-no-names,
+  mixture weights summing to one, mixtures declaring a sampled family.
+
 ## Unreleased — 2026-08-27
 
 The reactor model. Forced by reading milestone M3 closely: it says *reproduce the

@@ -182,11 +182,122 @@ def test_log_transform_must_be_declared():
     assert not validate_uncertainty_ensemble(doc).ok
 
 
+def test_an_ensemble_without_a_conditioning_block_is_valid_and_means_conditional():
+    """The single most important absence rule in the uncertainty additions:
+    every ensemble written before the block existed conditioned silently, so
+    absence must mean 'conditional' and stay valid -- nothing already in a
+    store changes meaning."""
+    assert "conditioning" not in ENSEMBLE
+    assert validate_uncertainty_ensemble(ENSEMBLE).ok
+
+
+def test_a_marginalized_ensemble_declares_what_it_marginalized():
+    doc = dict(ENSEMBLE, conditioning={
+        "kind": "marginalized",
+        "marginalized": ["co_to_o_fragmentation", "void_fraction"],
+        "held_fixed": ["ms_sensitivity_CO", "site_density"],
+        "prior_source": "calibration entry priors + bed uncertainty map",
+    })
+    report = validate_uncertainty_ensemble(doc)
+    assert report.ok
+    assert not any("conditioning" in w.pointer for w in report.warnings)
+
+
+def test_a_marginalized_claim_with_no_named_nuisances_warns():
+    doc = dict(ENSEMBLE, conditioning={"kind": "marginalized"})
+    report = validate_uncertainty_ensemble(doc)
+    assert report.ok
+    assert any("conditioning" in w.pointer for w in report.warnings)
+
+
+def test_parameter_roles_must_parallel_parameter_names():
+    doc = dict(ENSEMBLE, parameter_roles=["interest", "nuisance"])
+    report = validate_uncertainty_ensemble(doc)
+    assert any("parameter_roles" in w.pointer for w in report.warnings)
+    doc = dict(ENSEMBLE, parameter_roles=["interest", "interest", "nuisance"])
+    report = validate_uncertainty_ensemble(doc)
+    assert report.ok
+    assert not any("parameter_roles" in w.pointer for w in report.warnings)
+
+
+def test_a_nuisance_budget_row_may_be_honestly_priorless():
+    """sigma_nuisance is nullable ON PURPOSE: where no record states an
+    uncertainty, the row routes to the prior-free envelope instead of carrying
+    an invented sigma."""
+    doc = dict(ENSEMBLE, nuisance_budget=[{
+        "parameter": "log10_k_ads",
+        "nuisance": "ms_sensitivity_CO",
+        "sensitivity": -0.42,
+        "sigma_nuisance": None,
+        "source": "no record states an MS sensitivity uncertainty; envelope",
+    }])
+    assert validate_uncertainty_ensemble(doc).ok
+
+
+def test_mixture_weights_must_sum_to_one():
+    components = [
+        {"ensemble_id": "art://fit-a-2026-09-01-aaaaaa", "weight": 0.7,
+         "weight_criterion": "BIC"},
+        {"ensemble_id": "art://fit-b-2026-09-01-bbbbbb", "weight": 0.2,
+         "weight_criterion": "BIC"},
+    ]
+    doc = dict(ENSEMBLE, method="posterior_mixture", method_family="sampled",
+               components=components)
+    report = validate_uncertainty_ensemble(doc)
+    assert report.ok
+    assert any("sum to" in w.message for w in report.warnings)
+    components[1]["weight"] = 0.3
+    report = validate_uncertainty_ensemble(doc)
+    assert not any("sum to" in w.message for w in report.warnings)
+
+
+def test_a_mixture_declares_a_sampled_family():
+    doc = dict(ENSEMBLE, method="posterior_mixture",
+               components=[{"ensemble_id": "art://fit-a-2026-09-01-aaaaaa",
+                            "weight": 1.0}])
+    report = validate_uncertainty_ensemble(doc)
+    assert any("sampled family" in w.message for w in report.warnings)
+
+
+def test_approximation_distinguishes_quadratic_from_profiled():
+    """laplace and profile_likelihood share method_family='asymptotic'; the
+    quadratic-vs-actual-shape distinction is the entire reason to profile, so
+    it needs its own field rather than an enum split of a hashed registry."""
+    assert validate_uncertainty_ensemble(
+        dict(ENSEMBLE, approximation="quadratic")).ok
+    assert validate_uncertainty_ensemble(
+        dict(ENSEMBLE, method="profile_likelihood",
+             approximation="profiled")).ok
+    assert not validate_uncertainty_ensemble(
+        dict(ENSEMBLE, approximation="exact")).ok
+
+
 # ---- protocols ---------------------------------------------------------
 
 
 def test_protocol_example_is_valid(valid_protocol):
     assert validate_protocol(valid_protocol).ok
+
+
+def test_a_bed_uncertainty_key_must_name_a_real_bed_field():
+    """Same rule as channel references: a sigma keyed to nothing looks
+    satisfied right up until something tries to use it."""
+    doc = {
+        "protocol": "step_change",
+        "parameters": {"species": "O2", "from_mol_frac": 0.0,
+                       "to_mol_frac": 0.05, "step_at_s": 10.0},
+        "base_conditions": {
+            "temperature_K": 459.15, "pressure_kPa": 101.3,
+            "bed": {"length_mm": 10.0, "diameter_mm": 3.9,
+                    "void_fraction": 0.853,
+                    "uncertainty": {"void_fraction": 0.05}},
+        },
+    }
+    assert validate_protocol(doc).ok
+    doc["base_conditions"]["bed"]["uncertainty"] = {"porosity": 0.05}
+    report = validate_protocol(doc)
+    assert not report.ok
+    assert any("names no bed field" in p.message for p in report.errors)
 
 
 def test_chemical_looping_is_expressible_as_multi_pulse():

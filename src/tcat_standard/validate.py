@@ -255,12 +255,44 @@ def _structural_errors(document: Any, kind: str) -> list[Problem]:
 
     if kind == "protocol":
         out.extend(_waveform_problems(document, ""))
+        out.extend(_bed_uncertainty_errors(document, ""))
+
+    if kind == "dataset":
+        out.extend(_bed_uncertainty_errors(document.get("protocol"), "/protocol"))
 
     if kind == "uncertainty-ensemble":
         p = _manifest_location_problem(document.get("samples"), "/samples")
         if p:
             out.append(p)
 
+    return out
+
+
+def _bed_uncertainty_errors(protocol: Any, prefix: str) -> list[Problem]:
+    """A bed.uncertainty key must name a sibling bed field that exists.
+
+    An error rather than advice, by the `_channel_reference_errors` rule: a key
+    naming nothing looks satisfied right up until something tries to use the
+    sigma, and then it silently applies to no quantity at all.
+    """
+    out: list[Problem] = []
+    if not isinstance(protocol, dict):
+        return out
+    bed = (protocol.get("base_conditions") or {}).get("bed")
+    if not isinstance(bed, dict):
+        return out
+    uncertainty = bed.get("uncertainty")
+    if not isinstance(uncertainty, dict):
+        return out
+    siblings = {k for k in bed if k not in ("uncertainty", "source", "notes")}
+    for key in uncertainty:
+        if key not in siblings:
+            out.append(
+                Problem(
+                    f"{prefix}/base_conditions/bed/uncertainty/{key}",
+                    f"names no bed field (declared: {', '.join(sorted(siblings)) or 'none'})",
+                )
+            )
     return out
 
 
@@ -658,6 +690,45 @@ def _advisory_checks(document: Any, kind: str, version: str) -> list[Problem]:
                     "asymptotic ensemble: usable for design, but not a sampled posterior",
                 )
             )
+        roles = document.get("parameter_roles")
+        if names and roles and len(roles) != len(names):
+            out.append(
+                Problem(
+                    "/parameter_roles",
+                    f"length {len(roles)} does not match parameter_names length {len(names)}",
+                )
+            )
+        conditioning = document.get("conditioning")
+        if isinstance(conditioning, dict):
+            if (conditioning.get("kind") in ("marginalized", "profiled")
+                    and not conditioning.get("marginalized")):
+                out.append(
+                    Problem(
+                        "/conditioning/marginalized",
+                        f"kind={conditioning.get('kind')!r} but no nuisance quantities "
+                        "are named; name them or the claim is unverifiable",
+                    )
+                )
+        components = document.get("components")
+        if isinstance(components, list) and components:
+            total = sum(c.get("weight", 0) for c in components
+                        if isinstance(c, dict))
+            if abs(total - 1.0) > 1e-6:
+                out.append(
+                    Problem(
+                        "/components",
+                        f"mixture weights sum to {total:.6g}, not 1",
+                    )
+                )
+            if document.get("method_family") != "sampled":
+                out.append(
+                    Problem(
+                        "/components",
+                        "a mixture's samples are a weighted resample, which is a "
+                        "sampled family; method_family says "
+                        f"{document.get('method_family')!r}",
+                    )
+                )
 
     return out
 

@@ -48,6 +48,12 @@
             "catalyst_density_kg_per_m3": { "type": "number", "exclusiveMinimum": 0 },
             "site_density_umol_per_g": { "type": "number", "exclusiveMinimum": 0, "description": "Active sites per gram, from a named measurement -- record the method in the sample's `properties`. Under an axial reactor model this is NOT fitted: it sets the coupling between surface rate and gas, so the scale factor a gradientless fit leaves degenerate with the desorption constant comes from here instead." },
             "source": { "type": "string", "description": "Where these values came from, when it is not the instrument export. Anything transcribed out of analysis code rather than measured into a record should say so here." },
+            "uncertainty": {
+              "type": "object",
+              "description": "DRAFT (2026-08): axial-reworked branch. Type B standard uncertainties (JCGM 100:2008) on the sibling fields, keyed by field name -- 'void_fraction': 0.05 is the uncertainty on `void_fraction`. A map rather than {value, sigma} promotion because promotion would break every existing record; a key that names no sibling field is a validation error. Partial is legal and expected: state what a record supports (a two-point spread like the computed 0.853 vs the driver's 0.5716 is a legitimate source -- say so in `source`), and leave the rest to the prior-free envelope rather than inventing sigmas.",
+              "minProperties": 1,
+              "additionalProperties": { "type": "number", "minimum": 0 }
+            },
             "notes": { "type": "string" }
           }
         }

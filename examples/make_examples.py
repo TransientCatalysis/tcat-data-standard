@@ -1148,6 +1148,88 @@ def build_model_spec_eley_rideal() -> dict:
     }
 
 
+def write_ensemble_csv() -> Path:
+    """A small, deterministic Laplace draw for the ensemble example."""
+    DATA.mkdir(parents=True, exist_ok=True)
+    path = DATA / "ensemble-samples-prbs-co-ox.csv"
+    rng = random.Random(20260901)
+    point = (-3.2, -1.7, 0.4)
+    spread = (0.15, 0.4, 0.08)
+    lines = ["log10_k_ads,log10_k_des,log10_k_rxn"]
+    for _ in range(400):
+        draw = [rng.gauss(mu, sigma) for mu, sigma in zip(point, spread)]
+        lines.append(",".join(f"{v:.6f}" for v in draw))
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+
+def build_uncertainty_ensemble() -> dict:
+    """A worked uncertainty-ensemble document, conditioning block included.
+
+    The conditioning block is the point of the example: an ensemble that says
+    OUT LOUD what its intervals condition on, instead of conditioning silently
+    the way every interval before the field existed did. The nuisance budget
+    shows both an honest null (no record states an MS sensitivity uncertainty,
+    so the row routes to the prior-free envelope) and a record-sourced sigma.
+    """
+    samples_path = write_ensemble_csv()
+    entry = ManifestEntry.from_file(samples_path, repo_root=REPO, format="csv",
+                                    media_type="text/csv")
+    return {
+        "schema_version": "0.1.0",
+        "method": "laplace",
+        "method_family": "asymptotic",
+        "approximation": "quadratic",
+        "parameter_names": ["log10_k_ads", "log10_k_des", "log10_k_rxn"],
+        "parameter_units": ["log10(1/s)", "log10(1/s)", "log10(1/s)"],
+        "parameter_transform": "log10",
+        "parameter_roles": ["interest", "interest", "interest"],
+        "n_samples": 400,
+        "point_estimate": [-3.2, -1.7, 0.4],
+        "samples": entry.to_dict(),
+        "conditioning": {
+            "kind": "conditional",
+            "held_fixed": [
+                "ms_sensitivity_factors",
+                "fragmentation_matrix",
+                "feed_composition",
+            ],
+            "prior_source": (
+                "none -- Type A only (JCGM 100:2008); the held_fixed list names "
+                "what a marginalized re-evaluation would have to widen over"
+            ),
+        },
+        "nuisance_budget": [
+            {
+                "parameter": "log10_k_ads",
+                "nuisance": "ms_sensitivity_m28",
+                "sensitivity": -0.42,
+                "sigma_nuisance": None,
+                "source": (
+                    "no record states an MS sensitivity uncertainty; the "
+                    "prior-free envelope is the reported answer, not an "
+                    "invented sigma"
+                ),
+            },
+            {
+                "parameter": "log10_k_rxn",
+                "nuisance": "fragmentation_co2_to_co",
+                "sensitivity": 11.0,
+                "sigma_nuisance": 0.003,
+                "contribution_decades": 0.033,
+                "source": (
+                    "spread of the declared vs applied coefficient preserved "
+                    "under declared_unused"
+                ),
+            },
+        ],
+        "notes": (
+            "SYNTHETIC, for the schema's worked example. point_estimate is the "
+            "optimum of the synthetic fit; the samples are a seeded Laplace draw."
+        ),
+    }
+
+
 def main() -> None:
     csv_path = write_csv()
     entry = ManifestEntry.from_file(csv_path, repo_root=REPO, format="csv", media_type="text/csv")
@@ -1175,8 +1257,10 @@ def main() -> None:
     spec_axial_thermo = build_model_spec_axial_thermo()
     campaign = build_campaign(dataset["dataset_id"], model["model_id"])
     publication = build_publication(dataset["dataset_id"], model["model_id"])
+    ensemble = build_uncertainty_ensemble()
 
     for name, doc in (
+        ("uncertainty-ensemble-example.json", ensemble),
         ("dataset-prbs-co-ox.json", dataset),
         ("calibration-fixed.json", calibration),
         ("protocol-prbs.json", protocol),

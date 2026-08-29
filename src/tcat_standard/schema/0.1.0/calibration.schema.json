@@ -77,6 +77,7 @@
                   "required": ["reference_pressure", "pressure_channel", "units"],
                   "properties": {
                     "reference_pressure": { "type": "number", "exclusiveMinimum": 0, "description": "Pressure at which `sensitivity` was determined." },
+                    "reference_pressure_sigma": { "type": "number", "minimum": 0, "description": "DRAFT (2026-08): axial-reworked branch. Type B standard uncertainty (JCGM 100:2008) on reference_pressure. Optional; absent means no uncertainty is stated in any record, which routes this stage to the prior-free envelope rather than to a fabricated sigma." },
                     "pressure_channel": { "type": "string", "description": "Name of the dataset channel carrying the measured analyser pressure." },
                     "units": { "type": "string", "minLength": 1, "examples": ["Torr", "Pa"] },
                     "form": {
@@ -96,7 +97,9 @@
                   "properties": {
                     "source_channel": { "type": "string", "description": "Channel whose signal drives the slope term. Omit for a constant-only baseline." },
                     "slope": { "type": "number", "default": 0, "description": "Subtracted amount per unit of source_channel." },
+                    "slope_sigma": { "type": "number", "minimum": 0, "description": "DRAFT (2026-08): axial-reworked branch. Type B standard uncertainty on slope. Optional; absent means none is stated -- envelope, not invention." },
                     "intercept": { "type": "number", "description": "Constant subtracted." },
+                    "intercept_sigma": { "type": "number", "minimum": 0, "description": "DRAFT (2026-08): axial-reworked branch. Type B standard uncertainty on intercept. Optional; absent means none is stated." },
                     "notes": { "type": "string" }
                   },
                   "additionalProperties": false
@@ -115,6 +118,28 @@
             "description": "For kind = ms_fragmentation: the cracking pattern itself. Keys are \"<contributing species>-><affected channel>\", values the fraction of the contributor's signal appearing on that channel -- so \"CO2->CO\": 0.0883 means 8.83% of the CO2 signal lands on m/z 28. A partial pattern is legal and normal: labs measure the splits that matter to them, and a full matrix is the same shape grown. This is the artifact that fragmentation_matrix_ref points AT.",
             "minProperties": 1,
             "additionalProperties": { "type": "number" }
+          },
+          "matrix_sigma": {
+            "type": "object",
+            "description": "DRAFT (2026-08): axial-reworked branch. Type B standard uncertainties on the cracking pattern, keyed exactly like `matrix` (the same parallel-map shape `declared_unused` uses). Partial is legal: state the sigmas you have, leave the rest to the prior-free envelope.",
+            "minProperties": 1,
+            "additionalProperties": { "type": "number", "minimum": 0 }
+          },
+          "priors": {
+            "type": "object",
+            "description": "DRAFT (2026-08): axial-reworked branch. Record-sourced priors on individual coefficients, keyed by dotted path within this entry (\"matrix.CO->O\", \"channels.CO.sensitivity\"). Exists for the case where the record itself carries DISAGREEING values -- a declared coefficient, an applied one, and an independent literature value -- and the honest prior is built from that documented spread rather than invented. PEtab's priorDistribution/priorParameters vocabulary, reshaped to this schema's time-indexed entries.",
+            "minProperties": 1,
+            "additionalProperties": {
+              "type": "object",
+              "required": ["sigma", "source"],
+              "properties": {
+                "sigma": { "type": "number", "minimum": 0, "description": "Standard uncertainty, in the coefficient's own units (or decades if the coefficient is stored log-scaled -- say which in source)." },
+                "distribution": { "type": "string", "default": "normal", "examples": ["normal", "lognormal", "uniform"], "description": "Distribution family the sigma parameterises." },
+                "source": { "type": "string", "minLength": 1, "description": "Where this prior comes from, specific enough to re-derive -- e.g. 'spread of declared 0.005905 vs applied 0.0106 vs NIST ~0.017'." },
+                "from_declared_unused": { "type": "boolean", "description": "True when the prior was constructed from the declared/applied discrepancy that `declared_unused` preserves." }
+              },
+              "additionalProperties": false
+            }
           },
           "declared_unused": {
             "type": "object",
