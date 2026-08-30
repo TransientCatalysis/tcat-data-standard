@@ -972,23 +972,44 @@ def _co_ox_er_mechanism() -> dict:
     }
 
 
-#: Per-constant log10 bounds. These belong to the SPECIFICATION, not to a
-#: fitting script: they are part of what the hypothesis asserts is physically
-#: reachable, and two implementations of one mechanism that use different bounds
-#: are not producing comparable fits. Wide enough not to shape the answer,
-#: narrow enough to keep an optimiser out of regions where the coverage ODEs
-#: stop being integrable at a useful timestep.
+#: Per-constant log10 bounds, from PHYSICS rather than from convenience.
+#:
+#: Bounds belong to the specification: two implementations of one mechanism
+#: that use different ones are not producing comparable fits. But a bound that
+#: binds at the optimum has stopped being a guardrail and become an undeclared
+#: prior -- it sets the estimate, and it voids the reported uncertainty in that
+#: direction, because a symmetric interval around a constrained optimum is not
+#: a statement about the data. The earlier values (k1 <= 1e8, k5 <= 1e9,
+#: k_3 <= 1e6) did exactly that: three of eight constants sat on them.
+#:
+#: These are the two rates nothing can exceed, computed at this campaign's
+#: conditions (1.07e5 Pa, 459 K) rather than assumed:
+#:
+#:   Surface elementary steps: kT/h = 9.6e12 /s  ->  log10 = 12.98.  No
+#:   activated surface process has a larger prefactor.
+#:
+#:   Adsorption, on the mole-fraction basis these constants use: the
+#:   impingement flux P/sqrt(2 pi m k T) divided by the site density, at unit
+#:   sticking. For CO over 1-2e19 sites/m2 that is 1.2-2.5e8 per unit mole
+#:   fraction per second  ->  log10 = 8.1 to 8.4. Ceiling set at 8.5.
+#:
+#: So a constant resting on one of these bounds now means something: the data
+#: wants that step faster than physics allows, which is a statement about the
+#: mechanism and not about the optimiser. Values far below are unconstrained
+#: territory and the lower edge is set well clear at 1e-8.
+_ADSORPTION_CEILING = 8.5      # collision-limited, mole-fraction basis
+_SURFACE_CEILING = 13.0        # kT/h at 459 K
 _LOG10_BOUNDS = {
-    "k1": (-2.0, 8.0),    # adsorption, per mole fraction
-    "k_1": (-4.0, 8.0),   # desorption
-    "k2": (-2.0, 8.0),
-    "k_2": (-4.0, 8.0),
-    "k3": (-2.0, 8.0),    # dissociation
-    "k_3": (-6.0, 6.0),   # recombination, second order in a small coverage
-    "k4": (-2.0, 9.0),    # surface reaction, the fast step
-    "k_4": (-6.0, 6.0),   # reverse surface reaction; expected small, like k_5
-    "k5": (-2.0, 9.0),    # product desorption
-    "k_5": (-6.0, 6.0),   # product readsorption, expected small
+    "k1": (-8.0, _ADSORPTION_CEILING),    # CO adsorption
+    "k_1": (-8.0, _SURFACE_CEILING),      # CO desorption
+    "k2": (-8.0, _ADSORPTION_CEILING),    # O2 adsorption
+    "k_2": (-8.0, _SURFACE_CEILING),
+    "k3": (-8.0, _SURFACE_CEILING),       # dissociation
+    "k_3": (-8.0, _SURFACE_CEILING),      # recombination
+    "k4": (-8.0, _SURFACE_CEILING),       # surface reaction
+    "k_4": (-8.0, _SURFACE_CEILING),
+    "k5": (-8.0, _SURFACE_CEILING),       # CO2 desorption
+    "k_5": (-8.0, _ADSORPTION_CEILING),   # CO2 readsorption
 }
 
 
