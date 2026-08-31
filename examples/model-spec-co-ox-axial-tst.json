@@ -1,0 +1,283 @@
+{
+  "schema_version": "0.1.0",
+  "spec_id": "co-ox-5step-tst-axial",
+  "family": "microkinetic",
+  "name": "CO oxidation, five-step LH, thermodynamically consistent joint fit in the axial bed",
+  "description": "Arrhenius forward constants and fitted adsorption thermochemistry, every reverse from detailed balance, evaluated in a one-dimensional axially-dispersed packed bed. One model across all campaign temperatures, with the reactor at the manuscript's fidelity.",
+  "derived_from": "art://spec-co-ox-5step-thermo-consistent-2026-09-01-000000",
+  "derivation": "the thermodynamically consistent parameterisation, evaluated in an axially-dispersed packed bed",
+  "parameter_transform": "none",
+  "thermodynamics": {
+    "parameterisation": "tst-detailed-balance",
+    "gas_parents": {
+      "CO*": {
+        "CO": 1
+      },
+      "O2*": {
+        "O2": 1
+      },
+      "O*": {
+        "O2": 0.5
+      },
+      "CO2*": {
+        "CO2": 1
+      }
+    },
+    "gas_data_source": "gas-thermo-codata-shomate-2026-08-25",
+    "pressure_Pa": 101325.0,
+    "notes": "Prefactors are ANCHORED, not fitted: kT/h for a surface step, the collision-limited impingement rate for a step whose forward side consumes a gas molecule. The fitted forward parameters are the activation entropy and enthalpy, so dS# = 0 is textbook transition-state theory and the sign constraint dS# <= 0 on adsorption is a physical statement where a bound on log10A was 14 decades of nothing. site_area_m2 is the one assumption the record does not measure -- the manifest gives sites per unit MASS, and no specific surface area was reported -- so it is declared here, because the value used is part of what the fitted activation entropies MEAN. ON SITE COUNT there are two distinct readings and this specification adopts the first. (1) FEWER TOTAL SITES: an active fraction f scales the gas-surface coupling uniformly, which is exactly what the bed's measured site density already does, so f is degenerate with that declared quantity and is not a parameter here. (2) SPECIAL SITES: if a step occurs only on special sites, its rate carries the probability of being at one, i.e. a configurational -R ln f inside THAT step's dS# -- an exact degeneracy with dS#, so again only the combination is estimable. Either way an active-site fraction must not be fitted alongside what it is degenerate with; which reading is meant changes what dS# means, not how many parameters there are.",
+    "site_area_m2": 1e-19
+  },
+  "mechanism": {
+    "sites": [
+      {
+        "name": "*",
+        "density": 1.0
+      }
+    ],
+    "gas": [
+      {
+        "name": "CO"
+      },
+      {
+        "name": "O2"
+      },
+      {
+        "name": "CO2"
+      }
+    ],
+    "adsorbates": [
+      {
+        "name": "CO*",
+        "site": "*",
+        "composition": {
+          "C": 1,
+          "O": 1
+        }
+      },
+      {
+        "name": "O2*",
+        "site": "*",
+        "composition": {
+          "O": 2
+        }
+      },
+      {
+        "name": "O*",
+        "site": "*",
+        "composition": {
+          "O": 1
+        }
+      },
+      {
+        "name": "CO2*",
+        "site": "*",
+        "composition": {
+          "C": 1,
+          "O": 2
+        }
+      }
+    ],
+    "steps": [
+      {
+        "equation": "CO + * -> CO*",
+        "name": "S1 CO adsorption",
+        "reversible": true
+      },
+      {
+        "equation": "O2 + * -> O2*",
+        "name": "S2 O2 adsorption",
+        "reversible": true
+      },
+      {
+        "equation": "O2* + * -> 2 O*",
+        "name": "S3 O2 dissociation",
+        "reversible": true
+      },
+      {
+        "equation": "CO* + O* -> CO2* + *",
+        "name": "S4 surface reaction",
+        "reversible": true
+      },
+      {
+        "equation": "CO2* -> CO2 + *",
+        "name": "S5 CO2 desorption",
+        "reversible": true
+      }
+    ],
+    "activity_basis": "mole_fraction",
+    "gas_constant_J_per_mol_K": 8.314
+  },
+  "free_parameters": [
+    {
+      "name": "dSact_k1",
+      "bounds": [
+        -200.0,
+        0.0
+      ],
+      "description": "Activation entropy, J/mol/K. Zero is textbook TST at the anchored prefactor; non-positive because a transition state formed from a free gas molecule cannot be more disordered than the gas."
+    },
+    {
+      "name": "dSact_k2",
+      "bounds": [
+        -200.0,
+        0.0
+      ],
+      "description": "Activation entropy, J/mol/K. Zero is textbook TST at the anchored prefactor; non-positive because a transition state formed from a free gas molecule cannot be more disordered than the gas."
+    },
+    {
+      "name": "dSact_k3",
+      "bounds": [
+        -120.0,
+        0.0
+      ],
+      "description": "Activation entropy, J/mol/K. Zero is textbook TST at kT/h; the upper edge stays at zero so the prefactor cannot exceed kT/h."
+    },
+    {
+      "name": "dSact_k4",
+      "bounds": [
+        -120.0,
+        0.0
+      ],
+      "description": "Activation entropy, J/mol/K. Zero is textbook TST at kT/h; the upper edge stays at zero so the prefactor cannot exceed kT/h."
+    },
+    {
+      "name": "dSact_k5",
+      "bounds": [
+        -120.0,
+        0.0
+      ],
+      "description": "Activation entropy, J/mol/K. Zero is textbook TST at kT/h; the upper edge stays at zero so the prefactor cannot exceed kT/h."
+    },
+    {
+      "name": "dHact_k1",
+      "bounds": [
+        0.0,
+        250.0
+      ],
+      "description": "Activation enthalpy, kJ/mol. Non-negative."
+    },
+    {
+      "name": "dHact_k2",
+      "bounds": [
+        0.0,
+        250.0
+      ],
+      "description": "Activation enthalpy, kJ/mol. Non-negative."
+    },
+    {
+      "name": "dHact_k3",
+      "bounds": [
+        0.0,
+        250.0
+      ],
+      "description": "Activation enthalpy, kJ/mol. Non-negative."
+    },
+    {
+      "name": "dHact_k4",
+      "bounds": [
+        0.0,
+        250.0
+      ],
+      "description": "Activation enthalpy, kJ/mol. Non-negative."
+    },
+    {
+      "name": "dHact_k5",
+      "bounds": [
+        0.0,
+        250.0
+      ],
+      "description": "Activation enthalpy, kJ/mol. Non-negative."
+    },
+    {
+      "name": "dH_CO*",
+      "units": "kJ/mol",
+      "bounds": [
+        -300.0,
+        50.0
+      ],
+      "description": "Adsorption enthalpy of CO* relative to its gas parent."
+    },
+    {
+      "name": "dS_CO*",
+      "units": "J/(mol K)",
+      "bounds": [
+        -250.0,
+        0.0
+      ],
+      "description": "Non-positive by physics: adsorption loses entropy."
+    },
+    {
+      "name": "dH_O2*",
+      "units": "kJ/mol",
+      "bounds": [
+        -300.0,
+        50.0
+      ],
+      "description": "Adsorption enthalpy of O2* relative to its gas parent."
+    },
+    {
+      "name": "dS_O2*",
+      "units": "J/(mol K)",
+      "bounds": [
+        -250.0,
+        0.0
+      ],
+      "description": "Non-positive by physics: adsorption loses entropy."
+    },
+    {
+      "name": "dH_O*",
+      "units": "kJ/mol",
+      "bounds": [
+        -300.0,
+        50.0
+      ],
+      "description": "Adsorption enthalpy of O* relative to its gas parent."
+    },
+    {
+      "name": "dS_O*",
+      "units": "J/(mol K)",
+      "bounds": [
+        -250.0,
+        0.0
+      ],
+      "description": "Non-positive by physics: adsorption loses entropy."
+    },
+    {
+      "name": "dH_CO2*",
+      "units": "kJ/mol",
+      "bounds": [
+        -300.0,
+        50.0
+      ],
+      "description": "Adsorption enthalpy of CO2* relative to its gas parent."
+    },
+    {
+      "name": "dS_CO2*",
+      "units": "J/(mol K)",
+      "bounds": [
+        -250.0,
+        0.0
+      ],
+      "description": "Non-positive by physics: adsorption loses entropy."
+    }
+  ],
+  "reaction_system": "CO oxidation",
+  "access_status": "public",
+  "license": "CC-BY-4.0",
+  "notes": "DRAFT (2026-08), axial-PDE branch. The physical constants M9 asks for, fitted under the reactor model M3 is stated against.",
+  "reactor": {
+    "kind": "axially-dispersed-packed-bed",
+    "nodes": 21,
+    "convection": "upwind2",
+    "outlet": "psu",
+    "velocity": "psu-variable",
+    "dispersion": "edwards-richardson-fuller-wilke",
+    "rate_basis": "per-site",
+    "inlet_reconstruction": {
+      "method": "tracer-shift",
+      "tracer": "Ar"
+    },
+    "notes": "Per-site rates on the mole-fraction basis: the (dH, dS) parameters mean exactly what the gradientless joint fit's mean, so the two posteriors are comparable parameter by parameter."
+  }
+}

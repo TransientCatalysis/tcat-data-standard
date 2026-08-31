@@ -1,0 +1,269 @@
+{
+  "schema_version": "0.1.0",
+  "spec_id": "co-ox-5step-tst-consistent",
+  "family": "microkinetic",
+  "name": "CO oxidation, five-step LH, thermodynamically consistent joint fit",
+  "description": "Arrhenius forward constants and fitted adsorption thermochemistry; every reverse from detailed balance. One model across all campaign temperatures.",
+  "derived_from": "art://spec-co-ox-5step-irreversible-45-2026-09-01-000000",
+  "derivation": "reparameterised in (log10A, Ea, dH_ads, dS_ads); all five steps reversible via detailed balance",
+  "parameter_transform": "none",
+  "thermodynamics": {
+    "parameterisation": "tst-detailed-balance",
+    "gas_parents": {
+      "CO*": {
+        "CO": 1
+      },
+      "O2*": {
+        "O2": 1
+      },
+      "O*": {
+        "O2": 0.5
+      },
+      "CO2*": {
+        "CO2": 1
+      }
+    },
+    "gas_data_source": "gas-thermo-codata-shomate-2026-08-25",
+    "pressure_Pa": 101325.0,
+    "notes": "Prefactors are ANCHORED, not fitted: kT/h for a surface step, the collision-limited impingement rate for a step whose forward side consumes a gas molecule. Fitted forward parameters are the activation entropy and enthalpy, so dS# = 0 is textbook transition-state theory. Constants are per-site on the mole-fraction basis, identical to the axial twin's, so the same anchors apply and the two reactor models remain comparable by subtraction. site_area_m2 is the one assumption the record does not measure. ON THE FITTED SCALE AND dSact_k5: the observable is scale * k5 * theta(CO2*), which invites the conclusion that the two enter through one product and only their sum is estimable. MEASURED on this campaign (2026-08-31) that is FALSE: theta(CO2*) itself depends on k5 -- a faster step drains the intermediate it consumes -- so compensating dSact_k5 by -dS/(R ln10) in the scale moved the residual by 32-52% of its range rather than leaving it fixed. The pair is strongly correlated, not degenerate, and the exact-degeneracy reading holds only in the fast-desorption limit where theta(CO2*) is set by the other steps. The axial twin does not pose the question at all, because the bed supplies the coupling from the measured loading instead of fitting it.",
+    "site_area_m2": 1e-19
+  },
+  "mechanism": {
+    "sites": [
+      {
+        "name": "*",
+        "density": 1.0
+      }
+    ],
+    "gas": [
+      {
+        "name": "CO"
+      },
+      {
+        "name": "O2"
+      },
+      {
+        "name": "CO2"
+      }
+    ],
+    "adsorbates": [
+      {
+        "name": "CO*",
+        "site": "*",
+        "composition": {
+          "C": 1,
+          "O": 1
+        }
+      },
+      {
+        "name": "O2*",
+        "site": "*",
+        "composition": {
+          "O": 2
+        }
+      },
+      {
+        "name": "O*",
+        "site": "*",
+        "composition": {
+          "O": 1
+        }
+      },
+      {
+        "name": "CO2*",
+        "site": "*",
+        "composition": {
+          "C": 1,
+          "O": 2
+        }
+      }
+    ],
+    "steps": [
+      {
+        "equation": "CO + * -> CO*",
+        "name": "S1 CO adsorption",
+        "reversible": true
+      },
+      {
+        "equation": "O2 + * -> O2*",
+        "name": "S2 O2 adsorption",
+        "reversible": true
+      },
+      {
+        "equation": "O2* + * -> 2 O*",
+        "name": "S3 O2 dissociation",
+        "reversible": true
+      },
+      {
+        "equation": "CO* + O* -> CO2* + *",
+        "name": "S4 surface reaction",
+        "reversible": true
+      },
+      {
+        "equation": "CO2* -> CO2 + *",
+        "name": "S5 CO2 desorption",
+        "reversible": true
+      }
+    ],
+    "activity_basis": "mole_fraction",
+    "gas_constant_J_per_mol_K": 8.314
+  },
+  "free_parameters": [
+    {
+      "name": "dSact_k1",
+      "bounds": [
+        -200.0,
+        0.0
+      ],
+      "description": "Activation entropy, J/mol/K; non-positive because a transition state formed from a free gas molecule cannot be more disordered than the gas."
+    },
+    {
+      "name": "dSact_k2",
+      "bounds": [
+        -200.0,
+        0.0
+      ],
+      "description": "Activation entropy, J/mol/K; non-positive because a transition state formed from a free gas molecule cannot be more disordered than the gas."
+    },
+    {
+      "name": "dSact_k3",
+      "bounds": [
+        -120.0,
+        0.0
+      ],
+      "description": "Activation entropy, J/mol/K; the upper edge stays at zero so the prefactor cannot exceed kT/h."
+    },
+    {
+      "name": "dSact_k4",
+      "bounds": [
+        -120.0,
+        0.0
+      ],
+      "description": "Activation entropy, J/mol/K; the upper edge stays at zero so the prefactor cannot exceed kT/h."
+    },
+    {
+      "name": "dSact_k5",
+      "bounds": [
+        -120.0,
+        0.0
+      ],
+      "description": "Activation entropy, J/mol/K; the upper edge stays at zero so the prefactor cannot exceed kT/h. STRONGLY CORRELATED with log10_scale in this gradientless treatment, though not degenerate with it -- see the thermodynamics notes for the measurement."
+    },
+    {
+      "name": "dHact_k1",
+      "bounds": [
+        0.0,
+        250.0
+      ],
+      "description": "Activation enthalpy, kJ/mol. Non-negative."
+    },
+    {
+      "name": "dHact_k2",
+      "bounds": [
+        0.0,
+        250.0
+      ],
+      "description": "Activation enthalpy, kJ/mol. Non-negative."
+    },
+    {
+      "name": "dHact_k3",
+      "bounds": [
+        0.0,
+        250.0
+      ],
+      "description": "Activation enthalpy, kJ/mol. Non-negative."
+    },
+    {
+      "name": "dHact_k4",
+      "bounds": [
+        0.0,
+        250.0
+      ],
+      "description": "Activation enthalpy, kJ/mol. Non-negative."
+    },
+    {
+      "name": "dHact_k5",
+      "bounds": [
+        0.0,
+        250.0
+      ],
+      "description": "Activation enthalpy, kJ/mol. Non-negative."
+    },
+    {
+      "name": "dH_CO*",
+      "units": "kJ/mol",
+      "bounds": [
+        -300.0,
+        50.0
+      ],
+      "description": "Adsorption enthalpy of CO* relative to its gas parent."
+    },
+    {
+      "name": "dS_CO*",
+      "units": "J/(mol K)",
+      "bounds": [
+        -250.0,
+        0.0
+      ],
+      "description": "Non-positive by physics: adsorption loses entropy."
+    },
+    {
+      "name": "dH_O2*",
+      "units": "kJ/mol",
+      "bounds": [
+        -300.0,
+        50.0
+      ],
+      "description": "Adsorption enthalpy of O2* relative to its gas parent."
+    },
+    {
+      "name": "dS_O2*",
+      "units": "J/(mol K)",
+      "bounds": [
+        -250.0,
+        0.0
+      ],
+      "description": "Non-positive by physics: adsorption loses entropy."
+    },
+    {
+      "name": "dH_O*",
+      "units": "kJ/mol",
+      "bounds": [
+        -300.0,
+        50.0
+      ],
+      "description": "Adsorption enthalpy of O* relative to its gas parent."
+    },
+    {
+      "name": "dS_O*",
+      "units": "J/(mol K)",
+      "bounds": [
+        -250.0,
+        0.0
+      ],
+      "description": "Non-positive by physics: adsorption loses entropy."
+    },
+    {
+      "name": "dH_CO2*",
+      "units": "kJ/mol",
+      "bounds": [
+        -300.0,
+        50.0
+      ],
+      "description": "Adsorption enthalpy of CO2* relative to its gas parent."
+    },
+    {
+      "name": "dS_CO2*",
+      "units": "J/(mol K)",
+      "bounds": [
+        -250.0,
+        0.0
+      ],
+      "description": "Non-positive by physics: adsorption loses entropy."
+    }
+  ],
+  "reaction_system": "CO oxidation",
+  "access_status": "public",
+  "license": "CC-BY-4.0",
+  "notes": "The physical constants this project is ultimately after (M9) are these parameters, not per-temperature rate constants."
+}

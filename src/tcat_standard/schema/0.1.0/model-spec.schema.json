@@ -400,9 +400,10 @@
         "parameterisation": {
           "type": "string",
           "enum": [
-            "arrhenius-detailed-balance"
+            "arrhenius-detailed-balance",
+            "tst-detailed-balance"
           ],
-          "description": "The only implemented value. Per-temperature fitting is the ABSENCE of this block, not an enum value -- a spec without it keeps today's meaning unchanged."
+          "description": "Which coordinates the FORWARD constants are fitted in; reverse constants follow detailed balance either way. 'arrhenius-detailed-balance' fits (log10A, Ea) per step. 'tst-detailed-balance' ANCHORS the prefactor at its transition-state value -- kT/h for a surface step, the collision-limited impingement rate for a step whose forward side consumes a gas molecule -- and fits (dS#, dH#) instead, so dS# = 0 is textbook transition-state theory and a sign constraint on dS# is a physical statement rather than a numerical guardrail. Per-temperature fitting is the ABSENCE of this block, not an enum value -- a spec without it keeps today's meaning unchanged."
         },
         "gas_parents": {
           "type": "object",
@@ -425,6 +426,11 @@
         "notes": {
           "type": "string",
           "description": "Anything else a reader needs about the thermodynamic treatment."
+        },
+        "site_area_m2": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Area per active site, m^2. Required in spirit by 'tst-detailed-balance' and meaningless without it: the collision anchor is an impingement flux per unit AREA, while a manifest reports site density per unit MASS, and converting between them needs a specific surface area that transient records do not carry. So this is the one declared assumption behind the adsorption anchor, and it is specification content because the value used is part of what the fitted activation entropies MEAN. ~1e-19 m^2 (10 A^2) is the conventional single-site area. NOTE that an active-site FRACTION is deliberately not a parameter anywhere: it would enter as -R ln f, perfectly correlated with dS#, so only the combination is estimable and fitting both would be structurally non-identifiable."
         }
       }
     },
