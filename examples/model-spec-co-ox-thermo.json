@@ -1,5 +1,5 @@
 {
-  "schema_version": "0.1.0",
+  "schema_version": "0.2.0",
   "spec_id": "co-ox-5step-thermo-consistent",
   "family": "microkinetic",
   "name": "CO oxidation, five-step LH, thermodynamically consistent joint fit",

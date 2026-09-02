@@ -1,0 +1,514 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://transientcatalysis.github.io/tcat-data-standard/0.2.0/protocol.schema.json",
+  "title": "Experiment protocol",
+  "description": "A named protocol plus its parameters -- never a raw time series. A transient experiment's design space is a function space, but real transient experiments are parameterised, so the parameterisation is the representation. THE SAME OBJECT is stored alongside executed data and emitted by experiment design, which is what makes closing the loop later a matter of plumbing rather than translation.",
+  "type": "object",
+  "required": [
+    "protocol",
+    "parameters",
+    "base_conditions"
+  ],
+  "properties": {
+    "protocol": {
+      "type": "string",
+      "description": "Which named protocol this is. Selects the parameter space enforced by the conditional blocks below. A closed enum on purpose: an unrecognised protocol name means a lab invented one, which is a conversation, not a validation pass.",
+      "enum": [
+        "prbs",
+        "pulse_train",
+        "temperature_ramp",
+        "step_change",
+        "multi_pulse",
+        "steady_state"
+      ]
+    },
+    "parameters": {
+      "type": "object",
+      "description": "Parameter space is declared per protocol by the conditional blocks below. Each protocol owns its own parameter names.",
+      "additionalProperties": true
+    },
+    "base_conditions": {
+      "type": "object",
+      "description": "The steady operating point the perturbation is applied around. Separated from parameters because it is shared across every protocol, while parameters differ per protocol.",
+      "required": [
+        "temperature_K",
+        "pressure_kPa"
+      ],
+      "properties": {
+        "temperature_K": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "pressure_kPa": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "total_flow_sccm": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "carrier": {
+          "type": "string",
+          "examples": [
+            "He",
+            "Ar",
+            "N2"
+          ]
+        },
+        "feed_mol_frac": {
+          "type": "object",
+          "description": "Baseline feed composition by species, mole fraction.",
+          "additionalProperties": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "catalyst_mass_g": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "bed_volume_cm3": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "bed": {
+          "type": "object",
+          "description": "Packed-bed geometry. MEASURED, so it belongs to the experiment rather than to any model -- but a reactor model cannot be evaluated without it, and none of it existed in any record before: for the CO-oxidation campaigns these numbers lived only in PSU's MATLAB drivers, which is also why the analysis spoke's residence-time bound had no traceable input. `bed_volume_cm3` above is kept and unused; state length and diameter instead, which determine it and also the velocity. DRAFT (2026-08): axial-PDE branch, for the September meeting.",
+          "additionalProperties": false,
+          "properties": {
+            "length_mm": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Packed length of the bed along the flow direction."
+            },
+            "diameter_mm": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Internal diameter of the tube."
+            },
+            "void_fraction": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1,
+              "description": "Gas volume fraction. COMPUTE it from the loaded masses and densities rather than quoting a handbook value: a bed diluted with wool is far more open than a packed one, and the reference implementation's own driver carries a commented-out literal from an undiluted bed that is wrong here by half the gas holdup."
+            },
+            "particle_diameter_um": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Effective particle diameter. For a physical mixture, the volume-weighted harmonic mean of the components' diameters -- the average that preserves specific surface, which is what the dispersion correlation's mechanical term scales with."
+            },
+            "diluent": {
+              "type": "string",
+              "description": "What the catalyst is dispersed in, e.g. 'aluminium wool', 'quartz wool'. It usually dominates the bed volume, so it sets the void fraction and the residence time."
+            },
+            "diluent_density_kg_per_m3": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "catalyst_density_kg_per_m3": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "site_density_umol_per_g": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Active sites per gram, from a named measurement -- record the method in the sample's `properties`. Under an axial reactor model this is NOT fitted: it sets the coupling between surface rate and gas, so the scale factor a gradientless fit leaves degenerate with the desorption constant comes from here instead."
+            },
+            "source": {
+              "type": "string",
+              "description": "Where these values came from, when it is not the instrument export. Anything transcribed out of analysis code rather than measured into a record should say so here."
+            },
+            "uncertainty": {
+              "type": "object",
+              "description": "DRAFT (2026-08): axial-reworked branch. Type B standard uncertainties (JCGM 100:2008) on the sibling fields, keyed by field name -- 'void_fraction': 0.05 is the uncertainty on `void_fraction`. A map rather than {value, sigma} promotion because promotion would break every existing record; a key that names no sibling field is a validation error. Partial is legal and expected: state what a record supports (a two-point spread like the computed 0.853 vs the driver's 0.5716 is a legitimate source -- say so in `source`), and leave the rest to the prior-free envelope rather than inventing sigmas.",
+              "minProperties": 1,
+              "additionalProperties": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "notes": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "time_base": {
+      "$ref": "defs/common.schema.json#/$defs/time_base"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Operator-facing detail: pretreatment, conditioning, or any deviation from the protocol as written."
+    },
+    "extensions": {
+      "$ref": "defs/common.schema.json#/$defs/extensions"
+    },
+    "maturity": {
+      "$ref": "defs/common.schema.json#/$defs/maturity",
+      "description": "How much weight someone else may put on this record. Absent means `sandbox`, which is true of everything written before the field existed."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "protocol": {
+            "const": "prbs"
+          }
+        },
+        "required": [
+          "protocol"
+        ]
+      },
+      "then": {
+        "properties": {
+          "parameters": {
+            "type": "object",
+            "required": [
+              "species",
+              "low_mol_frac",
+              "high_mol_frac",
+              "waveform"
+            ],
+            "properties": {
+              "species": {
+                "type": "string",
+                "description": "Which inlet species is modulated."
+              },
+              "low_mol_frac": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "high_mol_frac": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "waveform": {
+                "type": "object",
+                "description": "How the binary switching sequence is specified. Three forms, because real practice has three and only one of them is an LFSR. What every form must deliver is the ability to reconstruct the actual perturbation: an LFSR needs three integers, a randomised-dwell train needs its executed schedule, and a legacy run that logged neither needs to say so rather than leave the question blank. Discriminated by `form` so a reader never has to guess which fields are authoritative.",
+                "oneOf": [
+                  {
+                    "title": "LFSR-generated",
+                    "type": "object",
+                    "required": [
+                      "form",
+                      "register_length",
+                      "taps",
+                      "seed",
+                      "bit_period_s",
+                      "n_bits"
+                    ],
+                    "properties": {
+                      "form": {
+                        "const": "lfsr"
+                      },
+                      "register_length": {
+                        "type": "integer",
+                        "minimum": 2,
+                        "description": "LFSR register length. With seed and taps, this makes the sequence exactly reproducible."
+                      },
+                      "taps": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "description": "LFSR feedback tap positions."
+                      },
+                      "seed": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "LFSR seed. Required in this form: an unrecorded seed makes the perturbation waveform unreproducible."
+                      },
+                      "bit_period_s": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                      },
+                      "n_bits": {
+                        "type": "integer",
+                        "minimum": 1
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "title": "Recorded schedule",
+                    "type": "object",
+                    "required": [
+                      "form",
+                      "switch_times_s"
+                    ],
+                    "properties": {
+                      "form": {
+                        "const": "recorded"
+                      },
+                      "switch_times_s": {
+                        "type": "array",
+                        "minItems": 2,
+                        "items": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "description": "Executed valve-switch instants, seconds from t = 0, ascending. The schedule as run, not as planned -- this is the form for a randomised-dwell train, where the dwell times are drawn once and no generator state reproduces them."
+                      },
+                      "initial_level": {
+                        "type": "string",
+                        "enum": [
+                          "low",
+                          "high"
+                        ],
+                        "description": "Level held before the first switch."
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "title": "Reconstructed from a tracer",
+                    "type": "object",
+                    "required": [
+                      "form",
+                      "tracer_channel",
+                      "reason"
+                    ],
+                    "properties": {
+                      "form": {
+                        "const": "reconstructed"
+                      },
+                      "tracer_channel": {
+                        "type": "string",
+                        "description": "Channel carrying the inert tracer from which the inlet waveform is recovered.",
+                        "examples": [
+                          "ar_frac"
+                        ]
+                      },
+                      "reason": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Why no generator spec or executed schedule exists. Recording the gap is the point: a fit built on a tracer-reconstructed inlet inherits that reconstruction's assumptions, and a reader must be able to see so."
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "label": {
+                "type": "string",
+                "description": "Operator's own name for the sequence, verbatim. Kept because it is often the only handle the lab uses, but never trusted as metadata: it is routinely copied across runs it does not describe."
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "protocol": {
+            "const": "pulse_train"
+          }
+        },
+        "required": [
+          "protocol"
+        ]
+      },
+      "then": {
+        "properties": {
+          "parameters": {
+            "type": "object",
+            "required": [
+              "species",
+              "period_s",
+              "width_s",
+              "amplitude_mol_frac",
+              "count"
+            ],
+            "properties": {
+              "species": {
+                "type": "string"
+              },
+              "period_s": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "width_s": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "amplitude_mol_frac": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "protocol": {
+            "const": "temperature_ramp"
+          }
+        },
+        "required": [
+          "protocol"
+        ]
+      },
+      "then": {
+        "properties": {
+          "parameters": {
+            "type": "object",
+            "required": [
+              "start_K",
+              "rate_K_per_min",
+              "hold_K",
+              "hold_s"
+            ],
+            "properties": {
+              "start_K": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "rate_K_per_min": {
+                "type": "number"
+              },
+              "hold_K": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "hold_s": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "protocol": {
+            "const": "step_change"
+          }
+        },
+        "required": [
+          "protocol"
+        ]
+      },
+      "then": {
+        "properties": {
+          "parameters": {
+            "type": "object",
+            "required": [
+              "species",
+              "from_mol_frac",
+              "to_mol_frac",
+              "step_at_s"
+            ],
+            "properties": {
+              "species": {
+                "type": "string"
+              },
+              "from_mol_frac": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "to_mol_frac": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "step_at_s": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "protocol": {
+            "const": "multi_pulse"
+          }
+        },
+        "required": [
+          "protocol"
+        ]
+      },
+      "then": {
+        "properties": {
+          "parameters": {
+            "type": "object",
+            "required": [
+              "segments"
+            ],
+            "properties": {
+              "segments": {
+                "type": "array",
+                "minItems": 1,
+                "description": "Ordered segments. This is the representation for chemical-looping operation: an extended reductant pulse followed by an extended re-oxidation pulse.",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "species",
+                    "duration_s",
+                    "mol_frac"
+                  ],
+                  "properties": {
+                    "species": {
+                      "type": "string"
+                    },
+                    "duration_s": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    },
+                    "mol_frac": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    },
+                    "label": {
+                      "type": "string",
+                      "examples": [
+                        "reduction",
+                        "purge",
+                        "reoxidation"
+                      ]
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              },
+              "cycles": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 1
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      }
+    }
+  ],
+  "additionalProperties": false
+}

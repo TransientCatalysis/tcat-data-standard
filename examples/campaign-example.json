@@ -1,5 +1,5 @@
 {
-  "schema_version": "0.1.0",
+  "schema_version": "0.2.0",
   "campaign_id": "example-synthetic-prbs",
   "title": "SYNTHETIC EXAMPLE -- not a real study",
   "description": "Can the synthetic PRBS trace determine the two-site model's constants? Exists to exercise the schema.",

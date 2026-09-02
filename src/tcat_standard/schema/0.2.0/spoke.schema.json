@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://transientcatalysis.github.io/tcat-data-standard/0.2.0/spoke.schema.json",
+  "title": "Spoke manifest",
+  "description": "An optional `.tcat-spoke.json` at the root of a data spoke, declaring which schema version it is written against and where its documents live.\n\nIt exists so that spoke LAYOUT is declarative rather than conventional. The validator's directory-name convention (`manifests/`, `calibrations/`, ...) is a default, not a requirement -- and a default that a real lab will have good reasons to diverge from. A spoke organised by campaign, by student, by instrument, or as a monorepo of several sub-projects is equally valid: the contract is per-RECORD, not per-repository.\n\nThat is the whole point. Whether the collaboration ends up with one spoke per lab, one per student, one per campaign, or a mixture is not something anyone can usefully decide in advance, and nothing here should force the decision. Anything whose records validate is a spoke.\n\nJSON rather than YAML so it can be read and validated with no dependency beyond the validator itself -- these files are read on login nodes and in minimal CI containers.",
+  "type": "object",
+  "required": [
+    "standard_version",
+    "spoke_id",
+    "kind",
+    "stewards"
+  ],
+  "properties": {
+    "standard_version": {
+      "description": "The version of the standard this MANIFEST is written against. Records declare their own `schema_version`, and a spoke may hold documents at several versions and usually will, because a bump never obliges a lab to rewrite data. So this is a default for records that declare nothing -- never a correction to records that do.",
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "name": {
+      "description": "Human-readable name for this spoke. Free text: it is a label, not an identifier, and nothing joins on it.",
+      "type": "string"
+    },
+    "granularity": {
+      "description": "What this spoke is organised around, for a reader's benefit only. Nothing validates or joins on it -- the field exists so the answer is written down somewhere rather than inferred from a directory listing. Any value is legitimate, including a mixture that changed over time.",
+      "type": "string",
+      "examples": [
+        "lab",
+        "student",
+        "instrument",
+        "campaign",
+        "sub-project",
+        "monorepo",
+        "mixed"
+      ]
+    },
+    "layout": {
+      "description": "Which directories hold which kind of document. Every entry is a list, so one kind can live in several places -- a spoke with `2026-09-prbs/manifests/` and `2026-11-prbs/manifests/` lists both, or lists their parent and lets the walk recurse. Absent keys fall back to the default directory-name convention.",
+      "type": "object",
+      "properties": {
+        "dataset": {
+          "$ref": "#/$defs/paths"
+        },
+        "calibration": {
+          "$ref": "#/$defs/paths"
+        },
+        "protocol": {
+          "$ref": "#/$defs/paths"
+        },
+        "sample": {
+          "$ref": "#/$defs/paths"
+        },
+        "model": {
+          "$ref": "#/$defs/paths"
+        },
+        "publication": {
+          "$ref": "#/$defs/paths"
+        },
+        "provenance": {
+          "$ref": "#/$defs/paths"
+        },
+        "uncertainty-ensemble": {
+          "$ref": "#/$defs/paths"
+        },
+        "manifest-entry": {
+          "$ref": "#/$defs/paths"
+        }
+      },
+      "additionalProperties": false
+    },
+    "exclude": {
+      "description": "Paths the validator should not walk: scratch directories, vendored trees, notebook checkpoints. A spoke is allowed to contain things that are not records -- forcing every JSON file in a repository to be a valid document would make people keep their working files somewhere else, which is worse.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "examples": [
+        [
+          "scratch",
+          "notebooks/.ipynb_checkpoints",
+          "vendor"
+        ]
+      ]
+    },
+    "strict": {
+      "description": "When true, a JSON file whose kind cannot be inferred is an ERROR rather than a skip. Off by default, because a spoke legitimately holds configuration and notes. Turn it on once a spoke's layout has settled and you want a stray file to be noticed.",
+      "type": "boolean",
+      "default": false
+    },
+    "notes": {
+      "description": "Anything a reader needs in order to work in this spoke: how it is organised and why, what changed when, local conventions that diverge from the defaults.",
+      "type": "string"
+    },
+    "extensions": {
+      "description": "Free-form. The validator ignores this rather than rejecting it -- the same escape hatch and the same promotion rule as every other document kind.",
+      "type": "object",
+      "additionalProperties": true
+    },
+    "spoke_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+      "description": "Stable identifier for this spoke. `name` is explicitly a label that nothing joins on, so without this a spoke can never be registered and nothing can cross-check a record's inherited stewards against the manifest that declares them. Required now because zero manifests exist anywhere, which makes it free today and a major bump later."
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "data",
+        "analysis"
+      ],
+      "description": "Which side of the hub/spoke split this repository is on. Added because this manifest used to be a data-spoke concept only, which left analysis spokes with nowhere to record ownership at all."
+    },
+    "stewards": {
+      "$ref": "defs/common.schema.json#/$defs/stewards"
+    },
+    "maturity": {
+      "$ref": "defs/common.schema.json#/$defs/spoke_maturity",
+      "description": "The default rung for records in this spoke that make no claim of their own. Capped at `working` -- see the definition for why inheritance must not be able to manufacture a review."
+    }
+  },
+  "$defs": {
+    "paths": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "description": "Repository-relative directory. Walked recursively.",
+        "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+      },
+      "minItems": 1
+    }
+  },
+  "additionalProperties": false
+}

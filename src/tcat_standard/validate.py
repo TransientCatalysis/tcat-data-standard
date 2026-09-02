@@ -157,6 +157,11 @@ def validate(
 
     report.errors.extend(_structural_errors(document, kind))
     report.warnings.extend(_advisory_checks(document, kind, effective))
+    # Last, and deliberately: a `working` claim is checked against the warnings
+    # this document actually raised, so it has to run after they exist.
+    report.warnings.extend(_maturity_advice(document, kind, report.warnings))
+    if kind == "spoke":
+        report.warnings.extend(_steward_advice(document))
     return report
 
 
@@ -244,6 +249,81 @@ def _waveform_problems(protocol: Any, prefix: str) -> list[Problem]:
     return out
 
 
+_MATURITY_KINDS = frozenset(
+    {
+        "dataset",
+        "sample",
+        "model",
+        "model-spec",
+        "calibration",
+        "protocol",
+        "uncertainty-ensemble",
+        "campaign",
+    }
+)
+
+#: What each rung requires, and the sentence that explains why.
+_RUNG_REQUIREMENTS: dict[str, tuple[tuple[str, ...], str]] = {
+    "internally_reviewed": (
+        ("reviewed_by", "reviewed_on", "review_scope"),
+        "someone other than the producer checked this record and said what they "
+        'checked. "The team looked at it" is how that obligation quietly becomes '
+        "nothing -- the same rule the publication record applies to "
+        "reproducibility_reviewer",
+    ),
+    "published": (
+        ("reviewed_by", "reviewed_on", "review_scope", "published_in"),
+        "released alongside a publication that has passed the release gate in "
+        "tcat-index/RELEASE.md. This rung REFERENCES that gate rather than "
+        "restating it, so it needs to name the publication",
+    ),
+    "superseded": (
+        ("superseded_by", "superseded_reason"),
+        "a better record of the same thing exists and a reader who lands here "
+        "needs to be sent to it. A retirement with no forward pointer is a dead end",
+    ),
+}
+
+
+def _maturity_errors(document: Any, kind: str) -> list[Problem]:
+    """Say what a maturity rung requires, in the words of the rung.
+
+    JSON Schema enforces these through `if`/`then`, and reports them as
+    "'reviewed_by' is a required property" against a schema pointer nobody
+    reads. Same rule, better message -- no new law. The `anyOf` on a person is
+    the worst of them: it surfaces as "is not valid under any of the given
+    schemas", which tells a reader nothing about what to type.
+    """
+    out: list[Problem] = []
+    maturity = document.get("maturity")
+    if not isinstance(maturity, dict):
+        return out
+
+    rung = maturity.get("rung")
+    required, why = _RUNG_REQUIREMENTS.get(rung, ((), ""))
+    missing = [f for f in required if not maturity.get(f)]
+    if missing:
+        out.append(
+            Problem(
+                f"/maturity/{missing[0]}",
+                f"rung {rung!r} requires {', '.join(missing)}: {why}",
+            )
+        )
+
+    reviewer = maturity.get("reviewed_by")
+    if isinstance(reviewer, dict) and not (reviewer.get("orcid") or reviewer.get("github")):
+        out.append(
+            Problem(
+                "/maturity/reviewed_by",
+                "a reviewer needs an orcid or a github handle, not just a name. "
+                "People change institutions and share names, and a review "
+                "attributed to a string nobody can resolve is a review nobody "
+                "can ask about",
+            )
+        )
+    return out
+
+
 def _structural_errors(document: Any, kind: str) -> list[Problem]:
     """Errors phrased for a human, for rules JSON Schema states unreadably.
 
@@ -254,6 +334,13 @@ def _structural_errors(document: Any, kind: str) -> list[Problem]:
     out: list[Problem] = []
     if not isinstance(document, dict):
         return out
+
+    # Deliberately a set-membership test rather than an `if kind == ...` anchor:
+    # this function and _advisory_checks share those anchors, and a careless bulk
+    # edit has already once landed a block in both and turned warnings into
+    # errors. A different shape cannot be copied across by accident.
+    if kind in _MATURITY_KINDS or kind == "spoke":
+        out.extend(_maturity_errors(document, kind))
 
     if kind == "manifest-entry":
         p = _manifest_location_problem(document, "")
@@ -422,6 +509,157 @@ def _time_base_advice(time_base: Any, channels: Any) -> list[Problem]:
                         "so which timestamps apply to it is left to the reader to guess",
                     )
                 )
+    return out
+
+
+def _maturity_advice(document: Any, kind: str, raised: list[Problem]) -> list[Problem]:
+    """Advice about a maturity claim. Never an error -- see _advisory_checks.
+
+    `raised` is the set of warnings this document already produced, which is what
+    lets `working` be checkable: the claim is "the validator is quiet, or every
+    remaining warning is named in warnings_accepted". That makes this the only
+    place an advisory check has a consequence, and the consequence attaches to a
+    VOLUNTARY claim rather than to CI.
+    """
+    out: list[Problem] = []
+    maturity = document.get("maturity")
+    if not isinstance(maturity, dict):
+        # Deliberately silent. Absence means `sandbox`, which is true, and
+        # warning on every record that has made no claim is how people learn to
+        # skip the warnings that mean something.
+        return out
+
+    rung = maturity.get("rung")
+    if rung and rung != "sandbox" and not maturity.get("entered_at"):
+        out.append(
+            Problem(
+                "/maturity/entered_at",
+                f"rung {rung!r} with no date. A claim that cannot be aged is the "
+                "one that quietly goes stale",
+            )
+        )
+
+    if rung in ("working", "internally_reviewed", "published"):
+        accepted = {
+            w.get("pointer")
+            for w in (maturity.get("warnings_accepted") or [])
+            if isinstance(w, dict)
+        }
+        unaccounted = [w.pointer for w in raised if w.pointer not in accepted]
+        if unaccounted:
+            shown = ", ".join(unaccounted[:4]) + ("..." if len(unaccounted) > 4 else "")
+            out.append(
+                Problem(
+                    "/maturity/rung",
+                    f"claims {rung!r}, but {len(unaccounted)} advisory warning(s) are "
+                    f"neither fixed nor listed in warnings_accepted: {shown}",
+                )
+            )
+
+    reviewer = maturity.get("reviewed_by")
+    if isinstance(reviewer, dict) and rung in ("internally_reviewed", "published"):
+        producers = _named_people(document)
+        rname = (reviewer.get("orcid") or reviewer.get("github") or reviewer.get("name") or "")
+        if rname and producers and {rname} >= producers:
+            out.append(
+                Problem(
+                    "/maturity/reviewed_by",
+                    "the reviewer is the only person this record names. A one-person "
+                    "spoke is real, so this is advice rather than a refusal -- but a "
+                    "second name that did not review anything would be worse",
+                )
+            )
+
+    reviewed_on = maturity.get("reviewed_on")
+    newest = _newest_timestamp(document)
+    if reviewed_on and newest and str(reviewed_on) < newest[:10]:
+        out.append(
+            Problem(
+                "/maturity/reviewed_on",
+                f"reviewed {reviewed_on}, but this record carries content from "
+                f"{newest[:10]}. A badge outliving its review is the failure mode",
+            )
+        )
+
+    if rung == "published" and document.get("access_status") != "public":
+        out.append(
+            Problem(
+                "/maturity/rung",
+                f"claims 'published' while access_status is "
+                f"{document.get('access_status')!r}. Mid-release the two are "
+                "legitimately out of step for a few minutes; in the registry it is "
+                "an error, because that is the record of what was actually released",
+            )
+        )
+    return out
+
+
+def _named_people(document: Any) -> set[str]:
+    """Everyone this record names as producer or steward, by best handle."""
+    out: set[str] = set()
+    for block in ("personnel", "stewards"):
+        for person in document.get(block) or []:
+            if isinstance(person, dict):
+                handle = person.get("orcid") or person.get("github") or person.get("name")
+                if handle:
+                    out.add(handle)
+    return out
+
+
+def _newest_timestamp(document: Any) -> str | None:
+    """The newest ISO timestamp the record carries, for the stale-review check."""
+    stamps: list[str] = []
+    prov = document.get("provenance")
+    if isinstance(prov, dict) and isinstance(prov.get("created_at"), str):
+        stamps.append(prov["created_at"])
+    for entry in document.get("entries") or []:
+        if isinstance(entry, dict) and isinstance(entry.get("valid_from"), str):
+            stamps.append(entry["valid_from"])
+    return max(stamps) if stamps else None
+
+
+def _steward_advice(document: Any) -> list[Problem]:
+    """Advice about a spoke manifest's stewards block."""
+    out: list[Problem] = []
+    stewards = document.get("stewards")
+    if not isinstance(stewards, list) or not stewards:
+        return out
+
+    roles = {s.get("role") for s in stewards if isinstance(s, dict)}
+    if "data_steward" not in roles and "analysis_owner" not in roles:
+        out.append(
+            Problem(
+                "/stewards",
+                "no data_steward and no analysis_owner, so the generated CODEOWNERS "
+                "has no owner for the repository as a whole",
+            )
+        )
+    if not any(isinstance(s, dict) and s.get("github") for s in stewards):
+        out.append(
+            Problem(
+                "/stewards",
+                "no steward has a github handle, so CODEOWNERS cannot be generated "
+                "and the metadata and the repository permission cannot be kept in step",
+            )
+        )
+    if not any(isinstance(s, dict) and s.get("orcid") for s in stewards):
+        out.append(
+            Problem(
+                "/stewards",
+                "no steward has an ORCID. A person named only by a string cannot be "
+                "resolved once they leave the project",
+            )
+        )
+    layout = document.get("layout") or {}
+    if layout.get("calibration") and "instrument_owner" not in roles:
+        out.append(
+            Problem(
+                "/stewards",
+                "this spoke holds calibrations but names no instrument_owner. A "
+                "calibration change is reviewed by whoever owns the instrument, and "
+                "the review is worthless if nobody knows who that is",
+            )
+        )
     return out
 
 

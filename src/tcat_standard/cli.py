@@ -107,6 +107,11 @@ def _infer_kind(
     # Ordered most-specific first: a model document also carries a `metrics` key
     # that nothing else does, but a sample carries `sample_id` which a dataset
     # also has -- so the discriminating key has to be the unique one.
+    if "spoke_id" in doc and "standard_version" in doc:
+        # A manifest that is not at a spoke root -- an example, or a copy under
+        # review. It used to fall through to None and be skipped in silence,
+        # which is the one outcome this function exists to avoid.
+        return "spoke"
     if "calibration_id" in doc:
         return "calibration"
     if "model_id" in doc:

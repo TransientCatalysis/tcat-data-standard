@@ -1,0 +1,354 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://transientcatalysis.github.io/tcat-data-standard/0.2.0/calibration.schema.json",
+  "title": "Calibration (sensor model)",
+  "description": "A calibration is a first-class, versioned, content-addressed artifact -- not metadata attached to a dataset. Entries are TIME-INDEXED even when there is only one, because a fixed calibration is the degenerate case of a drifting one, and code written against the general shape needs no change the day someone hands you a before/after bracket. This schema fixes the SHAPE of a valid calibration; the physics lives in the analysis hub, which is free to argue about it.",
+  "type": "object",
+  "required": [
+    "calibration_id",
+    "schema_version",
+    "instrument",
+    "entries"
+  ],
+  "properties": {
+    "calibration_id": {
+      "$ref": "defs/common.schema.json#/$defs/artifact_id",
+      "description": "Content-addressed. A calibration change produces a NEW id; it never mutates an existing artifact. That is what makes it possible to swap one id and re-derive every affected trace, and to know exactly which downstream fits went stale."
+    },
+    "schema_version": {
+      "$ref": "defs/common.schema.json#/$defs/semver"
+    },
+    "instrument": {
+      "$ref": "defs/common.schema.json#/$defs/instrument"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "ms_sensitivity",
+        "ms_fragmentation",
+        "xas_reference",
+        "ir_reference",
+        "flow",
+        "temperature",
+        "other"
+      ],
+      "default": "other",
+      "description": "What sort of sensor model this is. IR background subtraction and reference-spectrum selection are transformations with their own artifacts, not silent preprocessing -- so they are calibrations here, not hidden steps in a script."
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Time-indexed entries, expected in ascending valid_from order. A single entry is legal and is the common case at project start.",
+      "items": {
+        "type": "object",
+        "required": [
+          "valid_from"
+        ],
+        "anyOf": [
+          {
+            "required": [
+              "channels"
+            ]
+          },
+          {
+            "required": [
+              "matrix"
+            ]
+          }
+        ],
+        "properties": {
+          "valid_from": {
+            "$ref": "defs/common.schema.json#/$defs/timestamp"
+          },
+          "valid_until": {
+            "$ref": "defs/common.schema.json#/$defs/timestamp",
+            "description": "Optional. Absent means 'until the next entry, or indefinitely'."
+          },
+          "channels": {
+            "type": "object",
+            "minProperties": 1,
+            "description": "Per-channel calibration coefficients, keyed by the same channel names the dataset uses.",
+            "additionalProperties": {
+              "type": "object",
+              "required": [
+                "sensitivity",
+                "units"
+              ],
+              "properties": {
+                "sensitivity": {
+                  "type": "number",
+                  "description": "Multiplicative factor mapping raw signal to the target quantity."
+                },
+                "sensitivity_sigma": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "Uncertainty on the sensitivity. Calibration uncertainty propagates but belongs to neither data nor parameter uncertainty; it is its own artifact, cited in the chain."
+                },
+                "offset": {
+                  "type": "number",
+                  "default": 0
+                },
+                "offset_sigma": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "units": {
+                  "type": "string",
+                  "description": "Units of the sensitivity factor itself, written as target-over-source so the conversion is checkable by inspection.",
+                  "examples": [
+                    "A/(mol/m^3)",
+                    "1/(mol/m^3)"
+                  ]
+                },
+                "mz": {
+                  "type": "number"
+                },
+                "species": {
+                  "type": "string"
+                },
+                "valid_range": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "items": {
+                    "type": "number"
+                  },
+                  "description": "Optional source-signal range over which this factor was determined. Extrapolating outside it is a judgement call that should be visible."
+                },
+                "pressure_normalization": {
+                  "type": "object",
+                  "description": "Correct this channel for drift in the analyser's own pressure before applying the sensitivity. A quadrupole's count rate tracks chamber pressure, so a sensitivity determined at one pressure misreads at another; the correction is referenced to the pressure at which the factor was determined.",
+                  "required": [
+                    "reference_pressure",
+                    "pressure_channel",
+                    "units"
+                  ],
+                  "properties": {
+                    "reference_pressure": {
+                      "type": "number",
+                      "exclusiveMinimum": 0,
+                      "description": "Pressure at which `sensitivity` was determined."
+                    },
+                    "reference_pressure_sigma": {
+                      "type": "number",
+                      "minimum": 0,
+                      "description": "DRAFT (2026-08): axial-reworked branch. Type B standard uncertainty (JCGM 100:2008) on reference_pressure. Optional; absent means no uncertainty is stated in any record, which routes this stage to the prior-free envelope rather than to a fabricated sigma."
+                    },
+                    "pressure_channel": {
+                      "type": "string",
+                      "description": "Name of the dataset channel carrying the measured analyser pressure."
+                    },
+                    "units": {
+                      "type": "string",
+                      "minLength": 1,
+                      "examples": [
+                        "Torr",
+                        "Pa"
+                      ]
+                    },
+                    "form": {
+                      "type": "string",
+                      "enum": [
+                        "linear_scale",
+                        "ratio"
+                      ],
+                      "default": "linear_scale",
+                      "description": "linear_scale: x * (1 + (p_ref - p)/p_ref), the first-order form legacy spreadsheets use. ratio: x * p_ref/p, exact proportionality. They agree to first order and diverge as p departs from p_ref, so which one was applied is not a detail."
+                    },
+                    "notes": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "baseline": {
+                  "type": "object",
+                  "description": "A baseline subtracted from this channel that depends on ANOTHER channel, plus a constant. Distinct from a cracking split: a split apportions a known fragmentation of one species onto another mass, whereas this absorbs whatever empirical, signal-tracking background a lab has fitted -- reagent impurity, detector artefact, flow-correlated offset. Keeping the two apart matters because a split is a property of the molecule and transfers between instruments, while a baseline is a property of this rig on this day and does not.",
+                  "required": [
+                    "intercept"
+                  ],
+                  "properties": {
+                    "source_channel": {
+                      "type": "string",
+                      "description": "Channel whose signal drives the slope term. Omit for a constant-only baseline."
+                    },
+                    "slope": {
+                      "type": "number",
+                      "default": 0,
+                      "description": "Subtracted amount per unit of source_channel."
+                    },
+                    "slope_sigma": {
+                      "type": "number",
+                      "minimum": 0,
+                      "description": "DRAFT (2026-08): axial-reworked branch. Type B standard uncertainty on slope. Optional; absent means none is stated -- envelope, not invention."
+                    },
+                    "intercept": {
+                      "type": "number",
+                      "description": "Constant subtracted."
+                    },
+                    "intercept_sigma": {
+                      "type": "number",
+                      "minimum": 0,
+                      "description": "DRAFT (2026-08): axial-reworked branch. Type B standard uncertainty on intercept. Optional; absent means none is stated."
+                    },
+                    "notes": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "floor": {
+                  "type": "number",
+                  "description": "Value below which the corrected signal is clamped. Declaring it here is what lets a dataset carry a matching `censoring` block instead of presenting clamped points as measurements. A calibration that clamps and does not say so is the failure this field exists to make impossible."
+                },
+                "notes": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "matrix": {
+            "type": "object",
+            "description": "For kind = ms_fragmentation: the cracking pattern itself. Keys are \"<contributing species>-><affected channel>\", values the fraction of the contributor's signal appearing on that channel -- so \"CO2->CO\": 0.0883 means 8.83% of the CO2 signal lands on m/z 28. A partial pattern is legal and normal: labs measure the splits that matter to them, and a full matrix is the same shape grown. This is the artifact that fragmentation_matrix_ref points AT.",
+            "minProperties": 1,
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "matrix_sigma": {
+            "type": "object",
+            "description": "DRAFT (2026-08): axial-reworked branch. Type B standard uncertainties on the cracking pattern, keyed exactly like `matrix` (the same parallel-map shape `declared_unused` uses). Partial is legal: state the sigmas you have, leave the rest to the prior-free envelope.",
+            "minProperties": 1,
+            "additionalProperties": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "priors": {
+            "type": "object",
+            "description": "DRAFT (2026-08): axial-reworked branch. Record-sourced priors on individual coefficients, keyed by dotted path within this entry (\"matrix.CO->O\", \"channels.CO.sensitivity\"). Exists for the case where the record itself carries DISAGREEING values -- a declared coefficient, an applied one, and an independent literature value -- and the honest prior is built from that documented spread rather than invented. PEtab's priorDistribution/priorParameters vocabulary, reshaped to this schema's time-indexed entries.",
+            "minProperties": 1,
+            "additionalProperties": {
+              "type": "object",
+              "required": [
+                "sigma",
+                "source"
+              ],
+              "properties": {
+                "sigma": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "Standard uncertainty, in the coefficient's own units (or decades if the coefficient is stored log-scaled -- say which in source)."
+                },
+                "distribution": {
+                  "type": "string",
+                  "default": "normal",
+                  "examples": [
+                    "normal",
+                    "lognormal",
+                    "uniform"
+                  ],
+                  "description": "Distribution family the sigma parameterises."
+                },
+                "source": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Where this prior comes from, specific enough to re-derive -- e.g. 'spread of declared 0.005905 vs applied 0.0106 vs NIST ~0.017'."
+                },
+                "from_declared_unused": {
+                  "type": "boolean",
+                  "description": "True when the prior was constructed from the declared/applied discrepancy that `declared_unused` preserves."
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "declared_unused": {
+            "type": "object",
+            "description": "Coefficients an upstream export DECLARED but did not apply, keyed like `matrix`. Legacy spreadsheets accumulate these: a parameter cell is edited, the formula that once referenced it is replaced by a hard-coded literal, and the two drift apart with nothing to flag it. `matrix` must always carry what was actually applied -- that is what a re-derivation has to reproduce. This field exists so the declared value survives the discrepancy instead of being silently dropped, because which of the two is physically right is a question for the instrument's owner, not for whoever noticed.",
+            "minProperties": 1,
+            "additionalProperties": {
+              "type": "object",
+              "required": [
+                "value",
+                "reason"
+              ],
+              "properties": {
+                "value": {
+                  "type": "number"
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "How the discrepancy was established -- specific enough to re-check, e.g. which cell declared it and how many rows used something else."
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "fragmentation_matrix_ref": {
+            "$ref": "defs/common.schema.json#/$defs/artifact_ref",
+            "description": "For MS: the cracking-pattern matrix, itself a separate cited artifact rather than an inline table, because it is revised independently of the sensitivity factors."
+          },
+          "background_ref": {
+            "$ref": "defs/common.schema.json#/$defs/artifact_ref",
+            "description": "For IR/XAS: the background or single-beam reference used. A cited artifact, not a silent preprocessing step."
+          },
+          "reference_spectrum_ref": {
+            "$ref": "defs/common.schema.json#/$defs/artifact_ref",
+            "description": "For XAS: the reference standard used for energy alignment or linear-combination fitting."
+          },
+          "determined_from": {
+            "type": "array",
+            "items": {
+              "$ref": "defs/common.schema.json#/$defs/artifact_id"
+            },
+            "description": "The calibration-gas or standard datasets this entry was fit from. Makes the calibration itself auditable."
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "owner": {
+      "type": "string",
+      "description": "Who owns the instrument. A calibration change is reviewed by this person -- everything downstream depends on calibration code, so it carries a tighter gate than a fitting tool.",
+      "examples": [
+        "rioux-lab",
+        "frenkel-group"
+      ]
+    },
+    "supersedes": {
+      "$ref": "defs/common.schema.json#/$defs/artifact_ref",
+      "description": "The calibration this one replaces, if any. Forms an explicit chain instead of leaving readers to sort by date."
+    },
+    "access_status": {
+      "$ref": "defs/common.schema.json#/$defs/access_status"
+    },
+    "license": {
+      "$ref": "defs/common.schema.json#/$defs/license_spdx"
+    },
+    "personnel": {
+      "$ref": "defs/common.schema.json#/$defs/personnel"
+    },
+    "notes": {
+      "type": "string",
+      "description": "How this calibration was determined and what its known limits are. The place to record that a fragmentation correction is missing, or that a factor was extrapolated outside its measured range."
+    },
+    "extensions": {
+      "$ref": "defs/common.schema.json#/$defs/extensions"
+    },
+    "maturity": {
+      "$ref": "defs/common.schema.json#/$defs/maturity",
+      "description": "How much weight someone else may put on this record. Absent means `sandbox`, which is true of everything written before the field existed."
+    },
+    "stewards": {
+      "$ref": "defs/common.schema.json#/$defs/stewards",
+      "description": "Who is answerable for THIS record, replacing the spoke's list rather than merging with it. Absent means the spoke's stewards apply, which is the usual case."
+    }
+  },
+  "additionalProperties": false
+}

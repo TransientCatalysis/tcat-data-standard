@@ -1,5 +1,5 @@
 {
-  "schema_version": "0.1.0",
+  "schema_version": "0.2.0",
   "spec_id": "co-ox-5step-irrev-axial",
   "family": "microkinetic",
   "name": "CO oxidation, five-step LH, irreversible steps 4-5, axial bed",

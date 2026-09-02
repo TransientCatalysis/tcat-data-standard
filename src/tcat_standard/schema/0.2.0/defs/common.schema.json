@@ -1,0 +1,1037 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://transientcatalysis.github.io/tcat-data-standard/0.2.0/defs/common.schema.json",
+  "title": "Shared definitions, tcat data standard 0.2.0",
+  "description": "Vocabulary shared by every tcat schema. Nothing here is a standalone document; every $def is referenced from dataset, manifest-entry, calibration, provenance, uncertainty-ensemble, or protocol.",
+  "$defs": {
+    "semver": {
+      "description": "Semantic version string. Schema versions are semver so that a minor bump can only ADD optional fields (STANDARD.md, Schema Versioning).",
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$"
+    },
+    "timestamp": {
+      "description": "ISO 8601 instant, UTC, with explicit offset. Naive local timestamps are rejected: three institutions in two time zones plus a synchrotron cannot align transients on a wall clock.",
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]+)?(?:Z|[+-][0-9]{2}:[0-9]{2})$"
+    },
+    "artifact_id": {
+      "description": "Content-addressed artifact identifier: <tool>-<dataset-short-name>-<YYYY-MM-DD>-<short-hash>. The prefix is for humans and carries no authority; only the hash is trusted (STANDARD.md, Artifact Identity).",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9a-f]{6,16}$",
+      "examples": [
+        "calib-ptal2o3-co-ox-2026-03-14-a3f91c",
+        "fit-vox-c3h8-odh-2026-09-01-9b12ee"
+      ]
+    },
+    "artifact_ref": {
+      "description": "Reference to another artifact by ID, in art:// form. Used where a record cites an artifact it does not contain.",
+      "type": "string",
+      "pattern": "^art://[a-z][a-z0-9]*(?:-[a-z0-9]+)*-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9a-f]{6,16}$",
+      "examples": [
+        "art://frag-msq1-2026-03-14-77b201"
+      ]
+    },
+    "sha256": {
+      "description": "Lowercase hex SHA-256. Every byte-bearing pointer carries one; this is what makes a path swappable for a URL (STANDARD.md, Indirect File References).",
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "autonomy_level": {
+      "description": "TRACE-AI autonomy level under which the record was produced. The scale runs A0-A5; this project operates at A1-A2 (human-gated). Recorded rather than inferred, because it is nearly free now and unrecoverable later.",
+      "type": "string",
+      "enum": [
+        "A0",
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5"
+      ]
+    },
+    "status": {
+      "description": "TRACE-AI checklist item A5. Flag, never delete. A failed run that is deleted cannot be counted in an exclusion table at manuscript time.",
+      "type": "string",
+      "enum": [
+        "ok",
+        "flagged",
+        "failed"
+      ]
+    },
+    "access_status": {
+      "description": "DMSP three-tier access model. internal = project-only working data; staged = under manuscript preparation; public = released.",
+      "type": "string",
+      "enum": [
+        "internal",
+        "staged",
+        "public"
+      ]
+    },
+    "license_spdx": {
+      "description": "SPDX identifier. DMSP defaults: CC-BY-4.0 for data and documentation, CC0-1.0 where unrestricted reuse is preferred and permitted, MIT for software.",
+      "type": "string",
+      "enum": [
+        "CC-BY-4.0",
+        "CC0-1.0",
+        "MIT",
+        "proprietary"
+      ]
+    },
+    "layer": {
+      "description": "Which of the three data layers this record describes. raw = instrument output as produced, immutable and checksummed. canonical = tidy, units and uncertainties explicit, immutable once written. derived = regenerable from raw plus a recorded transformation chain.",
+      "type": "string",
+      "enum": [
+        "raw",
+        "canonical",
+        "derived"
+      ]
+    },
+    "measurement_type": {
+      "description": "Modality of the measurement or calculation. Drives which conditional requirements apply (an experimental modality must declare a protocol).",
+      "type": "string",
+      "enum": [
+        "prbs_kinetics",
+        "ms",
+        "ir_gas",
+        "ir_transient",
+        "xas_mes",
+        "steady_state",
+        "characterization",
+        "computational"
+      ]
+    },
+    "noise_model": {
+      "description": "Named noise model for a channel's uncertainty. Declaring the family is the point: a counting-statistics sigma and a calibrated-estimate sigma propagate differently and must not be silently interchanged.",
+      "type": "object",
+      "required": [
+        "family"
+      ],
+      "properties": {
+        "family": {
+          "type": "string",
+          "enum": [
+            "counting",
+            "gaussian_homoscedastic",
+            "gaussian_heteroscedastic",
+            "baseline_drift",
+            "calibrated_estimate",
+            "exact",
+            "unknown"
+          ],
+          "description": "\"exact\" is for channels that carry no measurement noise because they are not measurements -- a censoring flag, a row counter, an index. It is distinct from an uncertainty `kind` of \"none\", which says a sigma is unavailable; this says there is none to have. Keeping them apart stops a bookkeeping column from being reported as a channel with missing uncertainty forever."
+        },
+        "parameters": {
+          "type": "object",
+          "description": "Family-specific parameters, e.g. {\"sigma\": 1.2e-11} for gaussian_homoscedastic.",
+          "additionalProperties": true
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "channel_uncertainty": {
+      "description": "How uncertainty is carried for one channel. Either a sibling column of per-point sigmas, or a single constant sigma, or an explicit declaration that none is available -- which is legal but must be stated, not left blank.",
+      "type": "object",
+      "required": [
+        "kind",
+        "noise_model"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "sigma_column",
+            "constant_sigma",
+            "none"
+          ]
+        },
+        "column": {
+          "type": "string",
+          "description": "Required when kind is sigma_column: the name of the column holding per-point sigma."
+        },
+        "value": {
+          "type": "number",
+          "description": "Required when kind is constant_sigma, in the channel's own units.",
+          "minimum": 0
+        },
+        "noise_model": {
+          "$ref": "#/$defs/noise_model"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "sigma_column"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "column"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "constant_sigma"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "value"
+            ]
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "channel": {
+      "description": "One measured or computed channel. Units and uncertainty are REQUIRED here rather than in two parallel top-level maps, so a channel cannot exist with a unit but no uncertainty (or vice versa).",
+      "type": "object",
+      "required": [
+        "units",
+        "quantity",
+        "uncertainty"
+      ],
+      "properties": {
+        "units": {
+          "type": "string",
+          "description": "Explicit unit string. No implicit conventions, no dimensionless-by-omission. Use \"1\" for a genuine dimensionless quantity.",
+          "minLength": 1,
+          "examples": [
+            "A",
+            "mol/m^3",
+            "Pa",
+            "K",
+            "1",
+            "arb"
+          ]
+        },
+        "quantity": {
+          "type": "string",
+          "description": "What is being measured, independent of unit. This is what distinguishes a raw ion current from a derived concentration.",
+          "examples": [
+            "ion_current",
+            "concentration",
+            "partial_pressure",
+            "temperature",
+            "mole_fraction",
+            "absorbance",
+            "normalized_absorption"
+          ]
+        },
+        "uncertainty": {
+          "$ref": "#/$defs/channel_uncertainty"
+        },
+        "mz": {
+          "type": "number",
+          "description": "Mass-to-charge ratio, for MS channels."
+        },
+        "wavenumber_cm-1": {
+          "type": "number",
+          "description": "For a single-wavenumber IR channel."
+        },
+        "energy_eV": {
+          "type": "number",
+          "description": "For a single-energy XAS channel."
+        },
+        "species": {
+          "type": "string",
+          "description": "Chemical species this channel reports, where one applies."
+        },
+        "notes": {
+          "type": "string"
+        },
+        "time_column": {
+          "type": "string",
+          "description": "Name of the time channel this channel is sampled on, when channels do not share one. A scanning quadrupole MS visits its masses in sequence, so each species is acquired at its own instant -- for a 5-mass scan at 283.82 ms the stagger is 56.76 ms per mass. Forcing those onto one time column would misdate every species but the first. Note that such a stamp is often DERIVED (one logged clock minus k * scan_speed / n_masses) rather than logged per mass; that makes it a model of the acquisition, not a measurement of it, and `notes` is the place to say which. The named column must itself be declared as a channel with quantity \"time\".",
+          "examples": [
+            "co_time_s",
+            "o2_time_s"
+          ]
+        },
+        "censoring": {
+          "$ref": "#/$defs/censoring",
+          "description": "Whether this channel's values are bounded by the processing that produced them rather than by the measurement."
+        },
+        "identifiers": {
+          "$ref": "#/$defs/chemical_identifiers",
+          "description": "Chemical identifiers for this channel's species. The DMSP commits to common chemical identifiers 'when available' for interoperability; free-text `species` is fine for a lab, and an identifier is what makes the channel joinable outside one."
+        }
+      },
+      "additionalProperties": false
+    },
+    "censoring": {
+      "description": "A channel is CENSORED when its recorded value is a bound rather than a measurement. Spreadsheet and instrument pipelines routinely clamp a background-subtracted signal at zero, and the result is indistinguishable from a genuine zero once written to a CSV -- so a fit treats the clamp as an exact observation and every parameter it informs is pulled toward it, one-directionally, hardest where the true value is smallest.\n\nRead the bound as a statement about the ESTIMATOR, not about the quantity. A calibrated channel holds sensitivity x (signal - background), which is a noisy estimator of a physical quantity and not the quantity itself; its realisations fall below zero whenever the true value is near zero, and that is correct behaviour for an estimator rather than an impossible reading. `lower_bound` names the floor the data was clamped TO -- no recorded value lies below it -- and a value sitting on that floor says the estimate fell at or below it. Replacing such an estimate with the floor makes the channel a biased estimator of whatever a model predicts for it.\n\nRecording the bound makes the points identifiable; naming a flag_column makes them addressable point by point, which is what a likelihood needs in order to treat them as inequalities instead of equalities. Where the pre-clamp value is still recoverable upstream, re-deriving it is better than modelling the censoring: see `recoverable`.",
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "none",
+            "left_clipped",
+            "right_clipped",
+            "interval"
+          ],
+          "description": "none is the honest default and says the question was considered. left_clipped: the data was clamped up to a floor, so a value sitting on lower_bound means the underlying estimate fell at or below it. right_clipped: clamped down to a ceiling, so a value on upper_bound means the estimate was at or above it. interval: both."
+        },
+        "lower_bound": {
+          "type": "number",
+          "description": "Required when kind is left_clipped or interval. Values equal to it are bounds, not measurements."
+        },
+        "upper_bound": {
+          "type": "number",
+          "description": "Required when kind is right_clipped or interval."
+        },
+        "flag_column": {
+          "type": "string",
+          "description": "Name of a companion channel holding 1 where this channel's value was censored and 0 where it was measured. Without it, censored points can only be found by comparing against the bound -- which silently also catches values that genuinely landed on it."
+        },
+        "fraction_censored": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Fraction of this channel's points that are censored. Cheap to compute at write time, and it is the number that tells a reader whether this is a footnote or the dominant feature of the data."
+        },
+        "recoverable": {
+          "type": "boolean",
+          "description": "Whether the pre-censoring value can still be recovered from an upstream artifact. True changes the remedy from 'model it' to 're-derive it'."
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "left_clipped",
+                  "interval"
+                ]
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "lower_bound"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "right_clipped",
+                  "interval"
+                ]
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "upper_bound"
+            ]
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "instrument": {
+      "description": "Model and identifier. The identifier must be stable across runs: it is the join key between a dataset and the calibration that applies to it.",
+      "type": "object",
+      "required": [
+        "model",
+        "identifier"
+      ],
+      "properties": {
+        "model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "identifier": {
+          "type": "string",
+          "minLength": 1,
+          "examples": [
+            "MS-Q1",
+            "PRBS-REACTOR-1",
+            "NSLS2-QAS-XAS"
+          ]
+        },
+        "site": {
+          "type": "string",
+          "description": "Which institution or facility holds the instrument. Free text in 0.2.0; a controlled list is a promotion candidate.",
+          "examples": [
+            "psu",
+            "bnl",
+            "gt"
+          ]
+        },
+        "facility": {
+          "type": "string",
+          "description": "User facility and endstation, where applicable.",
+          "examples": [
+            "NSLS-II QAS 7-BM"
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "time_base": {
+      "description": "The time base a transient measurement is expressed on. Named explicitly by the DMSP. Without it, two modalities acquired under the same perturbation cannot be aligned.",
+      "type": "object",
+      "required": [
+        "dt_s",
+        "n_samples"
+      ],
+      "properties": {
+        "t0": {
+          "$ref": "#/$defs/timestamp",
+          "description": "UTC instant corresponding to t = 0 of the trace. Required in spirit and requested of every new acquisition; optional in the schema only because legacy exports exist that discarded it, and those must be describable without inventing one. State t0_absent_reason instead when it is genuinely unavailable."
+        },
+        "dt_s": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Nominal sample interval in seconds. Use the irregular flag if sampling is not uniform. Under kind = per_channel this is the nominal full-scan cycle interval, not the spacing of any one channel."
+        },
+        "n_samples": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "shared",
+            "per_channel"
+          ],
+          "default": "shared",
+          "description": "Whether all channels share one time column (shared) or each carries its own (per_channel). Under per_channel every non-time channel must declare its time_column."
+        },
+        "t0_absent_reason": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Why no absolute t0 exists. A fabricated wall-clock is worse than a stated absence: it silently licenses a cross-modality alignment that was never measured."
+        },
+        "irregular": {
+          "type": "boolean",
+          "default": false,
+          "description": "True when dt_s is nominal only and a time column carries the truth. The time column must then be declared as a channel."
+        },
+        "time_column": {
+          "type": "string",
+          "description": "Name of the authoritative time column, required in practice when irregular is true and kind is shared. Under kind = per_channel the channels name their own instead."
+        }
+      },
+      "additionalProperties": false
+    },
+    "personnel": {
+      "description": "Who PRODUCED the record -- past tense, historical, and never a permission. Distinct from `stewards`, which says who is answerable now; see that definition for why the two must not be merged. Optional; the DMSP commits to it, so the field name is fixed now.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "orcid": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$"
+          },
+          "institution": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "examples": [
+              "acquired",
+              "processed",
+              "reviewed",
+              "steward"
+            ]
+          },
+          "github": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$"
+          },
+          "credit_roles": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "conceptualization",
+                "data-curation",
+                "formal-analysis",
+                "funding-acquisition",
+                "investigation",
+                "methodology",
+                "project-administration",
+                "resources",
+                "software",
+                "supervision",
+                "validation",
+                "visualization",
+                "writing-original-draft",
+                "writing-review-editing"
+              ]
+            },
+            "description": "CRediT contributor roles, the same closed fourteen `stewards` uses, so the contribution vocabulary is shared even though the two blocks answer different questions."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "funding": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "funder",
+          "award"
+        ],
+        "properties": {
+          "funder": {
+            "type": "string",
+            "examples": [
+              "US Department of Energy"
+            ]
+          },
+          "award": {
+            "type": "string",
+            "examples": [
+              "DE-FOA-0003612"
+            ]
+          },
+          "program": {
+            "type": "string",
+            "examples": [
+              "Genesis Mission"
+            ]
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "publication": {
+      "type": "object",
+      "properties": {
+        "doi": {
+          "type": "string",
+          "pattern": "^10\\.[0-9]{4,9}/[^\\s]+$"
+        },
+        "preprint_doi": {
+          "type": "string",
+          "pattern": "^10\\.[0-9]{4,9}/[^\\s]+$"
+        },
+        "title": {
+          "type": "string"
+        },
+        "repository_doi": {
+          "type": "string",
+          "description": "DOI of the public data deposit. Reported to DOE OSTI on release per the DMSP.",
+          "pattern": "^10\\.[0-9]{4,9}/[^\\s]+$"
+        }
+      },
+      "additionalProperties": true
+    },
+    "extensions": {
+      "description": "Free-form namespace. THE VALIDATOR IGNORES THIS OBJECT RATHER THAN REJECTING IT. When the same field appears independently in three labs' extensions, it is promoted into the schema proper. Schema follows practice; it does not predict it.",
+      "type": "object",
+      "additionalProperties": true
+    },
+    "doi": {
+      "description": "A DOI, bare (no https://doi.org/ prefix). Bare so it can be composed into any resolver.",
+      "type": "string",
+      "pattern": "^10\\.[0-9]{4,9}/[^\\s]+$"
+    },
+    "chemical_identifiers": {
+      "description": "Common chemical identifiers, where any apply. The DMSP commits to using these 'when available' for interoperability, so the field exists to be filled rather than argued about later. All optional: a surface intermediate often has no CAS number, and a supported mixed oxide often has no meaningful SMILES.",
+      "type": "object",
+      "properties": {
+        "formula": {
+          "type": "string",
+          "description": "Empirical or stoichiometric formula.",
+          "examples": [
+            "C3H8",
+            "VOx/SiO2"
+          ]
+        },
+        "inchi": {
+          "type": "string"
+        },
+        "inchikey": {
+          "type": "string",
+          "pattern": "^[A-Z]{14}-[A-Z]{10}-[A-Z]$"
+        },
+        "smiles": {
+          "type": "string"
+        },
+        "cas": {
+          "type": "string",
+          "pattern": "^[0-9]{2,7}-[0-9]{2}-[0-9]$"
+        },
+        "pubchem_cid": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "cod_id": {
+          "type": "string",
+          "description": "Crystallography Open Database entry, for a structure."
+        },
+        "icsd_id": {
+          "type": "string"
+        },
+        "materials_project_id": {
+          "type": "string",
+          "pattern": "^mp-[0-9]+$"
+        }
+      },
+      "additionalProperties": true
+    },
+    "software_ref": {
+      "description": "The software that produced or interprets a record. The DMSP's 'associated GitHub info or software release'. Distinct from provenance.tool, which records what ran: this records what a reader should install.",
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "examples": [
+            "tcat-analysis",
+            "cqbax"
+          ]
+        },
+        "repository": {
+          "type": "string",
+          "format": "uri"
+        },
+        "version": {
+          "type": "string"
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{7,40}$"
+        },
+        "release_doi": {
+          "$ref": "#/$defs/doi",
+          "description": "DOI of the archived release, where one exists."
+        },
+        "license": {
+          "type": "string",
+          "description": "SPDX identifier. Free-form because third-party software is not limited to our own license set."
+        }
+      },
+      "additionalProperties": true
+    },
+    "objective": {
+      "description": "Which project objective this record serves. Named in the DMSP's metadata list. A closed enum would be wrong this early -- objectives get restated -- so it is a short free-text label plus an optional milestone tag.",
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string",
+          "examples": [
+            "1a-prediction",
+            "1b-mechanism",
+            "3-descriptors"
+          ]
+        },
+        "milestone": {
+          "type": "string",
+          "examples": [
+            "M3",
+            "M6",
+            "M9"
+          ]
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "split_assignment": {
+      "description": "Train/validation/test membership, expressed as GROUPS rather than as rows. This is TRACE-AI B2 made structural: catalysis data has shared lineages and repeated conditions, so a row-level split leaks. Listing batch_id and lineage_id values per split makes the grouping auditable and lets a validator check that no batch appears in two splits.",
+      "type": "object",
+      "required": [
+        "strategy",
+        "grouped_by"
+      ],
+      "properties": {
+        "strategy": {
+          "type": "string",
+          "enum": [
+            "grouped_random",
+            "grouped_stratified",
+            "leave_one_batch_out",
+            "leave_one_sample_out",
+            "temporal",
+            "predefined",
+            "none"
+          ],
+          "description": "'none' is legal and means the model was fit to all data with no held-out set -- which must be stated, because it changes what any reported metric means."
+        },
+        "grouped_by": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "batch_id",
+              "lineage_id",
+              "sample_id",
+              "none"
+            ]
+          },
+          "minItems": 1,
+          "description": "Which key(s) the split respects. 'none' means ungrouped, which for this project's data is almost always a leakage bug rather than a choice."
+        },
+        "train": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "validation": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "test": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "seed": {
+          "type": "integer",
+          "description": "Required in practice for any random strategy, or the split is unreproducible."
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "person": {
+      "description": "A person named well enough to be found again. `name` alone is not that -- people change institutions and share names, and a review attributed to a string nobody can resolve is a review nobody can ask about. So at least one persistent handle is required.",
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "As the person writes it."
+        },
+        "orcid": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$",
+          "description": "The persistent identifier, and the only field here that still resolves after someone leaves the project."
+        },
+        "github": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$",
+          "description": "GitHub login, validated against GitHub's own handle rule. This is the join key CODEOWNERS is generated from, so a typo here is a wrong repository permission rather than a cosmetic error -- which is why it is patterned instead of free text."
+        },
+        "institution": {
+          "type": "string",
+          "description": "Where they were when they did this. Recorded because it is unrecoverable once they move."
+        },
+        "email": {
+          "type": "string",
+          "description": "Contact of last resort. Stripped from public exports: an address is contact detail beyond what publishing implies consent to."
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "orcid"
+          ]
+        },
+        {
+          "required": [
+            "github"
+          ]
+        }
+      ],
+      "additionalProperties": false
+    },
+    "maturity_rung": {
+      "description": "How much weight someone else may put on this record. NOT a quality flag (`status`), NOT a permission tier (`access_status`), NOT a statement about process (`autonomy_level`), and NOT a study or paper lifecycle (`campaign.status`, `publication.status`) -- all four 2x2s are populated in every cell, and STANDARD.md carries them. The first four values are ORDERED and each has an entry criterion that can be checked rather than felt; `superseded` is terminal and orthogonal, so an at-least comparison never matches it. Closed, because a rung nobody can check is a rung that means whatever the writer wanted it to.",
+      "type": "string",
+      "enum": [
+        "sandbox",
+        "working",
+        "internally_reviewed",
+        "published",
+        "superseded"
+      ]
+    },
+    "maturity": {
+      "description": "The maturity claim, and the evidence for it. A block rather than a bare string because the four conditional requirements need somewhere to live, and four more top-level names on eight document kinds is how a namespace rots. ABSENCE MEANS `sandbox`: every record written before this field existed sits at the bottom rung by construction, so nothing already committed changes meaning.",
+      "type": "object",
+      "required": [
+        "rung"
+      ],
+      "properties": {
+        "rung": {
+          "$ref": "#/$defs/maturity_rung"
+        },
+        "entered_at": {
+          "type": "string",
+          "format": "date",
+          "description": "When this rung was claimed. A claim with no date cannot be aged, and an unaged claim is the one that quietly goes stale -- a reviewed badge outliving its review is the specific failure."
+        },
+        "warnings_accepted": {
+          "type": "array",
+          "description": "Advisory warnings this record raises and has decided to live with, by JSON pointer, each with its reason. This is what makes `working` checkable: the criterion is that the validator is quiet, or every remaining warning is named here. It is also the only place an advisory check gains a consequence -- and the consequence attaches to a VOLUNTARY claim, never to CI.",
+          "items": {
+            "type": "object",
+            "required": [
+              "pointer",
+              "reason"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "pointer": {
+                "type": "string",
+                "description": "The JSON pointer the warning names, e.g. /channels/co2/uncertainty."
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 30,
+                "description": "Why it is acceptable here. Thirty characters minimum for the same reason a stub must name what blocks it: \"known\" is not a reason."
+              }
+            }
+          }
+        },
+        "reviewed_by": {
+          "$ref": "#/$defs/person",
+          "description": "Who checked it. Required at `internally_reviewed` and above."
+        },
+        "reviewed_on": {
+          "type": "string",
+          "format": "date",
+          "description": "When the review happened. A review predating the content it reviews is not a review, and the validator says so."
+        },
+        "review_scope": {
+          "type": "string",
+          "minLength": 30,
+          "description": "What the reviewer actually checked, and against what. Thirty characters minimum, mirroring the analysis hub's `blocked_on` rule -- \"reviewed\" describes nothing and cannot be audited. The model is the calibration case: reproduced PSU's own mole fractions from raw counts, 130,537 of 130,560 values bit-identical across 26 runs."
+        },
+        "published_in": {
+          "type": "string",
+          "description": "The publication_id of the paper whose release gate this record passed. A REFERENCE to the gate in tcat-index/RELEASE.md, never a copy of it: the claim is verified against that publication's own status across records, so it cannot be true here and false there."
+        },
+        "deposit_doi": {
+          "type": "string",
+          "description": "The repository DOI the bytes were deposited under, so `published` is falsifiable from this record alone."
+        },
+        "superseded_by": {
+          "type": "string",
+          "description": "The id of the better record of the same thing. Required when superseded, because a reader who lands here needs somewhere to be sent; a retirement with no forward pointer is a dead end."
+        },
+        "superseded_reason": {
+          "type": "string",
+          "minLength": 30,
+          "description": "What the successor fixes -- a clean re-export, a recalibration, a corrected clock. Without it the pair is two records and no story."
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "rung": {
+                "const": "internally_reviewed"
+              }
+            },
+            "required": [
+              "rung"
+            ]
+          },
+          "then": {
+            "required": [
+              "reviewed_by",
+              "reviewed_on",
+              "review_scope"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "rung": {
+                "const": "published"
+              }
+            },
+            "required": [
+              "rung"
+            ]
+          },
+          "then": {
+            "required": [
+              "reviewed_by",
+              "reviewed_on",
+              "review_scope",
+              "published_in"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "rung": {
+                "const": "superseded"
+              }
+            },
+            "required": [
+              "rung"
+            ]
+          },
+          "then": {
+            "required": [
+              "superseded_by",
+              "superseded_reason"
+            ]
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "spoke_maturity": {
+      "description": "A spoke-wide default for records that make no claim of their own. Deliberately NARROWER than the record-level enum: `internally_reviewed` and `published` rest on per-record facts -- a named reviewer of THIS record, a paper citing THIS record -- that cannot be true of a directory. Uncapped, one edit to one file would promote every record in the tree, which is a claim manufactured by inheritance and the exact failure the ladder exists to prevent. The cap makes that unrepresentable rather than merely discouraged. Resolution: record's own rung, else this, else `sandbox`. It is a floor, not a ceiling -- a sandbox spoke may hold one published dataset.",
+      "type": "object",
+      "required": [
+        "rung"
+      ],
+      "properties": {
+        "rung": {
+          "type": "string",
+          "enum": [
+            "sandbox",
+            "working"
+          ]
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "stewards": {
+      "description": "Who is ANSWERABLE for this now -- present tense, with a GitHub handle, generating a repository permission. Distinct from `personnel`, which records who DID the work, past tense, and must not be merged with it: merging would either hand every historical contributor write access or lose the historical record the moment someone leaves. On a record this REPLACES the spoke's list rather than merging with it -- merge semantics are unimplementable in the head, since one record steward beside three spoke stewards is either one or four and nobody would agree which.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "institution",
+          "role"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "orcid": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$"
+          },
+          "github": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$",
+            "description": "The join key `.github/CODEOWNERS` is generated from."
+          },
+          "email": {
+            "type": "string"
+          },
+          "institution": {
+            "type": "string",
+            "minLength": 1,
+            "description": "REQUIRED. Which institution carries this duty. The DMSP scopes obligations per institution, so an unattributed steward cannot be chased."
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "data_steward",
+              "instrument_owner",
+              "analysis_owner",
+              "pi"
+            ],
+            "description": "The DUTY, not the contribution. Closed, because the point is that each duty has an owner and a validator can check the set is covered. `instrument_owner` is load-bearing: a calibration change is reviewed by that person, and the review is worthless if nobody knows who it is."
+          },
+          "credit_roles": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "conceptualization",
+                "data-curation",
+                "formal-analysis",
+                "funding-acquisition",
+                "investigation",
+                "methodology",
+                "project-administration",
+                "resources",
+                "software",
+                "supervision",
+                "validation",
+                "visualization",
+                "writing-original-draft",
+                "writing-review-editing"
+              ]
+            },
+            "description": "CRediT contributor roles (ANSI/NISO Z39.104-2022). Deliberately SEPARATE from `role`: conflating who to email when the calibration is wrong with who goes on the paper gets both wrong. Closed at exactly fourteen because CRediT is a fixed taxonomy -- an open list would be a different vocabulary wearing its name. Values are lowercase-hyphen rather than the NISO display strings, which contain an en dash and would be a footgun in every shell and grep."
+          },
+          "since": {
+            "type": "string",
+            "format": "date"
+          },
+          "until": {
+            "type": "string",
+            "format": "date",
+            "description": "When this stewardship ends -- a graduation, a postdoc's term. The field that makes the block survive turnover: nothing else records that a name has gone stale, and a stale steward is worse than none because it looks answered."
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

@@ -1,0 +1,367 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://transientcatalysis.github.io/tcat-data-standard/0.2.0/model.schema.json",
+  "title": "Model",
+  "description": "A fitted or trained model as a first-class artifact.\n\nThe DMSP treats models as research products and commits to distributing them with 'code, documentation, parameter files, training or calibration data references, and example use cases', and for AI/ML specifically with 'training data references, model architecture or algorithm description, hyperparameters or configuration files, performance metrics, uncertainty characterization where applicable, and limitations on appropriate use'. That is a document, and this is it.\n\nDeliberately one schema for both ends of the graded palette -- a neural ODE and a reduced microkinetic model are described by the same fields. Two schemas would mean two report paths, two query surfaces, and an arbitrary line down the middle of a palette whose whole point is that the boundary moves per question.\n\nIt also happens to satisfy TRACE-AI B1 (full model specification), B3 (metrics), B5 (uncertainty method), and, via `splits`, B2 (leakage control) -- see profiles/trace-ai/enforcement.md.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "model_id",
+    "family",
+    "algorithm",
+    "parameters_ref",
+    "training_data",
+    "metrics",
+    "access_status",
+    "license"
+  ],
+  "properties": {
+    "schema_version": {
+      "$ref": "defs/common.schema.json#/$defs/semver"
+    },
+    "model_id": {
+      "$ref": "defs/common.schema.json#/$defs/artifact_id",
+      "description": "Content-addressed, like every other artifact. A retrained model is a new id; it never mutates an existing one -- which is what lets a published result cite a model and have that citation stay true."
+    },
+    "family": {
+      "type": "string",
+      "enum": [
+        "data_driven",
+        "sparse_regression",
+        "microkinetic",
+        "generated",
+        "hybrid"
+      ],
+      "description": "Where on the graded palette this sits. Drives whether the model can serve sub-objective 1b (mechanism) at all, which is a property of the family rather than of the fit quality."
+    },
+    "algorithm": {
+      "type": "string",
+      "minLength": 2,
+      "description": "The specific method, from the analysis hub's model registry.",
+      "examples": [
+        "neural-ode",
+        "rnn",
+        "reactive-sindy",
+        "lh-two-site",
+        "reduced-mkm",
+        "rmg-scaffold"
+      ]
+    },
+    "interpretable": {
+      "type": "boolean",
+      "description": "Whether fitted parameters carry mechanistic meaning. Stated rather than inferred from the family, because a heavily-regularised sparse regression can be interpretable and an over-parameterised microkinetic model can fail to be."
+    },
+    "description": {
+      "type": "string",
+      "description": "What this model is, in a sentence a reader outside the project can follow."
+    },
+    "architecture": {
+      "type": "object",
+      "description": "Structure. For a network: layers, widths, activations. For a microkinetic model: the elementary-step network, or a pointer to a Cantera mechanism file. TRACE-AI B1.",
+      "properties": {
+        "summary": {
+          "type": "string"
+        },
+        "mechanism_ref": {
+          "$ref": "defs/common.schema.json#/$defs/artifact_ref",
+          "description": "For a microkinetic model: the mechanism as its own artifact, so it is portable and inspectable without running our code."
+        },
+        "n_parameters": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "n_species": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "n_reactions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "details": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "hyperparameters": {
+      "type": "object",
+      "description": "Configuration, including the solver and its tolerances. For a stiff problem these are not incidental: rtol changes the answer, so recording them is part of recording the result. TRACE-AI B1.",
+      "additionalProperties": true
+    },
+    "seed": {
+      "type": "integer",
+      "description": "Random seed. The DMSP commits to preserving 'random seeds where applicable'. Absent means the fit was deterministic -- which should be true and is worth being explicit about."
+    },
+    "features": {
+      "type": "array",
+      "description": "What the model consumes, and how each input was generated. TRACE-AI A3.",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "units"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "units": {
+            "type": "string",
+            "description": "Use \"1\" for dimensionless; never omission."
+          },
+          "quantity": {
+            "type": "string",
+            "examples": [
+              "concentration",
+              "surface_coverage",
+              "fraction_reduced"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "description": "Which channel or descriptor it came from."
+          },
+          "generation": {
+            "type": "string",
+            "description": "How it was computed, if not read directly."
+          },
+          "transform": {
+            "type": "string",
+            "enum": [
+              "none",
+              "log10",
+              "ln",
+              "standardize",
+              "minmax"
+            ],
+            "default": "none"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "parameters_ref": {
+      "description": "The fitted parameters or learned weights. A manifest entry when they are bytes on disk, or the artifact id of an uncertainty ensemble when the parameters ARE the ensemble -- which is the normal case for a fitted kinetic model, since a point estimate without its ensemble is not a result this project accepts.",
+      "oneOf": [
+        {
+          "$ref": "manifest-entry.schema.json"
+        },
+        {
+          "$ref": "defs/common.schema.json#/$defs/artifact_ref"
+        }
+      ]
+    },
+    "uncertainty_ref": {
+      "$ref": "defs/common.schema.json#/$defs/artifact_ref",
+      "description": "The uncertainty ensemble for this model's parameters. TRACE-AI B5. Absent means no uncertainty was quantified, which is a legitimate state for an early fit and must not be mistaken for certainty."
+    },
+    "training_data": {
+      "type": "object",
+      "required": [
+        "dataset_ids"
+      ],
+      "description": "What it was fit to. TRACE-AI A2 and B2.",
+      "properties": {
+        "dataset_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          },
+          "description": "Dataset ids, not paths. A model whose training data cannot be enumerated cannot be reproduced or audited."
+        },
+        "artifact_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "defs/common.schema.json#/$defs/artifact_id"
+          },
+          "description": "The exact canonical or derived artifacts consumed, where the fit ran through the tool contract. More precise than dataset ids, because it pins the calibration too."
+        },
+        "sample_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "n_observations": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "splits": {
+          "$ref": "defs/common.schema.json#/$defs/split_assignment"
+        }
+      },
+      "additionalProperties": false
+    },
+    "metrics": {
+      "type": "object",
+      "description": "Performance, per split, WITH uncertainty. TRACE-AI B3 exists to prevent best-only reporting, so a bare number is not enough: report an interval or a spread, or say why you cannot.",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "value",
+          "units",
+          "split"
+        ],
+        "properties": {
+          "value": {
+            "type": "number"
+          },
+          "units": {
+            "type": "string",
+            "examples": [
+              "%",
+              "1",
+              "mol/(g s)"
+            ]
+          },
+          "split": {
+            "type": "string",
+            "enum": [
+              "train",
+              "validation",
+              "test",
+              "held_out",
+              "all"
+            ]
+          },
+          "interval": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "number"
+            },
+            "description": "Confidence or credible interval. Its absence is what best-only reporting looks like."
+          },
+          "interval_kind": {
+            "type": "string",
+            "examples": [
+              "95% CI",
+              "95% credible",
+              "min-max over folds",
+              "1 sigma"
+            ]
+          },
+          "n": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "examples": [
+        {
+          "steady_state_conversion_rel_error": {
+            "value": 12.4,
+            "units": "%",
+            "split": "held_out",
+            "interval": [
+              9.1,
+              16.0
+            ],
+            "interval_kind": "95% CI",
+            "n": 6,
+            "notes": "Milestone M6 target is <= 20%."
+          }
+        }
+      ]
+    },
+    "identifiability": {
+      "type": "object",
+      "description": "Which parameters the data actually constrained. Milestone M9 is stated in terms of IDENTIFIABLE rate constants, so a model returning twelve numbers when the data pins four has not met it -- and cannot be shown either way unless this is recorded.",
+      "properties": {
+        "identifiable": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "unidentifiable": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "criterion": {
+          "type": "string",
+          "examples": [
+            "profile likelihood",
+            "FIM eigenvalue threshold",
+            "posterior contraction"
+          ]
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "limitations": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Limitations on appropriate use, in the DMSP's words. Strongly encouraged and checked by an advisory warning: a model released without stated limits will be applied outside them, and the person who does it will not be the person who fitted it. State the conditions, catalysts, and time horizons it was NOT validated on."
+    },
+    "software": {
+      "$ref": "defs/common.schema.json#/$defs/software_ref",
+      "description": "What to install to use this model. The DMSP's 'associated GitHub info or software release'."
+    },
+    "example_use": {
+      "type": "string",
+      "description": "Pointer to a runnable example -- notebook path or artifact ref. The DMSP commits to example use cases, and TRACE-AI D1 asks for executable artifacts."
+    },
+    "supersedes": {
+      "$ref": "defs/common.schema.json#/$defs/artifact_ref"
+    },
+    "autonomy_level": {
+      "$ref": "defs/common.schema.json#/$defs/autonomy_level"
+    },
+    "access_status": {
+      "$ref": "defs/common.schema.json#/$defs/access_status"
+    },
+    "embargo_until": {
+      "$ref": "defs/common.schema.json#/$defs/timestamp"
+    },
+    "license": {
+      "$ref": "defs/common.schema.json#/$defs/license_spdx"
+    },
+    "personnel": {
+      "$ref": "defs/common.schema.json#/$defs/personnel"
+    },
+    "funding": {
+      "$ref": "defs/common.schema.json#/$defs/funding"
+    },
+    "publication": {
+      "$ref": "defs/common.schema.json#/$defs/publication"
+    },
+    "project": {
+      "description": "Which project this model belongs to. Named in the DMSP's metadata list.",
+      "type": "string"
+    },
+    "objective": {
+      "$ref": "defs/common.schema.json#/$defs/objective"
+    },
+    "notes": {
+      "description": "Free-text narrative: what was tried and rejected, why this parameterisation, anything a reader needs that the structured fields do not carry.",
+      "type": "string"
+    },
+    "extensions": {
+      "$ref": "defs/common.schema.json#/$defs/extensions"
+    },
+    "maturity": {
+      "$ref": "defs/common.schema.json#/$defs/maturity",
+      "description": "How much weight someone else may put on this record. Absent means `sandbox`, which is true of everything written before the field existed."
+    },
+    "stewards": {
+      "$ref": "defs/common.schema.json#/$defs/stewards",
+      "description": "Who is answerable for THIS record, replacing the spoke's list rather than merging with it. Absent means the spoke's stewards apply, which is the usual case."
+    }
+  },
+  "additionalProperties": false
+}

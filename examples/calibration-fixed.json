@@ -1,6 +1,6 @@
 {
   "calibration_id": "cal-msq1-synthetic-2026-09-01-dd9265",
-  "schema_version": "0.1.0",
+  "schema_version": "0.2.0",
   "instrument": {
     "model": "Synthetic quadrupole MS",
     "identifier": "MS-Q1-SYNTH",
