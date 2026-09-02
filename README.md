@@ -1,5 +1,23 @@
 # tcat-data-standard
 
+> ### New here?
+>
+> **Depositing data?** Don't start with this document. Create a repository from
+> [`tcat-data-spoke-template`](https://github.com/TransientCatalysis/tcat-data-spoke-template)
+> and open its **`START-HERE.md`** — four steps, one command, ending at a
+> validating spoke. `tcat-spoke init` writes the manifest, your CODEOWNERS and
+> your `CITATION.cff`, so there is nothing to hand-edit.
+>
+> **Writing analysis?** Same, from
+> [`tcat-analysis-spoke-template`](https://github.com/TransientCatalysis/tcat-analysis-spoke-template).
+>
+> **Working out how the project runs?**
+> [`COLLABORATION.md`](https://github.com/TransientCatalysis/.github/blob/main/COLLABORATION.md)
+> — who owns what, what a pull request carries, and how to coach an agent here.
+>
+> `STANDARD.md` below is the rulebook. It is a reference, not a tutorial, and
+> nobody needs to read it before making a spoke.
+
 **What counts as a valid dataset for the TransientCatalysis collaboration.** Schema, validator, and ingestion contract.
 
 > **Status: draft, 0.1.0.** Nothing here has been exercised against real instrument data, because none exists yet. That is the point at which the required-field set is cheapest to argue about, so please argue about it now — see [STANDARD.md](STANDARD.md) §4 and the [open questions](STANDARD.md#adaptable-13-open-questions).
