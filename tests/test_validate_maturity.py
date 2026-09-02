@@ -257,3 +257,84 @@ def test_maturity_did_not_exist_in_0_1_0():
     block is rejected by 0.1.0, which is correct."""
     doc = dict(sample(), schema_version="0.1.0", maturity={"rung": "sandbox"})
     assert not validate(doc, "sample", version="0.1.0").ok
+
+
+# --- the permanent-home rule ----------------------------------------------
+
+def _dataset_at(rung: str, *, url: bool = True, **maturity) -> dict:
+    """A real dataset document, from the generated example, with its bytes moved.
+
+    Derived from `examples/dataset-prbs-co-ox.json` rather than hand-written, per
+    CONTRIBUTING: a hand-built fixture drifts from the schema and then fails for
+    a reason that has nothing to do with what it is testing. This one did exactly
+    that while being written -- five unrelated errors, none of them about
+    permanent homes.
+    """
+    import copy
+    import json
+    from pathlib import Path as _Path
+
+    example = json.loads(
+        (_Path(__file__).resolve().parents[1] / "examples" / "dataset-prbs-co-ox.json").read_text()
+    )
+    doc = copy.deepcopy(example)
+
+    if url:
+        # The OneDrive case: bytes somewhere this project does not control.
+        for entry in doc["files"]:
+            entry.pop("path", None)
+            entry["url"] = "https://example.sharepoint.com/a/Fast_Summary.csv"
+
+    m = {"rung": rung, "entered_at": "2026-09-01"}
+    if rung in ("internally_reviewed", "published"):
+        m |= {
+            "reviewed_by": {"name": "R Rioux", "orcid": "0000-0002-1825-0097"},
+            "reviewed_on": "2026-09-01",
+            "review_scope": "checked the exported counts against the instrument log",
+        }
+    if rung == "published":
+        m["published_in"] = "pub-example-2026"
+    m.update(maturity)
+    doc["maturity"] = m
+    return doc
+
+
+def _home_warnings(doc):
+    r = validate(doc, "dataset", version=V)
+    return [w for w in r.warnings if "/files/" in w.pointer]
+
+
+@pytest.mark.parametrize("rung", ["sandbox", "working"])
+def test_sandbox_and_working_data_may_live_anywhere(rung):
+    """The PI rule, one half: data feeding sandbox and working pipelines lives
+    wherever is convenient -- a lab share, OneDrive, scratch. Warning about it
+    would be warning about the normal case, which is how people learn to skip
+    warnings."""
+    assert _home_warnings(_dataset_at(rung)) == []
+
+
+def test_a_reviewed_record_on_a_revocable_url_is_warned_about():
+    """The other half: once a record claims someone checked it, somebody may
+    cite it, and a citation pointing at a share link breaks silently."""
+    warnings = _home_warnings(_dataset_at("internally_reviewed"))
+    assert warnings
+    assert "deposit" in warnings[0].message
+
+
+def test_a_deposit_doi_settles_it():
+    """A DOI is a promise a repository has made, rather than one a share link
+    implies."""
+    doc = _dataset_at("internally_reviewed", deposit_doi="10.5281/zenodo.123")
+    assert _home_warnings(doc) == []
+
+
+def test_bytes_kept_in_the_repository_need_no_deposit():
+    """`path` is as durable as the repository itself, which is the thing being
+    asked for."""
+    assert _home_warnings(_dataset_at("internally_reviewed", url=False)) == []
+
+
+def test_the_permanent_home_rule_is_advice_and_never_an_error():
+    """Depositing takes time and a decision about where. Blocking a review claim
+    on it would mean people stop claiming reviews, not that they deposit sooner."""
+    assert validate(_dataset_at("internally_reviewed"), "dataset", version=V).ok

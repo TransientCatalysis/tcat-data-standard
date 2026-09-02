@@ -302,9 +302,17 @@ def _cmd_codeowners(args: argparse.Namespace) -> int:
 
 def _cmd_check(args: argparse.Namespace) -> int:
     root = Path(args.path)
+    is_template = (root / ".tcat" / "IS_TEMPLATE").is_file()
     findings = check_spoke(root)
     if not findings:
-        print("spoke is configured")
+        # Say which check passed. In the template the check is INVERTED -- it
+        # asserts the placeholders survive -- and reporting that as "configured"
+        # would describe the opposite of what was verified.
+        print(
+            "template intact: placeholders still present for repositories made from it"
+            if is_template
+            else "spoke is configured"
+        )
         return 0
     for f in findings:
         print(f, file=sys.stderr)

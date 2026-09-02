@@ -581,6 +581,8 @@ def _maturity_advice(document: Any, kind: str, raised: list[Problem]) -> list[Pr
             )
         )
 
+    out.extend(_permanent_home_advice(document, rung))
+
     if rung == "published" and document.get("access_status") != "public":
         out.append(
             Problem(
@@ -591,6 +593,48 @@ def _maturity_advice(document: Any, kind: str, raised: list[Problem]) -> list[Pr
                 "an error, because that is the record of what was actually released",
             )
         )
+    return out
+
+
+def _permanent_home_advice(document: Any, rung: str | None) -> list[Problem]:
+    """At `internally_reviewed` and above, the bytes need a permanent home.
+
+    PI rule, 2026-09-01: data feeding sandbox and working pipelines may live
+    wherever it is convenient -- a lab share, OneDrive, a scratch filesystem.
+    The moment a record claims someone else checked it, somebody may cite it,
+    and a citation pointing at a revocable location is a citation that will
+    break without anyone noticing.
+
+    Checked rather than asserted, because "we should really deposit that" is how
+    the obligation quietly becomes nothing.
+
+    A `url` entry is the case this catches: it means the bytes are somewhere this
+    project does not control, and a share link can be revoked, re-issued, or
+    expire with an institutional account. `path` (in the repository, so in git)
+    and `lfs_oid` are as durable as the repository itself. A `deposit_doi` on the
+    maturity block settles it either way, because that is a promise a repository
+    has made rather than one a share link implies.
+    """
+    out: list[Problem] = []
+    if rung not in ("internally_reviewed", "published"):
+        return out
+
+    maturity = document.get("maturity") or {}
+    if maturity.get("deposit_doi"):
+        return out
+
+    for i, entry in enumerate(document.get("files") or []):
+        if isinstance(entry, dict) and entry.get("url"):
+            out.append(
+                Problem(
+                    f"/files/{i}/url",
+                    f"rung {rung!r} but the bytes are at a url this project does "
+                    "not control, and no deposit_doi is recorded. A share link "
+                    "can be revoked or expire with an account, and a reviewed "
+                    "record is one somebody may cite. Deposit it and record the "
+                    "DOI, or keep the copy in the repository",
+                )
+            )
     return out
 
 

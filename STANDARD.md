@@ -416,7 +416,7 @@ matches it.
 |---|---|---|
 | `sandbox` | It exists. Nothing else is claimed. It may be rewritten or deleted without notice and nothing should depend on it. | The record validates. **This is what absence means**, so every record written before this field existed is correctly labelled by saying nothing. |
 | `working` | It validates, its provenance reaches raw, and its own author would defend it. Others may build on it and should expect it to change. | Every advisory warning the document raises is either fixed or listed in `warnings_accepted` with a reason of at least thirty characters. |
-| `internally_reviewed` | Somebody other than the producer checked it against its source. | `reviewed_by` with an ORCID or GitHub handle, `reviewed_on`, and a `review_scope` of at least thirty characters. The validator warns when the reviewer is the only person the record names, and when the review predates the content it reviews. |
+| `internally_reviewed` | Somebody other than the producer checked it against its source, **and the bytes have a permanent home**. | `reviewed_by` with an ORCID or GitHub handle, `reviewed_on`, and a `review_scope` of at least thirty characters. The validator warns when the reviewer is the only person the record names, when the review predates the content it reviews, and when the files sit at a `url` this project does not control with no `deposit_doi` recorded. |
 | `published` | Released alongside a publication, through the release gate. | `published_in` names a `publication` whose own status is `accepted` or `published`, `access_status` is `public`, and `deposit_doi` is recorded. The criterion **is** the eight-step gate in `tcat-index/RELEASE.md` — this rung references it and never restates it. |
 | `superseded` | A better record of the same thing exists. Not a retraction. | `superseded_by` resolves to a registered record, with a `superseded_reason`. |
 
@@ -428,6 +428,28 @@ recalibration, a corrected clock. Calling that "deprecated" would read as a
 retraction, and a retraction is a serious thing to say about a scientific record.
 Saying *this observation is unsound* is `status: failed` with a `status_reason`,
 which is a different field answering a different question.
+
+### A permanent home is part of being reviewed
+
+Data feeding `sandbox` and `working` pipelines may live wherever is convenient —
+a lab share, OneDrive, a scratch filesystem. That is normal, and the validator
+says nothing about it, because warning about the ordinary case is how people
+learn to skip warnings.
+
+**At `internally_reviewed` and above it stops being convenient and starts being a
+promise.** A record that says somebody checked it is a record somebody may cite,
+and a citation pointing at a share link breaks silently — revoked, re-issued, or
+expired with an institutional account, with nothing anywhere reporting it.
+
+So a record at those rungs whose `files[]` point at a `url` is warned about unless
+`maturity.deposit_doi` names where the bytes were deposited. A `path` (in the
+repository, hence in git) or an `lfs_oid` is already as durable as the repository,
+and needs nothing further.
+
+It is advice rather than a refusal, deliberately. Depositing takes time and a
+decision about *where* — and `STANDARD.md` §14 records that the project has not
+yet chosen a public repository. Blocking the claim on it would mean people stop
+claiming reviews, not that they deposit sooner.
 
 ### `warnings_accepted`, and the one place advice has a consequence
 
