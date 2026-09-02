@@ -157,6 +157,29 @@ directory, and the old one is never touched again. Manufacturing a fake version
 history before anyone had used either version would have been worse than saying
 this.
 
+### When a bump is actually required
+
+A version increment is only *needed* once somebody else could be holding the old
+bytes — if nothing has been cloned, forked, or branched between pushes, amending
+in place is fine and burning a version number is pointless ceremony.
+
+One sharpening, specific to a **schema**: the operative question is not only "has
+the repository been cloned" but **"does any document declare this version"**. A
+dataset carrying `schema_version: 0.2.0` in some spoke is a consumer whether or
+not anyone cloned this repository, and amending 0.2.0 then silently changes what
+that document was checked against. So the test is:
+
+- **Nothing declares it, and nothing has cloned it** → amend in place.
+- **Something declares it** → new version, always. This is the case retention
+  exists for.
+- **In between** — cloned but not yet written against — → judgement. Note that
+  every downstream CI installs this package from `@main` on every run, so in
+  practice "cloned" happens continuously once pushed.
+
+`0.1.0` is past all of that and is frozen; a checked-in checksum manifest and
+`test_schema_0_1_0_is_byte_identical_to_the_manifest_committed_when_it_froze`
+make that structural rather than a promise.
+
 ### The escape hatch
 
 Every document may carry a free-form `extensions` object. **The validator ignores it rather than rejecting it.**
@@ -415,7 +438,7 @@ and the part they will fill the field in from.
 |---|---|
 | **`sandbox`** | Testing and exploration. **No expectation of quality or correctness.** It may be rewritten or deleted without notice, and nothing may depend on it. |
 | **`working`** | A promising direction, actively pursued, still exploratory. **May contain errors or inconsistencies.** Others may build on it and must expect it to change. If nobody is pursuing it any more, it is `superseded`, not `working`. |
-| **`reviewed`** | Carefully checked by **at least one project PI**, who is not the person who produced it. Like a drafted manuscript: correct and final in its basic form, though details may still change. |
+| **`reviewed`** | Carefully checked and vetted by **the stewards**, who are at this point effectively signing their names to the validity of the work. Like a drafted manuscript: correct and final in its basic form, though details may still change. |
 | **`published`** | Associated with a **peer-reviewed publication**. Correct and fully vetted. A paper under review is not this yet — its data is `reviewed` until the paper is accepted. |
 | **`superseded`** | Abandoned, or replaced by something better. **Never a dependency**, and removed from public and shared exports. Not deleted — see below. |
 
@@ -429,9 +452,44 @@ hard system.
 |---|---|
 | `sandbox` | The record validates. **This is what absence means**, so everything written before this field existed is correctly labelled by saying nothing. |
 | `working` | Every advisory warning the document raises is either fixed or listed in `warnings_accepted` with a reason of at least thirty characters. |
-| `reviewed` | `reviewed_by` with an ORCID or GitHub handle, `reviewed_on`, and a `review_scope` of at least thirty characters. The validator warns when the reviewer is the only person the record names, and when the review predates the content it reviews. **The bytes must have a permanent home** — see below. |
+| `reviewed` | `reviewed_by` with an ORCID or GitHub handle, `reviewed_on`, and a `review_scope` of at least thirty characters. The validator warns when the named reviewer is not among the record's stewards, and when the review predates the content it reviews. **The bytes must have a permanent home** — see below. |
 | `published` | `published_in` names a `publication` whose own status is `accepted` or `published`, `access_status` is `public`, and `deposit_doi` is recorded. The criterion **is** the eight-step gate in `tcat-index/RELEASE.md`; this rung references it and never restates it. |
 | `superseded` | `superseded_reason` says what happened. `superseded_by` names the successor **when there is one** — abandoned work has none, and requiring one would force people to invent a replacement. |
+
+### `reviewed` is where a human becomes answerable
+
+This is the rung that matters most, and it is worth stating in one sentence:
+
+> **Below `reviewed`, a record may be entirely agent-generated with nobody
+> claiming it is right. At `reviewed` and above, a named human is claiming it.**
+
+That is the whole reason the ladder has this shape. Agent-generated work is not a
+problem to be hidden — `sandbox` and `working` exist to describe it honestly, and
+`autonomy_level` already records how much of it was gated by a person. What would
+be a problem is agent-generated work arriving somewhere it looks vouched for
+without anyone having vouched.
+
+So the criterion is **accountability, not independence**. The reviewer should be
+one of the record's own stewards, and a sole steward vetting their own work is
+the intended case rather than a suspicious one — a one-person spoke is real, and
+demanding a second name would produce a second name that did not check anything.
+What is being asserted is not "somebody else agreed" but "I am answerable for
+this", which is exactly what a signature is.
+
+Two consequences worth being explicit about:
+
+- **`review_scope` is the load-bearing field**, not `reviewed_by`. A name is easy
+  to type; a sentence saying *what was checked, against what* is what makes the
+  claim auditable later, and it is why the minimum length exists. The model is
+  the calibration case: *"reproduced PSU's own exported mole fractions from raw
+  counts through the four-stage chain — 130,537 of 130,560 values bit-identical
+  across 26 runs."*
+- **`autonomy_level` does not move when a record is reviewed.** It records how
+  the work was *produced*, which does not change retroactively. A record produced
+  at A4 and then reviewed is still A4 — and the pair, high autonomy plus a named
+  reviewer, is a perfectly honest thing to have on the record. Collapsing the two
+  would let "a human did it" and "a human checked it" become the same claim, and
+  they are not.
 
 ### Three things the rungs deliberately do not say
 

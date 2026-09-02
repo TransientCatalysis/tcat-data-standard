@@ -559,17 +559,37 @@ def _maturity_advice(document: Any, kind: str, raised: list[Problem]) -> list[Pr
 
     reviewer = maturity.get("reviewed_by")
     if isinstance(reviewer, dict) and rung in ("reviewed", "published"):
-        producers = _named_people(document)
-        rname = (reviewer.get("orcid") or reviewer.get("github") or reviewer.get("name") or "")
-        if rname and producers and {rname} >= producers:
-            out.append(
-                Problem(
-                    "/maturity/reviewed_by",
-                    "the reviewer is the only person this record names. A one-person "
-                    "spoke is real, so this is advice rather than a refusal -- but a "
-                    "second name that did not review anything would be worse",
+        # `reviewed` means a steward has signed their name to the work being
+        # right. So the reviewer should BE a steward -- not an independent third
+        # party, which is a different (and here, weaker) idea. A sole steward
+        # attesting to their own work is the intended case, not a suspicious one:
+        # what the rung asserts is that a named human is answerable, which is
+        # exactly what stops fully agent-generated work reaching it unclaimed.
+        #
+        # Checked only when the RECORD carries its own stewards. Otherwise they
+        # come from the spoke manifest, which one document cannot see, and a
+        # warning fired on missing information would be noise.
+        stewards = document.get("stewards")
+        if isinstance(stewards, list) and stewards:
+            keys = {
+                s.get(k)
+                for s in stewards
+                if isinstance(s, dict)
+                for k in ("orcid", "github", "name")
+                if s.get(k)
+            }
+            named = {reviewer.get(k) for k in ("orcid", "github", "name") if reviewer.get(k)}
+            if named and not (named & keys):
+                out.append(
+                    Problem(
+                        "/maturity/reviewed_by",
+                        f"{reviewer.get('name', 'the reviewer')} is not among this "
+                        "record's stewards. At this rung the stewards are signing "
+                        "their names to the work being right, so whoever vetted it "
+                        "should be one of them -- either add them to `stewards`, or "
+                        "record the steward who is actually answerable",
+                    )
                 )
-            )
 
     reviewed_on = maturity.get("reviewed_on")
     newest = _newest_timestamp(document)
@@ -647,18 +667,6 @@ def _permanent_home_advice(document: Any, rung: str | None) -> list[Problem]:
                     "DOI, or keep the copy in the repository",
                 )
             )
-    return out
-
-
-def _named_people(document: Any) -> set[str]:
-    """Everyone this record names as producer or steward, by best handle."""
-    out: set[str] = set()
-    for block in ("personnel", "stewards"):
-        for person in document.get(block) or []:
-            if isinstance(person, dict):
-                handle = person.get("orcid") or person.get("github") or person.get("name")
-                if handle:
-                    out.add(handle)
     return out
 
 

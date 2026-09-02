@@ -195,16 +195,41 @@ def test_an_accepted_warning_needs_a_real_reason():
     assert not validate(sample(maturity=m), "sample", version=V).ok
 
 
-def test_a_self_review_warns_but_does_not_fail():
-    """A one-person spoke is real. Refusing it would produce a second name that
-    did not review anything, which is worse than the warning."""
+def test_a_steward_signing_their_own_work_is_the_intended_case():
+    """`reviewed` asserts that a named human is ANSWERABLE, not that an
+    independent third party checked it. A one-person spoke where the steward
+    vets their own work is exactly the model -- warning about it would be
+    warning about the normal case."""
     doc = sample(
-        stewards=[{"name": "A J Medford", "institution": "GT", "role": "data_steward", "orcid": _ORCID}],
+        stewards=[{"name": "A J Medford", "institution": "GT",
+                   "role": "data_steward", "orcid": _ORCID}],
         maturity=_reviewed(),
     )
     report = validate(doc, "sample", version=V)
     assert report.ok
-    assert any(w.pointer == "/maturity/reviewed_by" for w in report.warnings)
+    assert not [w for w in report.warnings if w.pointer == "/maturity/reviewed_by"]
+
+
+def test_a_reviewer_who_is_not_a_steward_is_warned_about():
+    """The rung means the stewards are signing their names. Somebody outside
+    that set signing instead is either a missing steward or a misattributed
+    review, and both are worth saying."""
+    doc = sample(
+        stewards=[{"name": "R Rioux", "institution": "PSU",
+                   "role": "instrument_owner", "orcid": "0000-0002-1825-0097"}],
+        maturity=_reviewed(),  # reviewed_by is Medford, who is not in that list
+    )
+    report = validate(doc, "sample", version=V)
+    assert report.ok
+    warnings = [w for w in report.warnings if w.pointer == "/maturity/reviewed_by"]
+    assert warnings and "stewards" in warnings[0].message
+
+
+def test_no_steward_warning_when_the_record_names_no_stewards():
+    """They come from the spoke manifest then, which one document cannot see.
+    Warning on information that is legitimately elsewhere is noise."""
+    report = validate(sample(maturity=_reviewed()), "sample", version=V)
+    assert not [w for w in report.warnings if w.pointer == "/maturity/reviewed_by"]
 
 
 def test_a_non_sandbox_rung_without_a_date_warns():

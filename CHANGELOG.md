@@ -21,6 +21,19 @@ gains a consequence -- attached to a voluntary claim, never to CI. STANDARD.md 1
 carries the table separating it from the four state fields that already exist,
 because a fifth vocabulary that overlapped them would have been worse than none.
 
+**`reviewed` is where a human becomes answerable.** Below it a record may be
+entirely agent-generated with nobody claiming it is right -- which is a
+legitimate state the lower rungs exist to describe honestly. At and above it, a
+named steward is claiming it. That is the whole reason the ladder has this shape,
+and STANDARD.md 15 now says it in one sentence.
+
+The criterion is ACCOUNTABILITY, not independence: the reviewer should be one of
+the record's own stewards, and a sole steward vetting their own work is the
+intended case rather than a suspicious one. An earlier draft required "at least
+one project PI" and warned about self-review -- the first is unverifiable (the
+standard has no roster, and one document cannot know one) and the second warned
+about the normal case, which is how people learn to skip warnings.
+
 **The rungs carry plain-language definitions**, and `internally_reviewed` is now
 just `reviewed` -- "internally" was doing no work once `published` covered the
 external case. Two changes came out of scrutinising the definitions rather than

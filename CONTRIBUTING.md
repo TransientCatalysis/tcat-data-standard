@@ -36,6 +36,17 @@ major  breaks existing data. Rare. Ships a migration script rather than a demand
 
 `status` and `batch_id` are required because a deleted failed run and a lost batch grouping are gone forever. Almost nothing else is like that. If a field can be backfilled from other records, from a lab notebook, or by asking someone — make it optional and let the validator warn.
 
+### A bump is not always needed
+
+Increment when somebody else could be holding the old bytes — cloned, forked, or
+branched between pushes. If not, amend in place; an unnecessary version number is
+ceremony, and it makes the real ones harder to read.
+
+For the schema specifically the question is sharper: **does any document declare
+that version?** If one does, it is a consumer regardless of who cloned what, and
+amending is exactly the silent reinterpretation `schema_version` exists to
+prevent. See STANDARD.md §6.
+
 ### Version retention
 
 Versions live in `src/tcat_standard/schema/<version>/` and **are never removed or edited**. A dataset declaring `0.1.0` is validated against `0.1.0` for as long as this repository exists, so a bump never obliges a lab to rewrite data.
