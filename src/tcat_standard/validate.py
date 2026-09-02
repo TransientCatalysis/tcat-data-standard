@@ -108,20 +108,35 @@ def validate(
     kind: str,
     *,
     version: str | None = None,
+    fallback_version: str | None = None,
     source: str = "<in-memory>",
 ) -> ValidationReport:
     """Validate one document of a given kind.
 
-    If the document declares its own ``schema_version`` and no explicit version
-    was requested, that declared version is used. This is the point of recording
-    it: data is checked against the standard it was written against, not against
-    whatever the standard has since become.
+    Version precedence, highest first:
+
+    1. ``version`` -- an explicit, deliberate override. Only ``--schema-version``
+       sets it, and its help text says what it does.
+    2. the document's own ``schema_version``. This is the point of recording it:
+       data is checked against the standard it was written against, not against
+       whatever the standard has since become.
+    3. ``fallback_version`` -- a default for documents that declare nothing, which
+       is how a spoke manifest's ``standard_version`` is applied.
+    4. ``CURRENT_SCHEMA_VERSION``.
+
+    A spoke pin is deliberately WEAKER than a document's own declaration. It used
+    to be stronger, which meant that adding a manifest pinned one version above a
+    tree of documents written against another silently revalidated all of them
+    against a schema they had never been checked against -- and the failures read
+    as "the schema change broke the data" rather than "the pin was applied to the
+    wrong thing". A spoke legitimately holds documents at several versions, and
+    usually will, because a version bump does not oblige a lab to rewrite data.
     """
     if kind not in KINDS:
         raise ValueError(f"unknown document kind {kind!r}; expected one of {', '.join(KINDS)}")
 
     declared = document.get("schema_version") if isinstance(document, dict) else None
-    effective = version or declared or CURRENT_SCHEMA_VERSION
+    effective = version or declared or fallback_version or CURRENT_SCHEMA_VERSION
 
     report = ValidationReport(kind=kind, source=source, schema_version=effective)
 
@@ -756,8 +771,14 @@ validate_spoke = _validate_kind("spoke")
 validate_campaign = _validate_kind("campaign")
 
 
-def validate_file(path: str | Path, kind: str, *, version: str | None = None) -> ValidationReport:
-    """Validate a JSON document on disk."""
+def validate_file(
+    path: str | Path,
+    kind: str,
+    *,
+    version: str | None = None,
+    fallback_version: str | None = None,
+) -> ValidationReport:
+    """Validate a JSON document on disk. See :func:`validate` for precedence."""
     path = Path(path)
     try:
         document = json.loads(path.read_text(encoding="utf-8"))
@@ -768,7 +789,9 @@ def validate_file(path: str | Path, kind: str, *, version: str | None = None) ->
             schema_version=version or CURRENT_SCHEMA_VERSION,
             errors=[Problem("", f"not valid JSON: {exc}")],
         )
-    return validate(document, kind, version=version, source=str(path))
+    return validate(
+        document, kind, version=version, fallback_version=fallback_version, source=str(path)
+    )
 
 
 def validate_or_raise(document: dict[str, Any], kind: str, *, version: str | None = None) -> None:

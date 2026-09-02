@@ -194,13 +194,13 @@ def main(argv: list[str] | None = None) -> int:
             ]
             strict = strict or bool((manifest or {}).get("strict"))
 
+            # Per ROOT, not accumulated across roots: one tree's pin is not a
+            # statement about the next tree.
+            spoke_default = None
             if manifest is not None:
                 report = validate(manifest, "spoke", source=str(root / SPOKE_MANIFEST))
                 reports.append(report)
-                if (manifest or {}).get("standard_version") and not args.schema_version:
-                    # A spoke that pins a version means it; honour the pin unless
-                    # the caller overrode it explicitly.
-                    args.schema_version = manifest["standard_version"]
+                spoke_default = (manifest or {}).get("standard_version") or None
 
             files = sorted(root.rglob("*.json")) if root.is_dir() else [root]
             for f in files:
@@ -215,7 +215,11 @@ def main(argv: list[str] | None = None) -> int:
                 if kind is None:
                     skipped.append(f)
                     continue
-                reports.append(validate_file(f, kind, version=args.schema_version))
+                reports.append(
+                    validate_file(
+                        f, kind, version=args.schema_version, fallback_version=spoke_default
+                    )
+                )
     else:
         for p in args.paths:
             reports.append(validate_file(p, args.kind, version=args.schema_version))
