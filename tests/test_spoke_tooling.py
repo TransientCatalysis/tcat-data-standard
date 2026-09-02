@@ -187,3 +187,82 @@ def test_check_passes_on_a_fully_bootstrapped_spoke(tmp_path):
 def test_check_reports_a_missing_manifest_with_the_command_that_makes_one(tmp_path, capsys):
     assert main(["check", str(tmp_path)]) == 1
     assert "tcat-spoke init" in capsys.readouterr().err
+
+
+# --- the analysis side needs a package rename ------------------------------
+
+def _analysis_template(tmp_path: Path) -> Path:
+    """A minimal stand-in for the analysis template's shape."""
+    (tmp_path / "src" / "tcat_spoke_example").mkdir(parents=True)
+    (tmp_path / "src" / "tcat_spoke_example" / "tool.py").write_text(
+        "# tcat-fit-example is the command\nfrom tcat_spoke_example import science\n"
+    )
+    (tmp_path / "src" / "tcat_spoke_example.egg-info").mkdir()
+    (tmp_path / "src" / "tcat_spoke_example.egg-info" / "top_level.txt").write_text(
+        "tcat_spoke_example\n"
+    )
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "test_conformance.py").write_text(
+        'COMMAND = "tcat-fit-example"\n'
+    )
+    (tmp_path / ".github" / "workflows").mkdir(parents=True)
+    (tmp_path / ".github" / "workflows" / "conform.yml").write_text(
+        "run: tcat-conform tcat-fit-example --as tcat-fit\n"
+    )
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "tcat-spoke-example"\n'
+        'description = "REPLACE -- what this spoke implements, in one line."\n'
+        'authors = [{ name = "REPLACE ME", email = "replace-me@example.com" }]\n'
+        "\n[project.scripts]\n"
+        'tcat-fit-example = "tcat_spoke_example.tool:main"\n'
+        "\n[project.urls]\n"
+        'Homepage = "https://github.com/TransientCatalysis/REPLACE"\n'
+    )
+    return tmp_path
+
+
+def _analysis_answers(tmp_path: Path) -> str:
+    m = _manifest(kind="analysis", spoke_id="gusmao-cqbax", name="Stiff DAE fitting")
+    return _answers(tmp_path, m)
+
+
+def test_init_renames_the_example_package_to_this_spokes_own(tmp_path):
+    """Seven places reference it, and missing any one leaves a spoke that
+    installs a package named after the template."""
+    root = _analysis_template(tmp_path)
+    assert main(["init", str(root), "--answers", _analysis_answers(tmp_path)]) == 0
+
+    assert (root / "src" / "tcat_gusmao_cqbax").is_dir()
+    assert not (root / "src" / "tcat_spoke_example").exists()
+    assert "tcat_gusmao_cqbax" in (root / "src" / "tcat_gusmao_cqbax" / "tool.py").read_text()
+    assert "tcat_spoke_example" not in (root / "tests" / "test_conformance.py").read_text()
+    assert "tcat-fit-gusmao-cqbax" in (root / ".github" / "workflows" / "conform.yml").read_text()
+
+
+def test_init_removes_the_stale_egg_info(tmp_path):
+    """A build artifact from an editable install in the template. It describes
+    the OLD package and is regenerated on install, so it is deleted rather than
+    renamed."""
+    root = _analysis_template(tmp_path)
+    main(["init", str(root), "--answers", _analysis_answers(tmp_path)])
+    assert not list((root / "src").glob("*.egg-info"))
+
+
+def test_init_fills_the_pyproject_a_spoke_would_otherwise_publish(tmp_path):
+    """The template leaves these valid-but-placeholder on purpose, so it installs
+    before anyone edits it. That is right for the template and wrong for a spoke,
+    where it means a package credited to "REPLACE ME"."""
+    root = _analysis_template(tmp_path)
+    main(["init", str(root), "--answers", _analysis_answers(tmp_path)])
+    text = (root / "pyproject.toml").read_text()
+    assert "REPLACE" not in text
+    assert 'name = "gusmao-cqbax"' in text
+    assert "A J Medford" in text
+
+
+def test_a_data_spoke_is_not_given_a_package(tmp_path):
+    """Only the analysis side has one; running the rename on a data spoke would
+    be looking for something that is correctly absent."""
+    (tmp_path / "README.md").write_text("# [BRACKETED]\n")
+    assert main(["init", str(tmp_path), "--answers", _answers(tmp_path, _manifest())]) == 0
+    assert not (tmp_path / "src").exists()

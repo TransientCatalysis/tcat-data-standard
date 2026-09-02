@@ -17,6 +17,8 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
+import shutil
 import sys
 from pathlib import Path
 from typing import Any
@@ -135,6 +137,53 @@ def _fill_placeholders(root: Path, manifest: dict[str, Any]) -> list[Path]:
     return touched
 
 
+def _rename_package(root: Path, manifest: dict[str, Any]) -> list[str]:
+    """Rename the analysis template's example package to this spoke's own.
+
+    The data side needs none of this: a data spoke has no package. The analysis
+    side does, and renaming it by hand means a directory move plus edits in
+    pyproject.toml, the README, the tool module, two test files, and the CI
+    workflow -- seven places, and missing any one of them leaves a spoke that
+    installs a package named after the template, or a workflow that
+    conformance-checks a command nobody installs.
+
+    Derived from `spoke_id` so the package, the command and the repository share
+    a name. Someone implementing a tool other than `tcat-fit` still has to change
+    the `--as` argument, and the summary printed at the end says so.
+    """
+    slug = re.sub(r"[^a-z0-9]+", "_", manifest["spoke_id"].lower()).strip("_")
+    package = f"tcat_{slug}"
+    command = f"tcat-fit-{slug.replace('_', '-')}"
+
+    old_pkg, old_cmd = "tcat_spoke_example", "tcat-fit-example"
+    src = root / "src" / old_pkg
+    if not src.is_dir():
+        return []
+
+    changed: list[str] = []
+    src.rename(root / "src" / package)
+    changed.append(f"src/{old_pkg}/ -> src/{package}/")
+
+    # Build artifacts from an editable install in the template. They describe
+    # the OLD package and are regenerated on install, so they are removed rather
+    # than rewritten.
+    for stale in (root / "src").glob("*.egg-info"):
+        shutil.rmtree(stale)
+        changed.append(f"removed {stale.relative_to(root)} (stale build artifact)")
+
+    for path in sorted(root.rglob("*")):
+        if not path.is_file() or path.suffix not in {".py", ".toml", ".md", ".yml", ".yaml"}:
+            continue
+        if ".git" in path.parts:
+            continue
+        text = path.read_text(encoding="utf-8")
+        new = text.replace(old_pkg, package).replace(old_cmd, command)
+        if new != text:
+            path.write_text(new, encoding="utf-8")
+            changed.append(str(path.relative_to(root)))
+    return changed
+
+
 def _fill_citation(root: Path, manifest: dict[str, Any]) -> bool:
     """Fill CITATION.cff from the manifest.
 
@@ -165,11 +214,15 @@ def _fill_citation(root: Path, manifest: dict[str, Any]) -> bool:
 
         if line.startswith("title:"):
             out.append(f'title: "{name} -- transient kinetics spoke"')
-        elif line.strip().startswith("REPLACE. What was measured"):
+        elif line.strip().startswith("REPLACE. What"):
+            kind = manifest.get("kind", "data")
             out.append(
-                f"  Data and metadata for {name}, validating against the tcat data "
-                "standard. Replace this with what was measured, on what system, by "
-                "what method."
+                f"  {name}. Replace this with "
+                + (
+                    "what this spoke implements and which declared tool it conforms to."
+                    if kind == "analysis"
+                    else "what was measured, on what system, by what method."
+                )
             )
         elif line.startswith("date-released:"):
             out.append(f'date-released: "{datetime.date.today().isoformat()}"')
@@ -198,6 +251,50 @@ def _fill_citation(root: Path, manifest: dict[str, Any]) -> bool:
 
     path.write_text("\n".join(out) + "\n", encoding="utf-8")
     return True
+
+
+def _fill_pyproject(root: Path, manifest: dict[str, Any]) -> bool:
+    """Fill an analysis spoke's pyproject from the manifest.
+
+    The template leaves `name`, `description`, `authors` and the Homepage url as
+    valid-but-placeholder values on purpose, so that it installs and
+    `tcat-conform` runs before anyone has edited anything -- a template you must
+    fix before you can try it is one people abandon at step one. That is the
+    right default for the TEMPLATE and the wrong one for a spoke, where it means
+    a published package credited to "REPLACE ME".
+    """
+    path = root / "pyproject.toml"
+    if not path.is_file():
+        return False
+    stewards = [s for s in (manifest.get("stewards") or []) if s.get("name")]
+    text = path.read_text(encoding="utf-8")
+    before = text
+
+    text = text.replace(
+        'name = "tcat-spoke-example"', f'name = "{manifest["spoke_id"]}"'
+    )
+    text = text.replace(
+        'description = "REPLACE -- what this spoke implements, in one line."',
+        f'description = "{manifest.get("name") or manifest["spoke_id"]}"',
+    )
+    if stewards:
+        authors = ", ".join(
+            "{ name = \"%s\"%s }"
+            % (s["name"], f', email = "{s["email"]}"' if s.get("email") else "")
+            for s in stewards
+        )
+        text = text.replace(
+            'authors = [{ name = "REPLACE ME", email = "replace-me@example.com" }]',
+            f"authors = [{authors}]",
+        )
+    text = text.replace(
+        "https://github.com/TransientCatalysis/REPLACE",
+        f"https://github.com/TransientCatalysis/{manifest['spoke_id']}",
+    )
+    if text != before:
+        path.write_text(text, encoding="utf-8")
+        return True
+    return False
 
 
 def _write_codeowners(root: Path, manifest: dict[str, Any]) -> bool:
@@ -234,6 +331,12 @@ def _cmd_init(args: argparse.Namespace) -> int:
         print(f"filled placeholders in {rel}")
     if _fill_citation(root, manifest):
         print("filled CITATION.cff from the stewards block")
+
+    if manifest.get("kind") == "analysis":
+        for line in _rename_package(root, manifest):
+            print(f"renamed: {line}")
+        if _fill_pyproject(root, manifest):
+            print("filled pyproject.toml from the manifest")
 
     if _write_codeowners(root, manifest):
         print(f"wrote {CODEOWNERS}")
