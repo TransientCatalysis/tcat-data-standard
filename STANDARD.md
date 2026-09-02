@@ -268,7 +268,7 @@ Three kinds exist because the project's Data Management and Sharing Plan commits
 
 One sample is measured many times, across modalities, at three institutions. Repeating its synthesis history on every dataset guarantees the copies diverge and then nobody knows which is right — so a dataset carries `sample_id`, and a `sample` document carries everything the id stands for: synthesis method, precursors with lots, ordered thermal treatments, nominal *and* measured composition, and independently measured properties.
 
-The `properties` object is the part worth planning for. Milestone M9 — a rate constant correlating with an independently measured catalyst property — is a **join** between a fitted parameter and this field. If the properties live in a notebook, that milestone becomes a spreadsheet exercise at the worst possible time.
+The `properties` object is the part worth planning for. A rate constant correlating with an independently measured catalyst property is a **join** between a fitted parameter and this field. If the properties live in a notebook, that milestone becomes a spreadsheet exercise at the worst possible time.
 
 Flag-never-delete applies here too. A failed synthesis is retained with a reason; those are often the most informative entries in a materials series.
 

@@ -9,6 +9,7 @@ promise checkable rather than aspirational.
 from __future__ import annotations
 
 import json
+import re
 
 import pytest
 
@@ -193,3 +194,54 @@ def test_schema_0_1_0_is_byte_identical_to_the_manifest_committed_when_it_froze(
         "schema/0.1.0 has changed since it was frozen. It is retained forever and "
         "real data declares it; put the change in the current version instead."
     )
+
+
+#: Milestone identifiers belong to a PROJECT, not to a standard. `M9` means
+#: something specific on one DOE award and nothing at all to a lab in Leipzig.
+_MILESTONE_ID = re.compile(r"(?<![A-Za-z0-9_])M\d{1,2}\b")
+
+
+def test_no_shipped_schema_names_a_project_milestone():
+    """The standard is meant to outlive the project that paid for it.
+
+    A schema description that says "milestone M9 requires..." reads as universal
+    to anyone who opens it, and is meaningless to everyone outside one award. The
+    `objective.milestone` FIELD stays -- every project has milestones and
+    recording which one a record serves is general. What must not appear is a
+    particular project's milestone IDENTIFIERS, or an explanation of what they
+    require.
+
+    `0.1.0` is exempt: it is frozen, it shipped with that language, and editing a
+    retained version to improve its prose is exactly what the freeze forbids.
+    """
+    import json
+    from pathlib import Path
+
+    from tcat_standard.schema import available_versions, schema_dir
+
+    offenders: list[str] = []
+    for version in available_versions():
+        if version == "0.1.0":
+            continue
+        for path in sorted(Path(schema_dir(version)).rglob("*.json")):
+            for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+                if _MILESTONE_ID.search(line):
+                    offenders.append(f"{version}/{path.name}:{n}: {line.strip()[:90]}")
+
+    assert not offenders, (
+        "a shipped schema names a project milestone:\n  "
+        + "\n  ".join(offenders)
+        + "\n\nSay what the field is FOR, not which milestone needs it."
+    )
+
+
+def test_the_objective_milestone_field_still_exists():
+    """Asserting the negative above must not be satisfied by deleting the field.
+    Recording which milestone a record serves is general and stays."""
+    import json
+    from pathlib import Path
+
+    from tcat_standard.schema import schema_dir
+
+    common = json.loads((Path(schema_dir()) / "defs" / "common.schema.json").read_text())
+    assert "milestone" in common["$defs"]["objective"]["properties"]

@@ -95,7 +95,7 @@
     },
     "identifiability": {
       "type": "object",
-      "description": "Optional. Which parameters are actually constrained by the data -- the M9 milestone is stated in terms of identifiable rate constants, so the field exists to be filled in rather than argued about later.",
+      "description": "Optional. Which parameters are actually constrained by the data. An identifiability claim is stated in terms of identifiable constants, so the field exists to be filled in rather than argued about later.",
       "properties": {
         "identifiable": {
           "type": "array",

@@ -80,7 +80,7 @@
       "sigma": 8.0,
       "units": "K",
       "method": "H2-TPR",
-      "notes": "The kind of property milestone M9 correlates a rate constant against."
+      "notes": "The kind of property a fitted rate constant gets correlated against."
     },
     "v_surface_density": {
       "value": 2.3,

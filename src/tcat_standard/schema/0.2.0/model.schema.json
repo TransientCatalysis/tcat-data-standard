@@ -268,14 +268,14 @@
             ],
             "interval_kind": "95% CI",
             "n": 6,
-            "notes": "Milestone M6 target is <= 20%."
+            "notes": "Held-out prediction target for this study."
           }
         }
       ]
     },
     "identifiability": {
       "type": "object",
-      "description": "Which parameters the data actually constrained. Milestone M9 is stated in terms of IDENTIFIABLE rate constants, so a model returning twelve numbers when the data pins four has not met it -- and cannot be shown either way unless this is recorded.",
+      "description": "Which parameters the data actually constrained. An identifiability claim is stated in terms of IDENTIFIABLE constants, so a model returning twelve numbers when the data pins four has not met it -- and cannot be shown either way unless this is recorded.",
       "properties": {
         "identifiable": {
           "type": "array",

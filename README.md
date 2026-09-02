@@ -91,7 +91,7 @@ entry = ManifestEntry.from_file("raw/run-014.csv", repo_root=".")
 | `model` | A fitted or trained model: architecture, splits, metrics, uncertainty, limitations |
 | `publication` | A manuscript and everything it rests on, with the role each artifact plays |
 
-The last three exist because the project's data-management plan commits to them. `sample` matters more than it looks: milestone M9 is a *join* between a fitted rate constant and an independently measured catalyst property, and that property has to be somewhere queryable.
+The last three exist because the project's data-management plan commits to them. `sample` matters more than it looks: correlating a fitted rate constant against a catalyst property is a *join* between a fit and an independently measured catalyst property, and that property has to be somewhere queryable.
 
 ## The six ideas worth knowing before you deposit data
 

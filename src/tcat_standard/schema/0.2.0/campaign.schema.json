@@ -84,7 +84,7 @@
     },
     "milestone": {
       "type": "string",
-      "description": "The project milestone this campaign serves, e.g. 'M3', when there is one."
+      "description": "The project milestone this campaign serves, when there is one. Free text: a milestone identifier means whatever the project that set it says it means, and this standard does not define any."
     },
     "spokes": {
       "type": "array",

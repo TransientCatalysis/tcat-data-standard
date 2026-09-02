@@ -879,9 +879,10 @@ def _advisory_checks(document: Any, kind: str, version: str) -> list[Problem]:
             out.append(
                 Problem(
                     "/properties",
-                    "no independently measured catalyst properties recorded. Milestone M9 "
-                    "is a join between a fitted rate constant and a property recorded HERE; "
-                    "if it lives in a notebook, that milestone becomes a spreadsheet exercise",
+                    "no independently measured catalyst properties recorded. Correlating a "
+                    "fitted rate constant against a catalyst property is a join between "
+                    "a fit and a property recorded HERE; if it lives in a notebook, "
+                    "that comparison becomes a spreadsheet exercise",
                 )
             )
         if not (document.get("synthesis") or {}).get("precursors"):

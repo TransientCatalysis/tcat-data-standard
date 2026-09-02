@@ -265,7 +265,7 @@
   "reaction_system": "CO oxidation",
   "access_status": "public",
   "license": "CC-BY-4.0",
-  "notes": "DRAFT (2026-08), axial-PDE branch. The physical constants M9 asks for, fitted under the reactor model M3 is stated against.",
+  "notes": "DRAFT (2026-08), axial-PDE branch. The physical constants an identifiability claim asks for, fitted under the reactor model the published comparison is stated against.",
   "reactor": {
     "kind": "axially-dispersed-packed-bed",
     "nodes": 21,

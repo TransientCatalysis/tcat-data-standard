@@ -90,7 +90,7 @@ def test_thermal_treatments_are_ordered_and_carry_conditions(sample):
 
 
 def test_every_measured_property_carries_units_and_a_method(sample):
-    """This is the side of the M9 join that gets left until too late: 'a rate
+    """This is the side of the join that gets left until too late: 'a rate
     constant correlating with an independently measured catalyst property' needs
     the property to exist here with a number, a unit, and a method."""
     for name, prop in sample["properties"].items():
@@ -103,12 +103,19 @@ def test_a_property_without_a_method_is_rejected(sample):
     assert not validate_sample(doc).ok
 
 
-def test_a_sample_with_no_properties_warns_about_m9(sample):
+def test_a_sample_with_no_measured_properties_warns(sample):
+    """Assert on the SUBSTANCE, not on a milestone label.
+
+    This used to check that the warning contained the string "M9". That coupled
+    a test in a general standard to one project's milestone numbering -- and it
+    would have gone green on a message that named the milestone and explained
+    nothing."""
     doc = copy.deepcopy(sample)
     doc.pop("properties")
     report = validate_sample(doc)
     assert report.ok, "advisory, not law"
-    assert any("M9" in w.message for w in report.warnings)
+    warning = next(w for w in report.warnings if w.pointer == "/properties")
+    assert "rate constant" in warning.message and "notebook" in warning.message
 
 
 def test_chemical_identifiers_are_optional_but_defined(sample):
@@ -262,7 +269,7 @@ def test_a_model_without_an_uncertainty_reference_warns(model):
 
 
 def test_identifiability_is_expressible(model):
-    """Milestone M9 is stated in terms of IDENTIFIABLE rate constants, so a model
+    """An identifiability claim is stated in terms of IDENTIFIABLE constants, so a model
     returning twelve numbers when the data pins four has to be able to say so."""
     ident = model["identifiability"]
     assert ident["identifiable"] and ident["criterion"]

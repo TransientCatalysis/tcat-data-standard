@@ -157,7 +157,7 @@
     },
     "catalyst_family": {
       "type": "string",
-      "description": "Material class, coarser than sample_id. Groups samples for cross-material comparison -- the M9 milestone correlates a rate constant against a catalyst property across variants, which needs a grouping key.",
+      "description": "Material class, coarser than sample_id. Groups samples for cross-material comparison -- correlating a rate constant against a catalyst property is done across variants, which needs a grouping key.",
       "examples": [
         "supported vanadium oxide",
         "Pt/Al2O3"

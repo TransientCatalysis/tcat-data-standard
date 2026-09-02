@@ -4,7 +4,7 @@
   "title": "SYNTHETIC EXAMPLE -- not a real study",
   "description": "Can the synthetic PRBS trace determine the two-site model's constants? Exists to exercise the schema.",
   "status": "active",
-  "milestone": "M3",
+  "milestone": "baseline-reproduction",
   "spokes": [
     "tcat-data-standard (examples)",
     "tcat-analysis"

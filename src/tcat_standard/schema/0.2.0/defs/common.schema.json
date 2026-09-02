@@ -655,7 +655,7 @@
       "additionalProperties": true
     },
     "objective": {
-      "description": "Which project objective this record serves. Named in the DMSP's metadata list. A closed enum would be wrong this early -- objectives get restated -- so it is a short free-text label plus an optional milestone tag.",
+      "description": "Which project objective this record serves. A closed enum would be wrong this early -- objectives get restated -- so it is a short free-text label plus an optional milestone tag.",
       "type": "object",
       "properties": {
         "label": {
@@ -669,10 +669,11 @@
         "milestone": {
           "type": "string",
           "examples": [
-            "M3",
-            "M6",
-            "M9"
-          ]
+            "phase-1-go-no-go",
+            "midterm-report",
+            "first-release"
+          ],
+          "description": "The project milestone this record serves, when there is one. Free text and deliberately not a closed set: a milestone identifier means whatever the project that set it says it means, and this standard defines none of its own."
         },
         "notes": {
           "type": "string"

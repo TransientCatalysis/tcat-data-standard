@@ -302,7 +302,7 @@ def test_a_bed_uncertainty_key_must_name_a_real_bed_field():
 
 def test_chemical_looping_is_expressible_as_multi_pulse():
     """An extended propane pulse followed by an extended O2 re-oxidation pulse --
-    the M6 milestone's held-out prediction target."""
+    a held-out prediction target for a chemical-looping study."""
     doc = {
         "protocol": "multi_pulse",
         "parameters": {
@@ -409,7 +409,7 @@ def test_a_step_must_declare_its_reversibility():
 
 
 def test_a_neural_specification_needs_an_architecture_not_a_mechanism():
-    """The same document kind covers the M3 baseline. A trained network's
+    """The same document kind covers a neural-network baseline. A trained network's
     architecture is as much 'what was fitted' as a mechanism is, and it has been
     exactly as likely to live only in a script."""
     from tcat_standard import validate_model_spec

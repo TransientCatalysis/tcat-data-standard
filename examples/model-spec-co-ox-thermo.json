@@ -264,5 +264,5 @@
   "reaction_system": "CO oxidation",
   "access_status": "public",
   "license": "CC-BY-4.0",
-  "notes": "The physical constants this project is ultimately after (M9) are these parameters, not per-temperature rate constants."
+  "notes": "The physical constants this project is ultimately after are these parameters, not per-temperature rate constants."
 }
