@@ -266,9 +266,9 @@ _MATURITY_KINDS = frozenset(
 _RUNG_REQUIREMENTS: dict[str, tuple[tuple[str, ...], str]] = {
     "reviewed": (
         ("reviewed_by", "reviewed_on", "review_scope"),
-        "a project PI other than the producer checked this record and said what "
-        'they checked. "The team looked at it" is how that obligation quietly '
-        "becomes nothing -- the same rule the publication record applies to "
+        "a steward has checked this record and is signing their name to it. "
+        '"The team looked at it" is how that obligation quietly becomes nothing '
+        "-- the same rule the publication record applies to "
         "reproducibility_reviewer",
     ),
     "published": (
