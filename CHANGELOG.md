@@ -1,9 +1,51 @@
 # Changelog
 
-Package and schema versions move together in 0.x. They will decouple once the
-schema stabilises and the validator keeps changing without it.
+**The package version and the schema version are different numbers and move
+independently.** This file used to say they moved together; they did not, and
+the claim is what let four files drift to three different answers. Today the
+package is 0.3.0 and the schema directory is 0.2.0.
+`test_the_package_version_matches_the_standard_document` now parses all four
+places, so the drift cannot come back.
 
-## Unreleased — 2026-08-29
+## 0.3.0 — 2026-09-01
+
+Accepted by the team, and the first release written against real data rather than
+in anticipation of it. Schema **0.2.0 is minted and 0.1.0 is frozen**.
+
+**`maturity`** — how much weight someone else may put on a record. Four ordered
+rungs (`sandbox`, `working`, `internally_reviewed`, `published`) plus the terminal
+`superseded`, every one with an entry criterion a validator can check. Absence
+means `sandbox`, so nothing already written changes meaning. `warnings_accepted`
+makes a `working` claim falsifiable, and is the only place an advisory check
+gains a consequence -- attached to a voluntary claim, never to CI. STANDARD.md 15
+carries the table separating it from the four state fields that already exist,
+because a fifth vocabulary that overlapped them would have been worse than none.
+
+**`stewards`** — who is answerable now, required on the spoke manifest, with a
+closed duty enum and CRediT contributor roles. `.github/CODEOWNERS` is generated
+from it so metadata and permission cannot drift. `personnel` stays alongside:
+who did the work and who answers for it now are different questions, and merging
+them would either hand every past contributor write access or lose the history
+when somebody graduates. The manifest also gains `spoke_id` and `kind`, and loses
+`contacts` -- which had zero instances anywhere, and which 0.1.0 still accepts.
+
+**Fixed.** A spoke's `standard_version` was applied as an override that beat each
+document's own `schema_version`. No spoke had a manifest yet, so nothing was
+mis-validated; it would have bitten on the first one, revalidating 47 PSU
+documents against a schema they were never written against and reporting it as
+though the schema change had broken the data. It is now a fallback, and the
+precedence is documented on `validate()`. `_infer_kind` also learned about spoke
+manifests, which it had been skipping in silence.
+
+**0.1.0 is frozen**, with a checked-in checksum manifest and a test, because
+prose did not stop it being amended four times -- twice after real data already
+declared it. See STANDARD.md 6, which now records that honestly in the past
+tense.
+
+The three dated sections below were amendments to 0.1.0 made while this work was
+on a branch. They ship here, unedited, because what they say is accurate.
+
+### 2026-08-29 — uncertainty stops being conditional by accident
 
 Uncertainty stops being conditional by accident (branch `axial-reworked`;
 `SPEC-DELTAS.md` 36–38 implemented). All additive and optional on 0.1.0, each
@@ -36,7 +78,7 @@ example's bytes except the new example files themselves).
 - Advisory checks: `parameter_roles` length, marginalized-with-no-names,
   mixture weights summing to one, mixtures declaring a sampled family.
 
-## Unreleased — 2026-08-27
+### 2026-08-27 — the reactor model becomes part of the hypothesis
 
 The reactor model. Forced by reading milestone M3 closely: it says *reproduce the
 published PSU CO-oxidation fit within stated uncertainty*, PSU's fit is a
@@ -97,7 +139,7 @@ implementation measured: the axial CO\* gradient is about 0.4 of a monolayer acr
 the bed at the peak of a pulse, and modelling the velocity as constant leaves the
 outlet oxygen response wrong by 3.96% of its range against 0.18%.
 
-## Unreleased — 2026-08-24
+### 2026-08-24 — the first real dataset, and what it forced
 
 First contact with real data. Every change below was forced by a specific thing
 in PSU's CO-oxidation PRBS export or in Kitchin's fit of it; none was designed in

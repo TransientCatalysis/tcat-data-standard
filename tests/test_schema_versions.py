@@ -115,3 +115,81 @@ def test_every_documented_field_has_a_description():
             if "description" not in sub and "$ref" not in sub:
                 missing.append(f"{kind}.{name}")
     assert not missing, f"undocumented properties: {missing}"
+
+
+def test_the_package_version_matches_the_standard_document():
+    """Four places record a version and they had all drifted apart.
+
+    `pyproject.toml` and `__init__` said 0.1.0 while `STANDARD.md` and the
+    changelog said 0.2.0, and a commit subject claimed 0.2.1 that no file
+    recorded. The repository whose subject is version discipline is the last one
+    that should be guessing at its own version, so this parses all four.
+
+    Note the package version and the SCHEMA version are deliberately different
+    numbers and move independently -- the changelog used to claim they moved
+    together, which is what produced the drift.
+    """
+    import re
+    from pathlib import Path
+
+    import tcat_standard
+
+    root = Path(__file__).resolve().parents[1]
+    pyproject = (root / "pyproject.toml").read_text(encoding="utf-8")
+    pkg = re.search(r'^version = "([^"]+)"', pyproject, re.M).group(1)
+
+    standard = (root / "STANDARD.md").read_text(encoding="utf-8")
+    doc_comment = re.search(r"<!-- VERSION: ([^ ]+) -->", standard).group(1)
+    doc_header = re.search(r"\*\*Standards version:\*\* (\S+)", standard).group(1)
+
+    citation = (root / "CITATION.cff").read_text(encoding="utf-8")
+    cff = re.search(r"^version: (\S+)", citation, re.M).group(1)
+
+    assert pkg == tcat_standard.__version__ == doc_comment == doc_header == cff, (
+        f"pyproject={pkg} __version__={tcat_standard.__version__} "
+        f"STANDARD comment={doc_comment} STANDARD header={doc_header} CITATION={cff}"
+    )
+
+
+def test_the_standard_document_names_the_schema_version_that_ships():
+    """They are different numbers on purpose, so the document has to say which
+    schema directory it is describing, and be right about it."""
+    import re
+    from pathlib import Path
+
+    from tcat_standard.schema import CURRENT_SCHEMA_VERSION
+
+    standard = (Path(__file__).resolve().parents[1] / "STANDARD.md").read_text(encoding="utf-8")
+    named = re.search(r"\*\*Schema version:\*\* (\S+)", standard).group(1)
+    assert named == CURRENT_SCHEMA_VERSION
+
+
+def test_schema_0_1_0_is_byte_identical_to_the_manifest_committed_when_it_froze():
+    """Retention, made structural rather than promised.
+
+    STANDARD.md 6 says a shipped version is never edited. Prose said that
+    before, and 0.1.0 was nonetheless amended four times -- twice after real
+    data already declared it. Real PSU documents declare 0.1.0, so an edit here
+    silently changes what those documents were checked against, and the change
+    is invisible in review because a schema diff looks like every other diff.
+
+    If this fails, the fix is essentially never to update the manifest. It is to
+    put the change in the CURRENT version directory instead.
+    """
+    import hashlib
+    import json
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1] / "src" / "tcat_standard" / "schema" / "0.1.0"
+    expected = json.loads(
+        (Path(__file__).resolve().parent / "data" / "schema-0.1.0-frozen.sha256.json").read_text()
+    )
+    actual = {
+        str(f.relative_to(root)): hashlib.sha256(f.read_bytes()).hexdigest()
+        for f in sorted(root.rglob("*"))
+        if f.is_file()
+    }
+    assert actual == expected, (
+        "schema/0.1.0 has changed since it was frozen. It is retained forever and "
+        "real data declares it; put the change in the current version instead."
+    )
