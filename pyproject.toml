@@ -28,6 +28,7 @@ dev = ["pytest>=7"]
 
 [project.scripts]
 tcat-validate = "tcat_standard.cli:main"
+tcat-spoke = "tcat_standard.spoke_cli:main"
 
 [project.urls]
 Homepage = "https://github.com/TransientCatalysis/tcat-data-standard"
