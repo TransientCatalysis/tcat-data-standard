@@ -13,13 +13,36 @@ Accepted by the team, and the first release written against real data rather tha
 in anticipation of it. Schema **0.2.0 is minted and 0.1.0 is frozen**.
 
 **`maturity`** — how much weight someone else may put on a record. Four ordered
-rungs (`sandbox`, `working`, `internally_reviewed`, `published`) plus the terminal
+rungs (`sandbox`, `working`, `reviewed`, `published`) plus the terminal
 `superseded`, every one with an entry criterion a validator can check. Absence
 means `sandbox`, so nothing already written changes meaning. `warnings_accepted`
 makes a `working` claim falsifiable, and is the only place an advisory check
 gains a consequence -- attached to a voluntary claim, never to CI. STANDARD.md 15
 carries the table separating it from the four state fields that already exist,
 because a fifth vocabulary that overlapped them would have been worse than none.
+
+**The rungs carry plain-language definitions**, and `internally_reviewed` is now
+just `reviewed` -- "internally" was doing no work once `published` covered the
+external case. Two changes came out of scrutinising the definitions rather than
+transcribing them.
+
+`superseded` no longer requires `superseded_by`. The definition covers
+ABANDONMENT as well as replacement, and abandoned work has no successor to point
+at; requiring one would force people to invent a replacement or to leave a record
+at a rung that overstates it. `superseded_reason` is required instead -- it is
+what distinguishes the two cases -- and a missing successor is a warning.
+
+`superseded` does NOT mean deleted, and STANDARD.md now says so in terms.
+Superseded work leaves public and shared exports and must never be a dependency,
+but the artifacts stay: their ids are how published results are traced, so
+deleting them breaks the provenance of work that cited them, and a deleted failed
+run cannot be counted in an exclusion table. That is PROMOTION.md's deprecation
+rule, TRACE-AI A5, and the registry's append-only rule, all saying the same thing.
+
+Also stated: the rungs do not set access (`access_status` does, and neither is
+derivable from the other), and they are NOT monotone -- a review that finds real
+problems moves a record from `reviewed` back to `working`, which is the system
+working.
 
 **`stewards`** — who is answerable now, required on the spoke manifest, with a
 closed duty enum and CRediT contributor roles. `.github/CODEOWNERS` is generated

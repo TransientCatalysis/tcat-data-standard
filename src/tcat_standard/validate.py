@@ -264,11 +264,11 @@ _MATURITY_KINDS = frozenset(
 
 #: What each rung requires, and the sentence that explains why.
 _RUNG_REQUIREMENTS: dict[str, tuple[tuple[str, ...], str]] = {
-    "internally_reviewed": (
+    "reviewed": (
         ("reviewed_by", "reviewed_on", "review_scope"),
-        "someone other than the producer checked this record and said what they "
-        'checked. "The team looked at it" is how that obligation quietly becomes '
-        "nothing -- the same rule the publication record applies to "
+        "a project PI other than the producer checked this record and said what "
+        'they checked. "The team looked at it" is how that obligation quietly '
+        "becomes nothing -- the same rule the publication record applies to "
         "reproducibility_reviewer",
     ),
     "published": (
@@ -278,9 +278,10 @@ _RUNG_REQUIREMENTS: dict[str, tuple[tuple[str, ...], str]] = {
         "restating it, so it needs to name the publication",
     ),
     "superseded": (
-        ("superseded_by", "superseded_reason"),
-        "a better record of the same thing exists and a reader who lands here "
-        "needs to be sent to it. A retirement with no forward pointer is a dead end",
+        ("superseded_reason",),
+        "a retirement needs to say what happened -- replaced by something better, "
+        "or abandoned, and why. `superseded_by` names the successor when there is "
+        "one; abandonment has none, which is why it is not required",
     ),
 }
 
@@ -539,7 +540,7 @@ def _maturity_advice(document: Any, kind: str, raised: list[Problem]) -> list[Pr
             )
         )
 
-    if rung in ("working", "internally_reviewed", "published"):
+    if rung in ("working", "reviewed", "published"):
         accepted = {
             w.get("pointer")
             for w in (maturity.get("warnings_accepted") or [])
@@ -557,7 +558,7 @@ def _maturity_advice(document: Any, kind: str, raised: list[Problem]) -> list[Pr
             )
 
     reviewer = maturity.get("reviewed_by")
-    if isinstance(reviewer, dict) and rung in ("internally_reviewed", "published"):
+    if isinstance(reviewer, dict) and rung in ("reviewed", "published"):
         producers = _named_people(document)
         rname = (reviewer.get("orcid") or reviewer.get("github") or reviewer.get("name") or "")
         if rname and producers and {rname} >= producers:
@@ -583,6 +584,17 @@ def _maturity_advice(document: Any, kind: str, raised: list[Problem]) -> list[Pr
 
     out.extend(_permanent_home_advice(document, rung))
 
+    if rung == "superseded" and not maturity.get("superseded_by"):
+        out.append(
+            Problem(
+                "/maturity/superseded_by",
+                "superseded with no successor named. Correct for work that was "
+                "simply abandoned -- say so in superseded_reason -- but if "
+                "something replaced it, a reader who lands here has nowhere to "
+                "be sent",
+            )
+        )
+
     if rung == "published" and document.get("access_status") != "public":
         out.append(
             Problem(
@@ -597,7 +609,7 @@ def _maturity_advice(document: Any, kind: str, raised: list[Problem]) -> list[Pr
 
 
 def _permanent_home_advice(document: Any, rung: str | None) -> list[Problem]:
-    """At `internally_reviewed` and above, the bytes need a permanent home.
+    """At `reviewed` and above, the bytes need a permanent home.
 
     PI rule, 2026-09-01: data feeding sandbox and working pipelines may live
     wherever it is convenient -- a lab share, OneDrive, a scratch filesystem.
@@ -616,7 +628,7 @@ def _permanent_home_advice(document: Any, rung: str | None) -> list[Problem]:
     has made rather than one a share link implies.
     """
     out: list[Problem] = []
-    if rung not in ("internally_reviewed", "published"):
+    if rung not in ("reviewed", "published"):
         return out
 
     maturity = document.get("maturity") or {}

@@ -789,12 +789,12 @@
       "additionalProperties": false
     },
     "maturity_rung": {
-      "description": "How much weight someone else may put on this record. NOT a quality flag (`status`), NOT a permission tier (`access_status`), NOT a statement about process (`autonomy_level`), and NOT a study or paper lifecycle (`campaign.status`, `publication.status`) -- all four 2x2s are populated in every cell, and STANDARD.md carries them. The first four values are ORDERED and each has an entry criterion that can be checked rather than felt; `superseded` is terminal and orthogonal, so an at-least comparison never matches it. Closed, because a rung nobody can check is a rung that means whatever the writer wanted it to.",
+      "description": "How much weight someone else may put on this record.\n\nsandbox -- testing and exploration. No expectation of quality or correctness. It may be rewritten or deleted without notice and nothing may depend on it.\n\nworking -- a promising direction being actively pursued, still exploratory, and may contain errors or inconsistencies. Others may build on it and must expect it to change. Every advisory warning the record raises is either fixed or listed in warnings_accepted with a reason.\n\nreviewed -- carefully checked by at least one project PI, who is not the person who produced it. Like a drafted manuscript: correct and final in its basic form, though details may still change. The bytes must have a permanent home by this point, because a reviewed record is one somebody may cite.\n\npublished -- associated with a peer-reviewed publication, and correct and fully vetted. Not a preprint: a paper under review is a `reviewed` record until it is accepted.\n\nsuperseded -- abandoned, or replaced by something better. Never a dependency, and removed from public and shared exports -- but NOT deleted: the artifacts stay, because their ids are how published results are traced, and a deleted failed run cannot be counted in an exclusion table.\n\nThe first four are ORDERED; `superseded` is terminal and reachable from any of them, so an at-least comparison never matches it. Each rung has an entry criterion that can be checked rather than felt. NOT a quality flag (`status`), NOT a permission tier (`access_status`), NOT a statement about process (`autonomy_level`), and NOT a study or paper lifecycle (`campaign.status`, `publication.status`) -- STANDARD.md 15 has the table, and all four 2x2s are populated in every cell. The set is closed because a rung nobody can check is a rung that means whatever the writer wanted.",
       "type": "string",
       "enum": [
         "sandbox",
         "working",
-        "internally_reviewed",
+        "reviewed",
         "published",
         "superseded"
       ]
@@ -839,7 +839,7 @@
         },
         "reviewed_by": {
           "$ref": "#/$defs/person",
-          "description": "Who checked it. Required at `internally_reviewed` and above."
+          "description": "Who checked it. Required at `reviewed` and above, and expected to be a project PI other than the person who produced the record. The standard cannot verify PI-ness -- it has no roster and one document cannot know one -- so that half is prose and review; what IS checked is that a real, resolvable person is named."
         },
         "reviewed_on": {
           "type": "string",
@@ -861,12 +861,12 @@
         },
         "superseded_by": {
           "type": "string",
-          "description": "The id of the better record of the same thing. Required when superseded, because a reader who lands here needs somewhere to be sent; a retirement with no forward pointer is a dead end."
+          "description": "The id of the better record of the same thing, when there is one. Optional, because `superseded` also covers ABANDONMENT -- work nobody finished -- and an abandoned record has no successor to point at. Requiring one would force people to invent a replacement or to leave the record at a rung that overstates it. When a successor does exist, naming it is what stops a reader landing on a dead end, and the validator warns when it is missing."
         },
         "superseded_reason": {
           "type": "string",
           "minLength": 30,
-          "description": "What the successor fixes -- a clean re-export, a recalibration, a corrected clock. Without it the pair is two records and no story."
+          "description": "REQUIRED when superseded. What happened -- a clean re-export, a recalibration, a corrected clock, or simply that it was abandoned and why. This is the field that distinguishes the two cases the rung covers, and without it the pair is two records and no story."
         },
         "notes": {
           "type": "string"
@@ -877,7 +877,7 @@
           "if": {
             "properties": {
               "rung": {
-                "const": "internally_reviewed"
+                "const": "reviewed"
               }
             },
             "required": [
@@ -925,7 +925,6 @@
           },
           "then": {
             "required": [
-              "superseded_by",
               "superseded_reason"
             ]
           }

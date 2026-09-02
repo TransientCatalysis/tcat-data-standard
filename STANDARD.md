@@ -395,8 +395,8 @@ below has all four cells populated in practice.
 
 | Field | The question it answers | Why maturity is not it |
 |---|---|---|
-| `status` — `ok` / `flagged` / `failed` | **Is this observation sound?** TRACE-AI A5, *flag never delete*. | A `failed` run can be `internally_reviewed`: a well-documented failure is a valuable, mature record, and the exclusion table at manuscript time is built from exactly those. A pristine `ok` run written this morning is `sandbox`. |
-| `access_status` — `internal` / `staged` / `public` | **Who may see it?** The DMSP's three-tier model. | Permission is a decision made *about* a record; maturity is a property *of* it. `public` + `sandbox` (scratch attached to a preprint) and `internal` + `internally_reviewed` (embargoed and checked) are both ordinary. |
+| `status` — `ok` / `flagged` / `failed` | **Is this observation sound?** TRACE-AI A5, *flag never delete*. | A `failed` run can be `reviewed`: a well-documented failure is a valuable, mature record, and the exclusion table at manuscript time is built from exactly those. A pristine `ok` run written this morning is `sandbox`. |
+| `access_status` — `internal` / `staged` / `public` | **Who may see it?** The DMSP's three-tier model. | Permission is a decision made *about* a record; maturity is a property *of* it. `public` + `sandbox` (scratch attached to a preprint) and `internal` + `reviewed` (embargoed and checked) are both ordinary. |
 | `autonomy_level` — A0–A5 | **How human-gated was the process?** | An A0 record written entirely by hand is not thereby checked; an A4 record is not thereby unreliable. Folding them would let "a human did it" launder itself into "it was reviewed", which is precisely what TRACE-AI exists to stop. |
 | `campaign.status` — `planned` … `abandoned` | **Where is this STUDY in its life?** | A study is `complete` when its last run finishes; its conclusions stay `sandbox` until somebody checks them. And `abandoned` ≠ `superseded`: abandoned means nobody finished it, superseded means somebody did it better. |
 | `publication.status` — `planned` … `withdrawn` | **Where is this PAPER in the editorial process?** | It is the *anchor* for the `published` rung, not the rung. A paper being `accepted` does not make every record it cites `published` — each still has to be public and deposited, which is why the rung is checked against the paper rather than copied from it. |
@@ -406,19 +406,59 @@ permission, `autonomy_level` about process, `campaign.status` and
 `publication.status` about a study and a paper — and `maturity` is about how much
 weight someone else may put on this record.**
 
-### The rungs, and what each one costs to claim
+### What each rung means
 
-Four ordered rungs and one terminal state. `superseded` is **not** the top of the
-ladder; it is reachable from any rung, which is why an at-least comparison never
-matches it.
+The plain-language definition first, because this is the part people will read
+and the part they will fill the field in from.
 
-| Rung | What you are asserting | What makes it checkable |
-|---|---|---|
-| `sandbox` | It exists. Nothing else is claimed. It may be rewritten or deleted without notice and nothing should depend on it. | The record validates. **This is what absence means**, so every record written before this field existed is correctly labelled by saying nothing. |
-| `working` | It validates, its provenance reaches raw, and its own author would defend it. Others may build on it and should expect it to change. | Every advisory warning the document raises is either fixed or listed in `warnings_accepted` with a reason of at least thirty characters. |
-| `internally_reviewed` | Somebody other than the producer checked it against its source, **and the bytes have a permanent home**. | `reviewed_by` with an ORCID or GitHub handle, `reviewed_on`, and a `review_scope` of at least thirty characters. The validator warns when the reviewer is the only person the record names, when the review predates the content it reviews, and when the files sit at a `url` this project does not control with no `deposit_doi` recorded. |
-| `published` | Released alongside a publication, through the release gate. | `published_in` names a `publication` whose own status is `accepted` or `published`, `access_status` is `public`, and `deposit_doi` is recorded. The criterion **is** the eight-step gate in `tcat-index/RELEASE.md` — this rung references it and never restates it. |
-| `superseded` | A better record of the same thing exists. Not a retraction. | `superseded_by` resolves to a registered record, with a `superseded_reason`. |
+| Rung | What it means |
+|---|---|
+| **`sandbox`** | Testing and exploration. **No expectation of quality or correctness.** It may be rewritten or deleted without notice, and nothing may depend on it. |
+| **`working`** | A promising direction, actively pursued, still exploratory. **May contain errors or inconsistencies.** Others may build on it and must expect it to change. If nobody is pursuing it any more, it is `superseded`, not `working`. |
+| **`reviewed`** | Carefully checked by **at least one project PI**, who is not the person who produced it. Like a drafted manuscript: correct and final in its basic form, though details may still change. |
+| **`published`** | Associated with a **peer-reviewed publication**. Correct and fully vetted. A paper under review is not this yet — its data is `reviewed` until the paper is accepted. |
+| **`superseded`** | Abandoned, or replaced by something better. **Never a dependency**, and removed from public and shared exports. Not deleted — see below. |
+
+### What each rung costs to claim
+
+Every criterion is mechanically checkable, and that is the point: the ethos here
+is checked, not claimed, and a ladder of vibes would be the one soft thing in a
+hard system.
+
+| Rung | What makes it checkable |
+|---|---|
+| `sandbox` | The record validates. **This is what absence means**, so everything written before this field existed is correctly labelled by saying nothing. |
+| `working` | Every advisory warning the document raises is either fixed or listed in `warnings_accepted` with a reason of at least thirty characters. |
+| `reviewed` | `reviewed_by` with an ORCID or GitHub handle, `reviewed_on`, and a `review_scope` of at least thirty characters. The validator warns when the reviewer is the only person the record names, and when the review predates the content it reviews. **The bytes must have a permanent home** — see below. |
+| `published` | `published_in` names a `publication` whose own status is `accepted` or `published`, `access_status` is `public`, and `deposit_doi` is recorded. The criterion **is** the eight-step gate in `tcat-index/RELEASE.md`; this rung references it and never restates it. |
+| `superseded` | `superseded_reason` says what happened. `superseded_by` names the successor **when there is one** — abandoned work has none, and requiring one would force people to invent a replacement. |
+
+### Three things the rungs deliberately do not say
+
+**They do not set access.** `access_status` does, and it is not derivable from
+maturity: `public` + `sandbox` (scratch attached to a preprint) and `internal` +
+`reviewed` (embargoed and checked) are both ordinary. What the rungs carry is an
+*expectation* — sandbox and working work is usually private and usually shared
+only internally, with the disclaimer the rung already implies — and an expectation
+is not a rule the validator enforces. Set `access_status` deliberately.
+
+**They are not monotone in time.** A record can go *down*. A review that finds
+real problems moves something from `reviewed` back to `working`, and that is the
+system functioning rather than failing. Only `published` is effectively one-way,
+because a paper cannot be un-accepted without a retraction — and a retraction is
+`status: failed` with a `status_reason`, which is a different field answering a
+different question.
+
+**`superseded` does not mean deleted.** Superseded work is removed from public and
+shared *exports*, and must never be a dependency. The artifacts themselves stay,
+for two reasons this project has already committed to: their ids are how
+published results are traced, so deleting them breaks the provenance of work that
+cited them (`PROMOTION.md`, "never delete or edit the artifacts it produced"); and
+a deleted failed run cannot be counted in an exclusion table at manuscript time,
+which is TRACE-AI A5 and the reason `status` exists at all. `tcat-index` is
+append-only for the same reason. If storage is the concern, that is what
+`durability: ephemeral` and `tcat-store gc` are for, and they operate on
+regenerable intermediates rather than on the record.
 
 **Why `superseded` and not `deprecated`.** Data is not an API. A capability name
 is deprecated because you should stop passing it; a dataset's bytes never stop
@@ -436,7 +476,7 @@ a lab share, OneDrive, a scratch filesystem. That is normal, and the validator
 says nothing about it, because warning about the ordinary case is how people
 learn to skip warnings.
 
-**At `internally_reviewed` and above it stops being convenient and starts being a
+**At `reviewed` and above it stops being convenient and starts being a
 promise.** A record that says somebody checked it is a record somebody may cite,
 and a citation pointing at a share link breaks silently — revoked, re-issued, or
 expired with an institutional account, with nothing anywhere reporting it.
@@ -497,7 +537,7 @@ time, and so nobody has to guess how to map it.
 |---|---|---|---|
 | `sandbox` | below beta — research | `UnderDevelopment` | 1 – Planning / 2 – Pre-Alpha |
 | `working` | `beta` | `UnderDevelopment` | 3 – Alpha / 4 – Beta |
-| `internally_reviewed` | `provisional` | `Completed` | 5 – Production/Stable |
+| `reviewed` | `provisional` | `Completed` | 5 – Production/Stable |
 | `published` | `validated` (Stages 1–4) | `Completed` | 6 – Mature |
 | `superseded` | retired | `Deprecated` | 7 – Inactive |
 
@@ -581,6 +621,6 @@ route to a person.
 
 | Version | Date | Change |
 |---|---|---|
-| 0.3.0 | 2026-09-01 | Accepted by the team, and the first version written against real data rather than in anticipation of it. **Schema `0.2.0` is minted and `0.1.0` is frozen** — 47 real PSU documents declare 0.1.0, and amending a version that real data declares is the thing `schema_version` exists to prevent. Adds **`maturity`** (`sandbox` / `working` / `internally_reviewed` / `published`, plus the terminal `superseded`), whose absence means `sandbox` so nothing already written changes meaning, and every rung of which has an entry criterion a validator can check — including `warnings_accepted`, which makes a `working` claim falsifiable and is the only place an advisory check gains a consequence. Adds **`stewards`**, required on the spoke manifest, with a closed duty enum and CRediT contributor roles, and generating `.github/CODEOWNERS` so ownership metadata and repository permission cannot drift; `personnel` stays alongside it, because who did the work and who answers for it now are different questions. The spoke manifest also gains `spoke_id` and `kind`, and loses `contacts` (zero instances anywhere, and 0.1.0 still accepts it — pinned by a test). **Fixed:** a spoke's `standard_version` was applied as an override that beat each document's own `schema_version`, which would have silently revalidated a whole tree against a schema it was never written against on the first manifest anyone wrote; it is now a fallback, and the precedence is documented. `_infer_kind` learned about spoke manifests, which it had been skipping in silence. Examples now source the current version instead of hardcoding one, and a `spoke-example.json` exists because the manifest is the one document every new spoke must write. |
+| 0.3.0 | 2026-09-01 | Accepted by the team, and the first version written against real data rather than in anticipation of it. **Schema `0.2.0` is minted and `0.1.0` is frozen** — 47 real PSU documents declare 0.1.0, and amending a version that real data declares is the thing `schema_version` exists to prevent. Adds **`maturity`** (`sandbox` / `working` / `reviewed` / `published`, plus the terminal `superseded`), whose absence means `sandbox` so nothing already written changes meaning, and every rung of which has an entry criterion a validator can check — including `warnings_accepted`, which makes a `working` claim falsifiable and is the only place an advisory check gains a consequence. Adds **`stewards`**, required on the spoke manifest, with a closed duty enum and CRediT contributor roles, and generating `.github/CODEOWNERS` so ownership metadata and repository permission cannot drift; `personnel` stays alongside it, because who did the work and who answers for it now are different questions. The spoke manifest also gains `spoke_id` and `kind`, and loses `contacts` (zero instances anywhere, and 0.1.0 still accepts it — pinned by a test). **Fixed:** a spoke's `standard_version` was applied as an override that beat each document's own `schema_version`, which would have silently revalidated a whole tree against a schema it was never written against on the first manifest anyone wrote; it is now a fallback, and the precedence is documented. `_infer_kind` learned about spoke manifests, which it had been skipping in silence. Examples now source the current version instead of hardcoding one, and a `spoke-example.json` exists because the manifest is the one document every new spoke must write. |
 | 0.2.0 | 2026-08-20 | Second pass, driven by a clause-by-clause audit against the project DMSP (see `DMSP-COMPLIANCE.md` alongside the spec). Adds three document kinds the DMSP commits to and the first draft lacked: **`sample`** (materials data, and the measured properties milestone M9 joins a rate constant against), **`model`** (fitted and trained models as research products, with grouped splits, metrics with intervals, and limitations on appropriate use), and **`publication`** (the data-to-publication link, and the unit the release gate operates on). Adds the last of the DMSP's enumerated metadata fields — `project`, `objective`, `software`, and per-channel `chemical_identifiers` — all optional, because none is lost by being backfilled. Schema `0.1.0` was amended in place rather than forked to `0.2.0`: it is a pre-release draft nobody has used, and manufacturing a fake version history would have been worse than saying so. Retention now explicitly begins at the first tagged release. AmSC/ModCon moved from an open question to a stated position with a watch item. |
 | 0.1.0 | 2026-08-20 | Initial draft, for team review before any real data exists. Required-field set is the infrastructure spec's §3.1 list plus the fields the DMSP commits to that would be unrecoverable if retrofitted (`sample_id`, `measurement_type`, `access_status`, `license`, `protocol`, `layer`). Units and uncertainty are per-channel rather than two top-level maps, so the inconsistent state is unrepresentable. The artifact hash rule is normative and lives here rather than in the analysis hub, because content addressing is only site-independent if the rule is shared. TRACE-AI is pinned at v2.2.0 — see `profiles/trace-ai/pin.json` for why not v2.0.0. Nothing in this version has been exercised against real instrument data. |

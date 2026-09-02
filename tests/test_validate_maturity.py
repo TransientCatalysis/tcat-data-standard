@@ -30,7 +30,7 @@ def sample(**over) -> dict:
 
 def _reviewed(**over) -> dict:
     d = {
-        "rung": "internally_reviewed",
+        "rung": "reviewed",
         "entered_at": "2026-09-01",
         "reviewed_by": {"name": "A J Medford", "orcid": _ORCID},
         "reviewed_on": "2026-09-01",
@@ -69,8 +69,8 @@ def test_sandbox_needs_nothing_else():
 
 # --- the conditional requirements ------------------------------------------
 
-def test_internally_reviewed_requires_a_named_reviewer_a_date_and_a_scope():
-    report = validate(sample(maturity={"rung": "internally_reviewed"}), "sample", version=V)
+def test_reviewed_requires_a_named_reviewer_a_date_and_a_scope():
+    report = validate(sample(maturity={"rung": "reviewed"}), "sample", version=V)
     assert not report.ok
     assert _errors_at(report, "/maturity")
 
@@ -105,10 +105,32 @@ def test_published_requires_the_publication_it_was_published_in():
     assert any("published_in" in p.message for p in report.errors)
 
 
-def test_superseded_requires_a_successor_and_a_reason():
+def test_superseded_requires_a_reason():
+    """What happened is the part a reader needs. Which of the two cases it was --
+    replaced, or abandoned -- is carried here and nowhere else."""
     report = validate(sample(maturity={"rung": "superseded"}), "sample", version=V)
     assert not report.ok
-    assert any("superseded_by" in p.message for p in report.errors)
+    assert any(p.pointer.startswith("/maturity") for p in report.errors)
+
+
+def test_abandoned_work_may_be_superseded_with_no_successor():
+    """`superseded` covers ABANDONMENT as well as replacement, and abandoned work
+    has no successor to point at. Requiring one would force people to invent a
+    replacement, or to leave the record at a rung that overstates it."""
+    m = {
+        "rung": "superseded",
+        "superseded_reason": "the student graduated and nobody picked the approach up",
+    }
+    report = validate(sample(maturity=m), "sample", version=V)
+    assert report.ok
+
+
+def test_a_superseded_record_with_no_successor_is_warned_about_not_refused():
+    """Correct for abandonment, and a dead end when something did replace it --
+    which is why it is advice rather than a refusal."""
+    m = {"rung": "superseded", "superseded_reason": "abandoned after the re-export arrived"}
+    report = validate(sample(maturity=m), "sample", version=V)
+    assert any(w.pointer == "/maturity/superseded_by" for w in report.warnings)
 
 
 def test_superseded_is_complete_with_a_successor_and_a_reason():
@@ -123,9 +145,9 @@ def test_superseded_is_complete_with_a_successor_and_a_reason():
 # --- the error MESSAGES, which are the point of the structural pass ---------
 
 def test_the_reviewer_error_names_the_rung_rather_than_the_schema_path():
-    report = validate(sample(maturity={"rung": "internally_reviewed"}), "sample", version=V)
+    report = validate(sample(maturity={"rung": "reviewed"}), "sample", version=V)
     msgs = " ".join(p.message for p in report.errors)
-    assert "internally_reviewed" in msgs
+    assert "reviewed" in msgs
     assert "reviewed_by" in msgs
 
 
@@ -235,7 +257,7 @@ def test_a_spoke_cannot_claim_a_rung_that_rests_on_a_named_reviewer():
         "spoke_id": "s",
         "kind": "data",
         "stewards": [{"name": "A", "institution": "GT", "role": "data_steward", "github": "a"}],
-        "maturity": {"rung": "internally_reviewed"},
+        "maturity": {"rung": "reviewed"},
     }
     assert not validate(spoke, "spoke", version=V).ok
 
@@ -286,7 +308,7 @@ def _dataset_at(rung: str, *, url: bool = True, **maturity) -> dict:
             entry["url"] = "https://example.sharepoint.com/a/Fast_Summary.csv"
 
     m = {"rung": rung, "entered_at": "2026-09-01"}
-    if rung in ("internally_reviewed", "published"):
+    if rung in ("reviewed", "published"):
         m |= {
             "reviewed_by": {"name": "R Rioux", "orcid": "0000-0002-1825-0097"},
             "reviewed_on": "2026-09-01",
@@ -316,7 +338,7 @@ def test_sandbox_and_working_data_may_live_anywhere(rung):
 def test_a_reviewed_record_on_a_revocable_url_is_warned_about():
     """The other half: once a record claims someone checked it, somebody may
     cite it, and a citation pointing at a share link breaks silently."""
-    warnings = _home_warnings(_dataset_at("internally_reviewed"))
+    warnings = _home_warnings(_dataset_at("reviewed"))
     assert warnings
     assert "deposit" in warnings[0].message
 
@@ -324,17 +346,17 @@ def test_a_reviewed_record_on_a_revocable_url_is_warned_about():
 def test_a_deposit_doi_settles_it():
     """A DOI is a promise a repository has made, rather than one a share link
     implies."""
-    doc = _dataset_at("internally_reviewed", deposit_doi="10.5281/zenodo.123")
+    doc = _dataset_at("reviewed", deposit_doi="10.5281/zenodo.123")
     assert _home_warnings(doc) == []
 
 
 def test_bytes_kept_in_the_repository_need_no_deposit():
     """`path` is as durable as the repository itself, which is the thing being
     asked for."""
-    assert _home_warnings(_dataset_at("internally_reviewed", url=False)) == []
+    assert _home_warnings(_dataset_at("reviewed", url=False)) == []
 
 
 def test_the_permanent_home_rule_is_advice_and_never_an_error():
     """Depositing takes time and a decision about where. Blocking a review claim
     on it would mean people stop claiming reviews, not that they deposit sooner."""
-    assert validate(_dataset_at("internally_reviewed"), "dataset", version=V).ok
+    assert validate(_dataset_at("reviewed"), "dataset", version=V).ok
