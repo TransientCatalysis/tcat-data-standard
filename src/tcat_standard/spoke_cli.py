@@ -26,6 +26,8 @@ from typing import Any
 from .schema import CURRENT_SCHEMA_VERSION
 from .spoke import (
     CODEOWNERS,
+    check_fingerprint,
+    write_fingerprint,
     SPOKE_MANIFEST,
     build_codeowners,
     check as check_spoke,
@@ -407,6 +409,8 @@ def _cmd_check(args: argparse.Namespace) -> int:
     root = Path(args.path)
     is_template = (root / ".tcat" / "IS_TEMPLATE").is_file()
     findings = check_spoke(root)
+    if not is_template:
+        findings += check_fingerprint(root)
     if not findings:
         # Say which check passed. In the template the check is INVERTED -- it
         # asserts the placeholders survive -- and reporting that as "configured"
@@ -420,6 +424,22 @@ def _cmd_check(args: argparse.Namespace) -> int:
     for f in findings:
         print(f, file=sys.stderr)
     return 1
+
+
+
+def _cmd_fingerprint(args: argparse.Namespace) -> int:
+    root = Path(args.path)
+    if args.check:
+        findings = check_fingerprint(root)
+        if findings:
+            for f in findings:
+                print(f, file=sys.stderr)
+            return 1
+        print("the shipped source matches the recorded version")
+        return 0
+    version, digest, n = write_fingerprint(root)
+    print(f"recorded {version} -> {digest[:12]}… ({n} source files)")
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -447,6 +467,15 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("check", help="placeholders filled, manifest present, CODEOWNERS current")
     p.add_argument("path", nargs="?", default=".", type=Path)
     p.set_defaults(func=_cmd_check)
+
+    p = sub.add_parser(
+        "fingerprint",
+        help="record which shipped source produced this version (--check in CI)",
+    )
+    p.add_argument("path", nargs="?", default=".", type=Path)
+    p.add_argument("--check", action="store_true",
+                   help="fail if the code changed but the version did not")
+    p.set_defaults(func=_cmd_fingerprint)
 
     args = ap.parse_args(argv)
     try:

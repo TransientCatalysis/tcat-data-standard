@@ -264,3 +264,143 @@ def check(root: Path) -> list[Finding]:
             )
         )
     return findings
+
+
+# ---------------------------------------------------------------- fingerprint
+
+FINGERPRINT = ".tcat-fingerprint.json"
+
+#: What can change a tool's OUTPUT: the code that ships in the wheel.
+#:
+#: Tests, docs, notebooks and examples are deliberately excluded. They can be
+#: edited freely without a version bump, which is the point -- a rule that fired
+#: on a typo in a docstring would be turned off within a week.
+_SHIPPED = ("src",)
+
+
+def source_digest(root: Path) -> tuple[str, int]:
+    """A digest of the spoke's shipped source, and how many files went into it.
+
+    Sorted, path-qualified, and content-hashed, so it is stable across machines
+    and checkouts and changes if and only if the shipped code changes.
+    """
+    import hashlib
+
+    root = Path(root)
+    files = sorted(
+        p for base in _SHIPPED for p in (root / base).rglob("*.py")
+        if "__pycache__" not in p.parts and ".egg-info" not in str(p)
+    )
+    h = hashlib.sha256()
+    for f in files:
+        h.update(str(f.relative_to(root)).encode())
+        h.update(b"\0")
+        h.update(f.read_bytes())
+        h.update(b"\0")
+    return h.hexdigest(), len(files)
+
+
+def read_version(root: Path) -> str | None:
+    """The spoke package's declared `__version__`, without importing it.
+
+    Read rather than imported: importing a spoke means installing its
+    dependencies, and this check has to run in a CI job that may deliberately
+    not have them.
+    """
+    import re
+
+    for init in sorted((Path(root) / "src").glob("*/__init__.py")):
+        m = re.search(r'^__version__\s*=\s*["\']([^"\']+)["\']', init.read_text(), re.M)
+        if m:
+            return m.group(1)
+    return None
+
+
+def check_fingerprint(root: Path) -> list[Finding]:
+    """Did the shipped code change without the version changing?
+
+    This is the mechanical half of a rule that is otherwise pure discipline:
+    **if a change alters what a tool outputs, it needs a new version.** The
+    version is hashed into every artifact id, so bumping it is what makes older
+    artifacts stale instead of silently reused -- and forgetting to bump it is
+    invisible, which is precisely why it cannot be left to memory.
+
+    Especially so where spokes are developed by agents: an agent will happily fix
+    a solver and not think about artifact identity, and nothing downstream will
+    complain until somebody compares two numbers that were never comparable.
+
+    THE HONEST LIMIT: this watches `src/`. A behaviour change that arrives
+    through a dependency bump, a data file, or a compiled extension will not trip
+    it. Those are real, and this is not a substitute for thinking -- it is a
+    floor under the cases that are easy to miss.
+    """
+    root = Path(root)
+    if not (root / "src").is_dir():
+        return []  # not a packaged spoke; nothing ships
+
+    version = read_version(root)
+    if version is None:
+        return [Finding(FINGERPRINT, "no __version__ found under src/*/__init__.py")]
+
+    digest, n_files = source_digest(root)
+    path = root / FINGERPRINT
+    if not path.is_file():
+        return [
+            Finding(
+                FINGERPRINT,
+                f"missing. Run `tcat-spoke fingerprint` and commit it -- without "
+                f"it nothing notices when the code changes and the version does not.",
+            )
+        ]
+
+    recorded = json.loads(path.read_text(encoding="utf-8"))
+    if recorded.get("version") != version:
+        return [
+            Finding(
+                FINGERPRINT,
+                f"records version {recorded.get('version')!r} but the package says "
+                f"{version!r}. Run `tcat-spoke fingerprint` and commit the result.",
+            )
+        ]
+    if recorded.get("digest") != digest:
+        return [
+            Finding(
+                FINGERPRINT,
+                f"THE SHIPPED CODE CHANGED BUT THE VERSION DID NOT (still {version!r}, "
+                f"{n_files} files).\n"
+                f"    If the change alters what any tool OUTPUTS, bump __version__ "
+                f"and run `tcat-spoke fingerprint` -- the version is hashed into "
+                f"artifact ids, so without a bump the store keeps serving the "
+                f"pre-change results under ids that look correct.\n"
+                f"    If it genuinely cannot change output (a comment, a type "
+                f"annotation, a rename), just run `tcat-spoke fingerprint` and "
+                f"commit -- you are recording that you considered it.",
+            )
+        ]
+    return []
+
+
+def write_fingerprint(root: Path) -> tuple[str, str, int]:
+    """Record the current version and source digest."""
+    root = Path(root)
+    version = read_version(root) or "unknown"
+    digest, n_files = source_digest(root)
+    (root / FINGERPRINT).write_text(
+        json.dumps(
+            {
+                "$comment": (
+                    "GENERATED by `tcat-spoke fingerprint`. Records which shipped "
+                    "source produced which version, so that changing the code "
+                    "without changing the version is caught rather than silently "
+                    "reusing cached artifacts. Do not edit by hand."
+                ),
+                "version": version,
+                "digest": digest,
+                "files": n_files,
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return version, digest, n_files
