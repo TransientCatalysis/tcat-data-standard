@@ -112,3 +112,31 @@ def test_the_version_is_read_without_importing_the_package(spoke):
 def test_the_recorded_file_says_it_is_generated(spoke):
     recorded = json.loads((spoke / FINGERPRINT).read_text())
     assert "GENERATED" in recorded["$comment"]
+
+
+def test_a_version_re_exported_from_version_py_is_still_found(tmp_path):
+    """`from .version import __version__` is a normal layout, and the regex
+    cannot see through an import. The analysis hub uses it, so before this the
+    fingerprint reported `no __version__ found` and the one repository in the
+    project with shipped source and no fingerprint gate stayed ungated."""
+    from tcat_standard.spoke import read_version
+
+    pkg = tmp_path / "src" / "somepkg"
+    pkg.mkdir(parents=True)
+    (pkg / "__init__.py").write_text("from .version import __version__\n")
+    (pkg / "version.py").write_text('__version__ = "1.2.3"\n')
+
+    assert read_version(tmp_path) == "1.2.3"
+
+
+def test_a_literal_in_init_still_wins(tmp_path):
+    """The counter-case: `__init__.py` is searched first, so a package that
+    declares the literal there is unaffected by the fallback."""
+    from tcat_standard.spoke import read_version
+
+    pkg = tmp_path / "src" / "somepkg"
+    pkg.mkdir(parents=True)
+    (pkg / "__init__.py").write_text('__version__ = "9.9.9"\n')
+    (pkg / "version.py").write_text('__version__ = "1.2.3"\n')
+
+    assert read_version(tmp_path) == "9.9.9"

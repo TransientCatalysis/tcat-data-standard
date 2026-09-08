@@ -300,6 +300,16 @@ def source_digest(root: Path) -> tuple[str, int]:
     return h.hexdigest(), len(files)
 
 
+#: Where a package may declare `__version__`, in the order searched. `version.py`
+#: is here because re-exporting (`from .version import __version__`) is a normal
+#: layout and the regex cannot see through an import -- the analysis hub does
+#: exactly that, so the fingerprint could not read its version at all and the one
+#: repository in the project with shipped source went ungated. Duplicating the
+#: literal into `__init__.py` to satisfy the reader would create two places to
+#: forget, which is the drift this check exists to catch.
+_VERSION_FILES = ("*/__init__.py", "*/version.py", "*/_version.py")
+
+
 def read_version(root: Path) -> str | None:
     """The spoke package's declared `__version__`, without importing it.
 
@@ -309,10 +319,12 @@ def read_version(root: Path) -> str | None:
     """
     import re
 
-    for init in sorted((Path(root) / "src").glob("*/__init__.py")):
-        m = re.search(r'^__version__\s*=\s*["\']([^"\']+)["\']', init.read_text(), re.M)
-        if m:
-            return m.group(1)
+    for pattern in _VERSION_FILES:
+        for path in sorted((Path(root) / "src").glob(pattern)):
+            m = re.search(r'^__version__\s*=\s*["\']([^"\']+)["\']',
+                          path.read_text(encoding="utf-8"), re.M)
+            if m:
+                return m.group(1)
     return None
 
 
