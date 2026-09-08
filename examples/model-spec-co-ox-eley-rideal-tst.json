@@ -1,0 +1,180 @@
+{
+  "schema_version": "0.2.0",
+  "spec_id": "co-ox-4step-eley-rideal-tst",
+  "name": "CO oxidation, four-step direct release, TST-anchored joint fit",
+  "family": "microkinetic",
+  "reaction_system": "CO oxidation",
+  "description": "The Eley-Rideal network -- CO2 released directly from CO* + O* with no adsorbed CO2 intermediate -- with prefactors anchored at kT/h or the collision rate and the activation entropy fitted. The competitor to the five-step LH TST fit under the same parameterisation, so the two differ in network and in nothing else.",
+  "derived_from": "art://spec-co-ox-4step-eley-rideal-2026-09-01-000000",
+  "derivation": "reparameterised in (dS#, dH#, dH_ads, dS_ads) with anchored prefactors; all four steps reversible via detailed balance",
+  "parameter_transform": "none",
+  "mechanism": {
+    "sites": [
+      {
+        "name": "*",
+        "density": 1.0
+      }
+    ],
+    "gas": [
+      {
+        "name": "CO"
+      },
+      {
+        "name": "O2"
+      },
+      {
+        "name": "CO2"
+      }
+    ],
+    "adsorbates": [
+      {
+        "name": "CO*",
+        "site": "*",
+        "composition": {
+          "C": 1,
+          "O": 1
+        }
+      },
+      {
+        "name": "O2*",
+        "site": "*",
+        "composition": {
+          "O": 2
+        }
+      },
+      {
+        "name": "O*",
+        "site": "*",
+        "composition": {
+          "O": 1
+        }
+      }
+    ],
+    "steps": [
+      {
+        "equation": "CO + * -> CO*",
+        "name": "S1 CO adsorption",
+        "reversible": true
+      },
+      {
+        "equation": "O2 + * -> O2*",
+        "name": "S2 O2 adsorption",
+        "reversible": true
+      },
+      {
+        "equation": "O2* + * -> 2 O*",
+        "name": "S3 O2 dissociation",
+        "reversible": true
+      },
+      {
+        "equation": "CO* + O* -> CO2 + 2 *",
+        "name": "S4 surface reaction with direct release",
+        "reversible": true
+      }
+    ],
+    "activity_basis": "mole_fraction",
+    "gas_constant_J_per_mol_K": 8.314
+  },
+  "thermodynamics": {
+    "parameterisation": "tst-detailed-balance",
+    "gas_parents": {
+      "CO*": {
+        "CO": 1
+      },
+      "O2*": {
+        "O2": 1
+      },
+      "O*": {
+        "O2": 0.5
+      }
+    },
+    "gas_data_source": "gas-thermo-codata-shomate-2026-08-25",
+    "pressure_Pa": 101325.0,
+    "notes": "Prefactors are ANCHORED, not fitted. Step 4 makes gas-phase CO2 directly, but its forward side consumes no gas molecule, so it is a surface step at kT/h -- the anchor follows the FORWARD direction, which is the same rule that puts desorption at kT/h in the LH network."
+  },
+  "free_parameters": [
+    {
+      "name": "dSact_k1",
+      "units": "J/(mol K)"
+    },
+    {
+      "name": "dSact_k2",
+      "units": "J/(mol K)"
+    },
+    {
+      "name": "dSact_k3",
+      "units": "J/(mol K)"
+    },
+    {
+      "name": "dSact_k4",
+      "units": "J/(mol K)"
+    },
+    {
+      "name": "dHact_k1",
+      "units": "kJ/mol"
+    },
+    {
+      "name": "dHact_k2",
+      "units": "kJ/mol"
+    },
+    {
+      "name": "dHact_k3",
+      "units": "kJ/mol"
+    },
+    {
+      "name": "dHact_k4",
+      "units": "kJ/mol"
+    },
+    {
+      "name": "dH_CO*",
+      "units": "kJ/mol",
+      "bounds": [
+        -300.0,
+        50.0
+      ]
+    },
+    {
+      "name": "dS_CO*",
+      "units": "J/(mol K)",
+      "bounds": [
+        -250.0,
+        0.0
+      ]
+    },
+    {
+      "name": "dH_O2*",
+      "units": "kJ/mol",
+      "bounds": [
+        -300.0,
+        50.0
+      ]
+    },
+    {
+      "name": "dS_O2*",
+      "units": "J/(mol K)",
+      "bounds": [
+        -250.0,
+        0.0
+      ]
+    },
+    {
+      "name": "dH_O*",
+      "units": "kJ/mol",
+      "bounds": [
+        -300.0,
+        50.0
+      ]
+    },
+    {
+      "name": "dS_O*",
+      "units": "J/(mol K)",
+      "bounds": [
+        -250.0,
+        0.0
+      ]
+    }
+  ],
+  "access_status": "public",
+  "license": "CC-BY-4.0",
+  "notes": "The competitor to the five-step LH thermo fit. Both predict any temperature; they differ in whether CO2 is bound before it leaves."
+}

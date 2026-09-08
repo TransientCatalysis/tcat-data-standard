@@ -2,10 +2,10 @@
   "schema_version": "0.1.0",
   "spec_id": "co-ox-5step-tst-consistent",
   "family": "microkinetic",
-  "name": "CO oxidation, five-step LH, thermodynamically consistent joint fit",
-  "description": "Arrhenius forward constants and fitted adsorption thermochemistry; every reverse from detailed balance. One model across all campaign temperatures.",
+  "name": "CO oxidation, five-step LH, TST-anchored joint fit",
+  "description": "Fixed prefactors and fitted activation entropy: kT/h for a surface step, the collision-limited impingement rate where the forward side consumes a gas molecule. The fitted forward parameters are dS# and dH#, so dS# = 0 is textbook transition-state theory and the bound on it is a physical claim rather than a numerical one. Every reverse from detailed balance; one model across all campaign temperatures.",
   "derived_from": "art://spec-co-ox-5step-irreversible-45-2026-09-01-000000",
-  "derivation": "reparameterised in (log10A, Ea, dH_ads, dS_ads); all five steps reversible via detailed balance",
+  "derivation": "reparameterised in (dS#, dH#, dH_ads, dS_ads) with prefactors anchored at kT/h or the collision rate; all five steps reversible via detailed balance",
   "parameter_transform": "none",
   "thermodynamics": {
     "parameterisation": "tst-detailed-balance",

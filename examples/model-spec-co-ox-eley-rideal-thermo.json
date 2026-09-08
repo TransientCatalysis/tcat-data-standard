@@ -1,0 +1,218 @@
+{
+  "schema_version": "0.2.0",
+  "spec_id": "co-ox-4step-eley-rideal-thermo",
+  "name": "CO oxidation, four-step direct release, thermodynamically consistent joint fit",
+  "family": "microkinetic",
+  "reaction_system": "CO oxidation",
+  "description": "The Eley-Rideal network -- CO2 released directly from CO* + O* with no adsorbed CO2 intermediate -- reparameterised in (log10A, Ea, dH_ads, dS_ads) with every reverse from detailed balance. One model across all campaign temperatures, so it can predict a temperature the campaign never visited: the property a discrimination design needs of both competitors.",
+  "derived_from": "art://spec-co-ox-4step-eley-rideal-2026-09-01-000000",
+  "derivation": "reparameterised in (log10A, Ea, dH_ads, dS_ads); all four steps reversible via detailed balance",
+  "parameter_transform": "none",
+  "mechanism": {
+    "sites": [
+      {
+        "name": "*",
+        "density": 1.0
+      }
+    ],
+    "gas": [
+      {
+        "name": "CO"
+      },
+      {
+        "name": "O2"
+      },
+      {
+        "name": "CO2"
+      }
+    ],
+    "adsorbates": [
+      {
+        "name": "CO*",
+        "site": "*",
+        "composition": {
+          "C": 1,
+          "O": 1
+        }
+      },
+      {
+        "name": "O2*",
+        "site": "*",
+        "composition": {
+          "O": 2
+        }
+      },
+      {
+        "name": "O*",
+        "site": "*",
+        "composition": {
+          "O": 1
+        }
+      }
+    ],
+    "steps": [
+      {
+        "equation": "CO + * -> CO*",
+        "name": "S1 CO adsorption",
+        "reversible": true
+      },
+      {
+        "equation": "O2 + * -> O2*",
+        "name": "S2 O2 adsorption",
+        "reversible": true
+      },
+      {
+        "equation": "O2* + * -> 2 O*",
+        "name": "S3 O2 dissociation",
+        "reversible": true
+      },
+      {
+        "equation": "CO* + O* -> CO2 + 2 *",
+        "name": "S4 surface reaction with direct release",
+        "reversible": true
+      }
+    ],
+    "activity_basis": "mole_fraction",
+    "gas_constant_J_per_mol_K": 8.314
+  },
+  "thermodynamics": {
+    "parameterisation": "arrhenius-detailed-balance",
+    "gas_parents": {
+      "CO*": {
+        "CO": 1
+      },
+      "O2*": {
+        "O2": 1
+      },
+      "O*": {
+        "O2": 0.5
+      }
+    },
+    "gas_data_source": "gas-thermo-codata-shomate-2026-08-25",
+    "pressure_Pa": 101325.0,
+    "notes": "Gas tables cancel out of every pure adsorption step. Step 4 carries the overall reaction dG(T) here, because it is the step that makes gas-phase CO2 -- in the LH network that role belongs to the CO2* desorption."
+  },
+  "free_parameters": [
+    {
+      "name": "log10A_k1",
+      "units": "log10(1/s or 1/(mol_frac s))",
+      "bounds": [
+        -2.0,
+        12.0
+      ]
+    },
+    {
+      "name": "Ea_k1",
+      "units": "kJ/mol",
+      "bounds": [
+        0.0,
+        250.0
+      ]
+    },
+    {
+      "name": "log10A_k2",
+      "units": "log10(1/s or 1/(mol_frac s))",
+      "bounds": [
+        -2.0,
+        12.0
+      ]
+    },
+    {
+      "name": "Ea_k2",
+      "units": "kJ/mol",
+      "bounds": [
+        0.0,
+        250.0
+      ]
+    },
+    {
+      "name": "log10A_k3",
+      "units": "log10(1/s or 1/(mol_frac s))",
+      "bounds": [
+        -2.0,
+        12.0
+      ]
+    },
+    {
+      "name": "Ea_k3",
+      "units": "kJ/mol",
+      "bounds": [
+        0.0,
+        250.0
+      ]
+    },
+    {
+      "name": "log10A_k4",
+      "units": "log10(1/s or 1/(mol_frac s))",
+      "bounds": [
+        -2.0,
+        12.0
+      ]
+    },
+    {
+      "name": "Ea_k4",
+      "units": "kJ/mol",
+      "bounds": [
+        0.0,
+        250.0
+      ]
+    },
+    {
+      "name": "dH_CO*",
+      "units": "kJ/mol",
+      "bounds": [
+        -300.0,
+        50.0
+      ],
+      "description": "Adsorption enthalpy of CO* relative to its gas parent."
+    },
+    {
+      "name": "dS_CO*",
+      "units": "J/(mol K)",
+      "bounds": [
+        -250.0,
+        0.0
+      ],
+      "description": "Non-positive by physics: adsorption loses entropy."
+    },
+    {
+      "name": "dH_O2*",
+      "units": "kJ/mol",
+      "bounds": [
+        -300.0,
+        50.0
+      ],
+      "description": "Adsorption enthalpy of O2* relative to its gas parent."
+    },
+    {
+      "name": "dS_O2*",
+      "units": "J/(mol K)",
+      "bounds": [
+        -250.0,
+        0.0
+      ],
+      "description": "Non-positive by physics: adsorption loses entropy."
+    },
+    {
+      "name": "dH_O*",
+      "units": "kJ/mol",
+      "bounds": [
+        -300.0,
+        50.0
+      ],
+      "description": "Adsorption enthalpy of O* relative to its gas parent."
+    },
+    {
+      "name": "dS_O*",
+      "units": "J/(mol K)",
+      "bounds": [
+        -250.0,
+        0.0
+      ],
+      "description": "Non-positive by physics: adsorption loses entropy."
+    }
+  ],
+  "access_status": "public",
+  "license": "CC-BY-4.0",
+  "notes": "The competitor to the five-step LH thermo fit. Both predict any temperature; they differ in whether CO2 is bound before it leaves."
+}
