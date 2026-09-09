@@ -54,7 +54,7 @@ from .validate import (
     validate_uncertainty_ensemble,
 )
 
-__version__ = "0.5.0"
+__version__ = "0.5.1"
 
 __all__ = [
     "CURRENT_SCHEMA_VERSION",

@@ -144,3 +144,39 @@ def test_a_literal_in_init_still_wins(tmp_path):
     (pkg / "version.py").write_text('__version__ = "1.2.3"\n')
 
     assert read_version(tmp_path) == "9.9.9"
+
+
+def test_the_normalised_text_is_exactly_the_code(tmp_path):
+    """Docstrings and comments gone (a multi-line docstring, a comment on a code
+    line, a non-ASCII comment before it -- the byte/char offset trap), trailing
+    whitespace and blank lines gone; the code untouched. Pinned as literal text
+    because the digest is a function of this text and of nothing else -- in
+    particular not of the interpreter, which is why the AST form was replaced."""
+    from tcat_data.spoke import normalised_source_text
+
+    src = (
+        '"""Module doc.\n\nTwo paragraphs — with a dash."""\n'
+        "import os  # trailing comment × two\n"
+        "\n"
+        "def f(k):\n"
+        '    """Doc."""\n'
+        "    # a comment — non-ASCII\n"
+        "    return k * 2   \n"
+        "\n\n"
+        "class C:\n"
+        "    '''class doc'''\n"
+        "    x = 'not a docstring'\n"
+    ).encode("utf-8")
+    assert normalised_source_text(src).decode("utf-8") == (
+        "import os\n"
+        "def f(k):\n"
+        "    return k * 2\n"
+        "class C:\n"
+        "    x = 'not a docstring'"
+    )
+
+
+def test_a_file_that_does_not_parse_is_hashed_raw():
+    from tcat_data.spoke import normalised_source_text
+
+    assert normalised_source_text(b"def (:\n") == b"!raw:def (:\n"

@@ -302,23 +302,76 @@ def source_digest(root: Path) -> tuple[str, int]:
     return h.hexdigest(), len(files)
 
 
-def _strip_docstrings(tree):
-    """Remove every docstring. Comments never reach the AST, so they are gone already."""
+def normalised_source_text(raw: bytes) -> bytes:
+    """One module's source with every docstring and comment removed, trailing
+    whitespace stripped and blank lines dropped -- the TEXT the identity digest
+    hashes.
+
+    Text, not an AST dump, because `ast.dump` is not stable across interpreters:
+    the same tcat_spec source dumped to two different digests on Python 3.11 and
+    3.12 (measured 2026-09-09, 31d9dfe7 vs a5cc39be), which would have given one
+    tool two identities depending on who ran it -- the silent split CONTRACT.md's
+    identity rule exists to make impossible. Docstrings are located by AST node
+    position (line and column, stable across versions for the same source) and
+    comments by the tokenizer's COMMENT tokens; both are removed from the raw
+    text, and what remains is hashed. The price is that reformatting whitespace
+    now moves the digest where the AST form did not; the interpreter-independence
+    is worth more.
+
+    A file that does not parse or tokenize comes back as its raw bytes under a
+    `!raw:` marker rather than being skipped: skipping would let a broken module
+    change behaviour without changing identity.
+    """
     import ast
+    import io
+    import tokenize
+
+    try:
+        text = raw.decode("utf-8")
+        tree = ast.parse(raw)
+        tokens = list(tokenize.tokenize(io.BytesIO(raw).readline))
+    except (SyntaxError, UnicodeDecodeError, tokenize.TokenError):
+        return b"!raw:" + raw
+
+    lines = text.splitlines(keepends=True)
+    # (row, char col) spans to blank. AST columns are UTF-8 byte offsets into the
+    # line; tokenize columns are character offsets. Both are converted to
+    # character offsets against the same decoded line.
+    def chars(row: int, byte_col: int) -> int:
+        return len(lines[row - 1].encode("utf-8")[:byte_col].decode("utf-8", "ignore"))
+
+    spans: list[tuple[int, int, int, int]] = []
     for node in ast.walk(tree):
         if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
             body = node.body
             if (body and isinstance(body[0], ast.Expr)
                     and isinstance(getattr(body[0], "value", None), ast.Constant)
                     and isinstance(body[0].value.value, str)):
-                node.body = body[1:] or [ast.Pass()]
-    return tree
+                d = body[0]
+                spans.append((d.lineno, chars(d.lineno, d.col_offset),
+                              d.end_lineno, chars(d.end_lineno, d.end_col_offset)))
+    for tok in tokens:
+        if tok.type == tokenize.COMMENT:
+            (r0, c0), (r1, c1) = tok.start, tok.end
+            spans.append((r0, c0, r1, c1))
+
+    out = [list(l) for l in lines]
+    for r0, c0, r1, c1 in spans:
+        for row in range(r0, r1 + 1):
+            line = out[row - 1]
+            lo = c0 if row == r0 else 0
+            hi = c1 if row == r1 else len(line)
+            for i in range(lo, min(hi, len(line))):
+                if line[i] != "\n":
+                    line[i] = " "
+    kept = ["".join(l).rstrip() for l in out]
+    return "\n".join(l for l in kept if l.strip()).encode("utf-8")
 
 
 def normalised_source_digest(package_dir: Path) -> tuple[str, int]:
-    """The IDENTITY digest of one package: sha256 over (module name, normalised AST) pairs.
+    """The IDENTITY digest of one package: sha256 over (module name, normalised text) pairs.
 
-    Four properties, each pinned by a test, each load-bearing for the identity
+    Five properties, each pinned by a test, each load-bearing for the identity
     rule in CONTRACT.md:
 
     * a docstring or comment edit does not move it -- prose is not behaviour, and
@@ -331,26 +384,18 @@ def normalised_source_digest(package_dir: Path) -> tuple[str, int]:
       artifact id where it is;
     * it is independent of the package DIRECTORY's name (module names are
       relative to the package), because the package name is carried separately
-      as the tool's name.
-
-    A file that does not parse contributes its raw bytes under a `!raw:` marker
-    rather than being skipped: skipping would let a broken module change
-    behaviour without changing identity, which is the one failure this exists
-    to prevent.
+      as the tool's name;
+    * it is independent of the Python interpreter, because it hashes normalised
+      TEXT (see `normalised_source_text`) -- an `ast.dump` form gave the same
+      source two digests on 3.11 and 3.12.
     """
-    import ast
     import hashlib
     package_dir = Path(package_dir)
     files = sorted(p for p in package_dir.rglob("*.py") if "__pycache__" not in p.parts)
     h = hashlib.sha256()
     for f in files:
         rel = f.relative_to(package_dir).with_suffix("").as_posix()
-        raw = f.read_bytes()
-        try:
-            dumped = ast.dump(_strip_docstrings(ast.parse(raw)), include_attributes=False).encode()
-        except SyntaxError:
-            dumped = b"!raw:" + raw
-        h.update(rel.encode()); h.update(b"\0"); h.update(dumped); h.update(b"\0")
+        h.update(rel.encode()); h.update(b"\0"); h.update(normalised_source_text(f.read_bytes())); h.update(b"\0")
     return h.hexdigest(), len(files)
 
 

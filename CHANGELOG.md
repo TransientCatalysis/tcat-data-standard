@@ -7,6 +7,10 @@ package is 0.3.0 and the schema directory is 0.2.0.
 `test_the_package_version_matches_the_standard_document` now parses all four
 places, so the drift cannot come back.
 
+## 0.5.1 — 2026-09-09
+
+**The identity digest is interpreter-independent.** `normalised_source_digest` hashed an `ast.dump`, which differs between Python 3.11 and 3.12 — the same source gave two digests, i.e. two identities for one tool. It now hashes normalised text (`normalised_source_text`: docstrings out by AST position, comments out by token, trailing whitespace and blank lines dropped), identical on both. Every digest moves once; reformatting whitespace now moves one too.
+
 ## 0.5.0 — 2026-09-09
 
 **Package renamed `tcat_standard` → `tcat_data`.** `import tcat_data`; console scripts (`tcat-validate`, `tcat-spoke`) and the distribution name `tcat-data-standard` are unchanged. Schema stays 0.3.0. The reason is the org's naming: three standards, one per kind of thing that has one — `tcat-data-standard` / `tcat_data`, `tcat-tool-standard` / `tcat_tool` (was `tcat-analysis` / `tcat_analysis`), and a `tcat-campaign-standard` to come. See `tcat-tool-standard/ARCHITECTURE.md`.
