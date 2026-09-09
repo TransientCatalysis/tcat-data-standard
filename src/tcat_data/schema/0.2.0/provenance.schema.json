@@ -74,7 +74,7 @@
         },
         "spoke": {
           "type": "string",
-          "description": "The repository implementing this tool, e.g. 'tcat-analysis-coox'. Optional and informational: identity is (name, version) plus git_sha, and two spokes implementing one declared tool should produce identical artifacts -- but a reader tracing a result wants to know WHERE the code lives without parsing free-text notes."
+          "description": "The repository implementing this tool, e.g. 'tcat-campaign-coox'. Optional and informational: identity is (name, version) plus git_sha, and two spokes implementing one declared tool should produce identical artifacts -- but a reader tracing a result wants to know WHERE the code lives without parsing free-text notes."
         }
       },
       "additionalProperties": false

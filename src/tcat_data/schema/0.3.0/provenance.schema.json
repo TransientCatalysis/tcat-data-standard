@@ -74,7 +74,7 @@
         },
         "spoke": {
           "type": "string",
-          "description": "The repository implementing this tool, e.g. 'tcat-analysis-coox'. Part of IDENTITY since 2026-09-02: a tool is spoke@version and both halves are hashed, because a version alone is not unique across spokes and two spokes implementing one declared tool used to mint identical ids."
+          "description": "The repository implementing this tool, e.g. 'tcat-campaign-coox'. Part of IDENTITY since 2026-09-02: a tool is spoke@version and both halves are hashed, because a version alone is not unique across spokes and two spokes implementing one declared tool used to mint identical ids."
         },
         "source_digest": {
           "type": "string",
