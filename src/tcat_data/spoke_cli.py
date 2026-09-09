@@ -1,15 +1,20 @@
-"""`tcat-spoke` -- create a spoke, and keep it honest afterwards.
+"""`tcat-spoke` -- create a spoke or a campaign, and keep it honest afterwards.
 
-Three subcommands, and each exists because something was previously done by hand
+Four subcommands, and each exists because something was previously done by hand
 and therefore sometimes not done at all:
 
-    init        write the manifest, fill the placeholders, generate CODEOWNERS
+    init        materialise the skeleton for --kind data|tool|campaign into a new
+                directory, write the manifest, fill the placeholders, rename the
+                example package, generate CODEOWNERS, record the fingerprint
     codeowners  regenerate CODEOWNERS from the stewards block (--check in CI)
     check       every placeholder filled, manifest present and valid, no drift
+    fingerprint the per-package source-digest index (--check in CI)
 
 `init` is deliberately the only thing a newcomer has to run. The previous route
 in was "use this template, then hand-edit REPLACE in five files", with nothing
-verifying the edit happened.
+verifying the edit happened; since 2026-09-09 there is no template repository
+either -- each standard ships its skeleton (`tcat_data.scaffold`), so a new
+repository starts from exactly what the installed standard says.
 """
 
 from __future__ import annotations
@@ -34,6 +39,7 @@ from .spoke import (
     load_manifest,
 )
 from .validate import validate
+from . import scaffold as _scaffold
 
 _ROLES = ("data_steward", "instrument_owner", "analysis_owner", "pi")
 
@@ -80,11 +86,18 @@ def _default_slug(root: Path) -> str:
     return root.resolve().name
 
 
-def _gather(root: Path, answers: dict[str, Any] | None) -> dict[str, Any]:
+def _gather(root: Path, answers: dict[str, Any] | None, kind: str | None = None) -> dict[str, Any]:
     if answers is not None:
         return answers
-    print(f"Creating a spoke in {root.resolve()}\n")
-    kind = _ask_choice("Kind", ("data", "analysis"), "data")
+    print(f"Creating a {kind or 'spoke'} in {root.resolve()}\n")
+    if kind == "campaign":
+        return {
+            "spoke_id": _ask("Campaign id (lowercase, hyphens)", _default_slug(root)),
+            "kind": "campaign",
+            "name": _ask("Title -- what the study asks, in one line", required=False),
+            "stewards": _ask_stewards(),
+        }
+    kind = {"tool": "analysis", "data": "data"}.get(kind) or _ask_choice("Kind", ("data", "analysis"), "data")
     manifest: dict[str, Any] = {
         "standard_version": CURRENT_SCHEMA_VERSION,
         "spoke_id": _ask("Spoke id (lowercase, hyphens)", _default_slug(root)),
@@ -158,6 +171,9 @@ def _rename_package(root: Path, manifest: dict[str, Any]) -> list[str]:
     command = f"tcat-fit-{slug.replace('_', '-')}"
 
     old_pkg, old_cmd = "tcat_spoke_example", "tcat-fit-example"
+    if manifest.get("kind") == "campaign":
+        old_pkg, old_cmd = "tcat_campaign_example", "tcat-campaign-example"
+        command = manifest["spoke_id"]
     src = root / "src" / old_pkg
     if not src.is_dir():
         return []
@@ -274,11 +290,12 @@ def _fill_pyproject(root: Path, manifest: dict[str, Any]) -> bool:
 
     text = text.replace(
         'name = "tcat-spoke-example"', f'name = "{manifest["spoke_id"]}"'
+    ).replace(
+        'name = "tcat-campaign-example"', f'name = "{manifest["spoke_id"]}"'
     )
-    text = text.replace(
-        'description = "REPLACE -- what this spoke implements, in one line."',
-        f'description = "{manifest.get("name") or manifest["spoke_id"]}"',
-    )
+    for placeholder in ('description = "REPLACE -- what this spoke implements, in one line."',
+                        'description = "REPLACE -- what this campaign studies, in one line."'):
+        text = text.replace(placeholder, f'description = "{manifest.get("name") or manifest["spoke_id"]}"')
     if stewards:
         authors = ", ".join(
             "{ name = \"%s\"%s }"
@@ -311,15 +328,70 @@ def _write_codeowners(root: Path, manifest: dict[str, Any]) -> bool:
     return True
 
 
+def _fill_campaign_record(root: Path, manifest: dict[str, Any]) -> bool:
+    """A campaign's manifest is its campaign.json (tcat-campaign-standard/CAMPAIGN.md):
+    fill the id and title; the pins are written later by `tcat-campaign pin`."""
+    path = root / "campaign.json"
+    if not path.is_file():
+        return False
+    record = json.loads(path.read_text(encoding="utf-8"))
+    record["campaign_id"] = manifest["spoke_id"]
+    if manifest.get("name"):
+        record["title"] = manifest["name"]
+    path.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return True
+
+
 def _cmd_init(args: argparse.Namespace) -> int:
     root = Path(args.path)
+    kind = args.kind
+
+    # A new directory (or an empty one) gets the skeleton first. An existing,
+    # populated directory is the pre-2026-09-09 route -- a clone of a template
+    # repository -- and is filled in place as before.
+    if not root.exists() or not any(root.iterdir()):
+        if kind is None:
+            print("tcat-spoke init: a new directory needs --kind data|tool|campaign", file=sys.stderr)
+            return 1
+        try:
+            written = _scaffold.materialise(kind, root)
+        except (LookupError, FileExistsError) as exc:
+            print(f"tcat-spoke init: {exc}", file=sys.stderr)
+            return 1
+        print(f"wrote the {kind} skeleton: {len(written)} files into {root}")
+
+    is_campaign = kind == "campaign" or (root / "campaign.json").is_file() and not (root / SPOKE_MANIFEST).exists() and kind is None and (root / "pyproject.toml").is_file() and "tcat-campaign" in (root / "pyproject.toml").read_text(encoding="utf-8")
     target = root / SPOKE_MANIFEST
-    if target.exists() and not args.force:
+    if not is_campaign and target.exists() and not args.force:
         print(f"{target} already exists; --force to overwrite", file=sys.stderr)
         return 1
 
     answers = json.loads(Path(args.answers).read_text()) if args.answers else None
-    manifest = _gather(root, answers)
+    manifest = _gather(root, answers, "campaign" if is_campaign else kind)
+
+    if is_campaign:
+        # No .tcat-spoke.json: the record is the manifest. Everything else that
+        # init does for a spoke -- placeholders, citation, package, CODEOWNERS,
+        # fingerprint -- a campaign needs too.
+        manifest = {**manifest, "kind": "campaign"}
+        if _fill_campaign_record(root, manifest):
+            print("filled campaign.json (id, title); `tcat-campaign pin .` writes the pins")
+        for rel in _fill_placeholders(root, manifest):
+            print(f"filled placeholders in {rel}")
+        if _fill_citation(root, manifest):
+            print("filled CITATION.cff from the stewards block")
+        for line in _rename_package(root, manifest):
+            print(f"renamed: {line}")
+        if _fill_pyproject(root, manifest):
+            print("filled pyproject.toml")
+        if _write_codeowners(root, {**manifest, "kind": "analysis"}):
+            print(f"wrote {CODEOWNERS}")
+        write_fingerprint(root)
+        print("recorded .tcat-fingerprint.json")
+        print("\nNext, once the toolchain is installed:")
+        print(f"  tcat-campaign pin {root}     # record the identities this study runs on")
+        print(f"  tcat-campaign check {root}   # the gate, locally and in CI")
+        return 0
 
     report = validate(manifest, "spoke")
     if not report.ok:
@@ -339,6 +411,9 @@ def _cmd_init(args: argparse.Namespace) -> int:
             print(f"renamed: {line}")
         if _fill_pyproject(root, manifest):
             print("filled pyproject.toml from the manifest")
+        if (root / "src").is_dir():
+            write_fingerprint(root)
+            print("recorded .tcat-fingerprint.json")
 
     if _write_codeowners(root, manifest):
         print(f"wrote {CODEOWNERS}")
@@ -356,7 +431,7 @@ def _cmd_init(args: argparse.Namespace) -> int:
             print(f"  {f}", file=sys.stderr)
     else:
         print("Nothing outstanding. Next:")
-        print(f"  tcat-validate all {root}")
+        print(f"  tcat-validate all {root}" if manifest.get("kind") == "data" else f"  pip install -e {root} && tcat-conform <your command> --as <declared tool>")
     if report.warnings:
         print("\nAdvice on the manifest:", file=sys.stderr)
         for w in report.warnings:
@@ -454,8 +529,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     sub = ap.add_subparsers(dest="cmd", required=True)
 
-    p = sub.add_parser("init", help="create the manifest, fill placeholders, write CODEOWNERS")
+    p = sub.add_parser("init", help="materialise a skeleton (new directory) and fill it in: manifest, placeholders, package name, CODEOWNERS, fingerprint")
     p.add_argument("path", nargs="?", default=".", type=Path)
+    p.add_argument("--kind", choices=("data", "tool", "campaign"),
+                   help="which skeleton to write into a NEW directory; each ships with its standard")
     p.add_argument("--answers", help="a JSON file of answers, so an agent can drive this")
     p.add_argument("--force", action="store_true", help="overwrite an existing manifest")
     p.set_defaults(func=_cmd_init)

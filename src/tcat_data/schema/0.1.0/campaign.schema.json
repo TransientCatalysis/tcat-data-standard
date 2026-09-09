@@ -91,7 +91,7 @@
       "items": {
         "type": "string"
       },
-      "description": "The repositories whose data and tools this campaign runs on, e.g. ['tcat-data-psu-coox', 'tcat-campaign-coox']. Informational; the authoritative per-artifact attribution is provenance tool.spoke."
+      "description": "The repositories whose data and tools this campaign runs on, e.g. ['tcat-data-psu-coox', 'tcat-analysis-coox']. Informational; the authoritative per-artifact attribution is provenance tool.spoke."
     },
     "notes": {
       "type": "string",

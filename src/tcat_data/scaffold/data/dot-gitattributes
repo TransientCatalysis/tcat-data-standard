@@ -1,0 +1,19 @@
+# CSV is the canonical tabular format, so it stays text: diffable, and a broken
+# line is visible in a PR.
+*.csv text
+*.json text
+*.md text
+*.yml text
+
+# LFS candidates. NOT enabled by default -- turning on LFS is a decision with a
+# quota attached, and it should be made deliberately rather than inherited from a
+# template.
+#
+# Before reaching for LFS, ask whether the file should be in the repository at
+# all. A manifest entry's `url` field points at object storage or a facility
+# archive and requires no quota, no client-side setup for collaborators, and no
+# change to any downstream consumer -- the checksum is what proves the bytes are
+# the same. LFS is for data that genuinely belongs with the code.
+#
+# To enable:  git lfs install && git lfs track "canonical/**/*.zarr/**"
+# canonical/**/*.zarr/** filter=lfs diff=lfs merge=lfs -text

@@ -1,0 +1,139 @@
+{
+  "$comment": [
+    "COPY THIS, then delete every $comment. Files beginning with '_' are skipped by",
+    "`tcat-validate all`, which is why this template can carry comments and REPLACE",
+    "placeholders. Your copy must not start with '_'.",
+    "",
+    "A sample document is authored by the lab that MADE the sample, once. Every",
+    "dataset measured on it then carries only `sample_id`. Repeating synthesis",
+    "history on each dataset guarantees the copies diverge, and then nobody knows",
+    "which is right.",
+    "",
+    "The `properties` object is the part worth planning for. Correlating a fitted",
+    "rate constant against an independently measured catalyst property is a JOIN",
+    "between a fit and the properties recorded here. If those live in a notebook,",
+    "that comparison becomes a spreadsheet exercise at the worst possible moment."
+  ],
+  "schema_version": "0.2.0",
+  "sample_id": "REPLACE-YOUR-OWN-VIAL-LABEL",
+  "$comment_id": [
+    "Verbatim what is written on the vial. A project-assigned relabelling scheme",
+    "that disagrees with the physical label is a scheme that gets ignored."
+  ],
+  "status": "ok",
+  "$comment_status": [
+    "Flag, never delete -- this applies to samples too. A synthesis that failed, or",
+    "a sample that was contaminated, is retained with a status_reason. Those are",
+    "often the most informative entries in a materials series."
+  ],
+  "catalyst_family": "REPLACE",
+  "identifiers": {
+    "formula": "REPLACE"
+  },
+  "composition": {
+    "nominal": {
+      "V": {
+        "value": 3.0,
+        "units": "wt%"
+      }
+    },
+    "measured": {
+      "V": {
+        "value": 2.84,
+        "sigma": 0.09,
+        "units": "wt%",
+        "method": "XRF"
+      }
+    },
+    "support": "SiO2"
+  },
+  "$comment_composition": [
+    "Both, where both exist -- the difference between what was intended and what",
+    "was made is frequently the interesting variable. A MEASURED composition must",
+    "name its method; a composition without one is not comparable across labs."
+  ],
+  "synthesis": {
+    "method": "REPLACE",
+    "precursors": [
+      {
+        "name": "REPLACE",
+        "identifiers": {
+          "formula": "REPLACE",
+          "cas": "0000-00-0"
+        },
+        "supplier": "REPLACE",
+        "lot": "REPLACE",
+        "purity": "REPLACE"
+      }
+    ],
+    "thermal_treatments": [
+      {
+        "label": "calcination",
+        "temperature_K": 823.0,
+        "ramp_K_per_min": 2.0,
+        "duration_s": 14400,
+        "atmosphere": "air",
+        "flow_sccm": 50.0
+      }
+    ],
+    "date": "2026-09-01T10:00:00Z",
+    "notes": "REPLACE"
+  },
+  "$comment_synthesis": [
+    "thermal_treatments is ORDERED: calcination-then-reduction is a different",
+    "material from reduction-then-calcination.",
+    "",
+    "Record the precursor `lot`. A precursor lot change is a classic culprit for",
+    "unexplained drift between nominally identical samples, and it is unrecoverable",
+    "once the bottle is gone."
+  ],
+  "properties": {
+    "surface_area": {
+      "value": 0.0,
+      "sigma": 0.0,
+      "units": "m^2/g",
+      "method": "BET N2 physisorption"
+    },
+    "reducibility_T_max": {
+      "value": 0.0,
+      "sigma": 0.0,
+      "units": "K",
+      "method": "H2-TPR",
+      "dataset_ref": "REPLACE-the-dataset-this-came-from"
+    }
+  },
+  "$comment_properties": [
+    "Every entry needs value + units + method. `dataset_ref` makes the value",
+    "auditable rather than asserted -- point it at the characterization dataset it",
+    "was derived from.",
+    "",
+    "Use \"1\" for a genuinely dimensionless quantity. Never omit units."
+  ],
+  "characterization": [
+    {
+      "technique": "XRD",
+      "dataset_id": "REPLACE",
+      "summary": "REPLACE -- one line of what it showed."
+    }
+  ],
+  "batch_id": "REPLACE-the-synthesis-batch",
+  "$comment_batch": [
+    "Datasets inherit batch_id from the sample they measure, and that inheritance",
+    "is what makes grouped train/test splits correct rather than approximate.",
+    "Same-batch data must stay within one split."
+  ],
+  "parent_sample_id": null,
+  "$comment_parent": [
+    "For a sample derived from another -- a split batch, a re-calcined portion, a",
+    "spent sample recovered after reaction. Makes the materials lineage explicit",
+    "instead of implied by a naming convention."
+  ],
+  "quantity_g": 0.0,
+  "location": "REPLACE",
+  "access_status": "internal",
+  "license": "CC-BY-4.0",
+  "notes": "REPLACE. Storage conditions, anything anomalous about the synthesis, why a sample was abandoned. The validator warns when this is empty.",
+  "extensions": {
+    "$comment": "Your escape hatch. The validator ignores this rather than rejecting it."
+  }
+}

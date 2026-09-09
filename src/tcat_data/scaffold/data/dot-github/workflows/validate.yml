@@ -1,0 +1,151 @@
+name: validate
+
+# PASSING THIS IS THE DEFINITION OF INGESTIBLE.
+#
+# This must be a REQUIRED STATUS CHECK, or it is a suggestion, and a suggestion
+# is not a gate. You should not have to arrange that yourself: the org applies a
+# ruleset to `tcat-*` repositories that requires the `validate` job. If `main`
+# here is unprotected, open an issue on the `.github` repository rather than
+# hunting through settings you may not have rights to.
+#
+# The JOB NAME below is what the ruleset names. Renaming it silently stops this
+# repository being gated, with no error anywhere.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Read the pinned standard version
+        id: pin
+        run: echo "version=$(cat .standard-version | tr -d '[:space:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Install the validator
+        # From main rather than a tag, while both move together in 0.x. Documents
+        # are still checked against the version each one DECLARES -- old schema
+        # versions are retained forever, so tracking main never invalidates data
+        # already committed here.
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "git+https://github.com/TransientCatalysis/tcat-data-standard.git@main"
+
+      - name: The pinned version exists
+        run: |
+          set -euo pipefail
+          if ! tcat-validate versions | grep -q "^${{ steps.pin.outputs.version }}"; then
+            echo "::error::.standard-version says ${{ steps.pin.outputs.version }}, which the validator does not have."
+            tcat-validate versions
+            exit 1
+          fi
+
+      - name: Validate every document
+        run: tcat-validate all .
+
+      - name: The spoke is configured, not merely created
+        # Nothing used to check that the template placeholders had been filled
+        # in, so a repository could be created, committed, and pass every other
+        # check here with its README still unfilled and its CITATION.cff
+        # crediting nobody.
+        #
+        # In THIS repository -- the template -- the check inverts and asserts the
+        # placeholders are still present, because a template whose placeholders
+        # got filled in is broken for everyone who creates a repository from it.
+        run: tcat-spoke check .
+
+      - name: CODEOWNERS still matches the stewards block
+        # Ownership recorded in two places diverges, and the copy that is wrong
+        # is always the one nobody is looking at. So CODEOWNERS is generated, and
+        # a hand edit fails here.
+        run: tcat-spoke codeowners --check .
+
+      - name: No instrument blobs
+        # The rule that cannot be expressed in a schema, because it is about what
+        # is committed rather than what a document says. Checked mechanically
+        # because it erodes one convenient exception at a time.
+        run: |
+          set -euo pipefail
+          large=$(git ls-files -z | xargs -0 -I{} sh -c '
+            f="{}"
+            case "$f" in *.md|*.json|*.yml|*.yaml|*.csv|*.txt|.git*) exit 0 ;; esac
+            [ -f "$f" ] || exit 0
+            size=$(wc -c < "$f")
+            [ "$size" -gt 5242880 ] && echo "$f ($size bytes)"
+            exit 0
+          ' || true)
+          if [ -n "$large" ]; then
+            echo "::error::binary files over 5 MB are committed. Convert at ingestion, or point the manifest entry at a url or LFS pointer instead:"
+            echo "$large"
+            exit 1
+          fi
+
+      - name: Every manifest checksum matches its file
+        # Catches the failure where a raw file is re-exported and its manifest is
+        # not updated. Without this, a published result cites a checksum that no
+        # longer describes the bytes -- which makes the citation a lie, silently.
+        run: |
+          python - <<'PY'
+          import json, sys
+          from pathlib import Path
+          from tcat_data import ManifestEntry, sha256_file, sha256_tree
+
+          problems, checked = [], 0
+          SKIP_DIRS = {".github", "tests", "node_modules", ".venv"}
+          for path in sorted(Path(".").rglob("*.json")):
+              # '_'-prefixed files are templates; 'tests' holds deliberately
+              # invalid fixtures. Both would fail for the right reasons and the
+              # wrong purpose.
+              if path.name.startswith("_") or SKIP_DIRS & set(path.parts):
+                  continue
+              try:
+                  doc = json.loads(path.read_text(encoding="utf-8"))
+              except json.JSONDecodeError:
+                  continue
+              if not isinstance(doc, dict) or "files" not in doc:
+                  continue
+              for raw in doc["files"]:
+                  try:
+                      entry = ManifestEntry.from_dict(raw)
+                  except (TypeError, ValueError) as exc:
+                      problems.append(f"{path}: {exc}")
+                      continue
+                  if entry.path is None:
+                      continue          # url / lfs form: nothing local to verify
+                  target = Path(entry.path)
+                  if not target.exists():
+                      problems.append(f"{path}: {entry.path} does not exist")
+                      continue
+                  actual = sha256_tree(target) if target.is_dir() else sha256_file(target)
+                  checked += 1
+                  if actual != entry.sha256:
+                      problems.append(
+                          f"{path}: checksum mismatch for {entry.path}\n"
+                          f"    manifest says {entry.sha256}\n"
+                          f"    file is       {actual}"
+                      )
+                  elif target.is_file() and entry.size_bytes != target.stat().st_size:
+                      # Cannot disagree with the checksum in practice; caught anyway
+                      # because a wrong size is a sign the entry was hand-edited.
+                      problems.append(
+                          f"{path}: size mismatch for {entry.path} "
+                          f"(manifest {entry.size_bytes}, file {target.stat().st_size})"
+                      )
+
+          for p in problems:
+              print(f"::error::{p}")
+          print(f"verified {checked} manifest entr{'y' if checked == 1 else 'ies'}")
+          sys.exit(1 if problems else 0)
+          PY

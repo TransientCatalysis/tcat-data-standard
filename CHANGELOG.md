@@ -7,6 +7,10 @@ package is 0.3.0 and the schema directory is 0.2.0.
 `test_the_package_version_matches_the_standard_document` now parses all four
 places, so the drift cannot come back.
 
+## 0.6.0 — 2026-09-09
+
+**`tcat-spoke init --kind data|tool|campaign <new-dir>`** materialises a repository skeleton from the installed standard that defines that kind, then fills it in as before. The skeletons ship as package data (`tcat_data.scaffold`; the tool and campaign ones inside their own standards) and the three GitHub template repositories are retired: a skeleton kept apart from its standard drifts, one shipped inside it cannot.
+
 ## 0.5.1 — 2026-09-09
 
 **The identity digest is interpreter-independent.** `normalised_source_digest` hashed an `ast.dump`, which differs between Python 3.11 and 3.12 — the same source gave two digests, i.e. two identities for one tool. It now hashes normalised text (`normalised_source_text`: docstrings out by AST position, comments out by token, trailing whitespace and blank lines dropped), identical on both. Every digest moves once; reformatting whitespace now moves one too.

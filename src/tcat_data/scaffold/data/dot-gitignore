@@ -1,0 +1,38 @@
+# Instrument-native binaries must never be committed. Convert at ingestion.
+# These patterns are a safety net, not the rule -- the rule is in raw/README.md,
+# and it applies to formats nobody has thought of yet.
+*.spa
+*.spc
+*.opus
+*.0
+*.1
+*.raw
+*.RAW
+*.sav
+*.wdf
+*.dat
+*.h5
+*.hdf5
+*.nxs
+*.mat
+
+# Derived data is regenerable by definition. Commit it only when a figure depends
+# on it, or when regenerating it is expensive enough that the bytes are worth it.
+derived/**/*.csv
+derived/**/*.zarr/
+!derived/README.md
+!derived/.gitkeep
+
+# Python and editor debris
+__pycache__/
+*.py[cod]
+.venv/
+.ipynb_checkpoints/
+.pytest_cache/
+.DS_Store
+
+# Never commit credentials, even to a private repository. A private repository is
+# one permission change away from not being private.
+.env
+*.pem
+*_token

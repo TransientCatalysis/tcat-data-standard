@@ -1,0 +1,21 @@
+Creative Commons Attribution 4.0 International (CC BY 4.0)
+
+SPDX-License-Identifier: CC-BY-4.0
+
+Copyright (c) 2026 [YOUR LAB / INSTITUTION]
+
+Full license text:  https://creativecommons.org/licenses/by/4.0/legalcode
+Human-readable deed: https://creativecommons.org/licenses/by/4.0/
+
+WHY THIS DEFAULT
+  The project DMSP sets CC-BY-4.0 as the default for public datasets, with
+  CC0-1.0 where unrestricted reuse is preferred and permitted. Every dataset also
+  carries its own `license` field, which is what actually governs it -- this file
+  is the repository-level default.
+
+ON RELEASE
+  Data is released no later than publication of the paper it supports. Until then
+  a dataset's `access_status` is `internal` or `staged`, and this repository is
+  private. Changing the file does not change the field; change the field.
+
+FILL IN THE COPYRIGHT LINE ABOVE before your first commit.

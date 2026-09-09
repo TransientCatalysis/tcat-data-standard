@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use this dataset, please cite it as below."
+title: "[LAB OR CAMPAIGN NAME] — transient kinetics data spoke"
+abstract: >-
+  REPLACE. What was measured, on what system, by what method. One or two sentences.
+type: dataset
+version: 0.1.0
+date-released: "REPLACE-YYYY-MM-DD"
+license: CC-BY-4.0
+repository-code: "https://github.com/TransientCatalysis/REPLACE"
+keywords:
+  - catalysis
+  - transient kinetics
+authors:
+  - family-names: REPLACE
+    given-names: REPLACE
+    affiliation: REPLACE
+    orcid: "https://orcid.org/REPLACE"
+references:
+  - type: software
+    title: "tcat-data-standard"
+    version: "0.1.0"
+    repository-code: "https://github.com/TransientCatalysis/tcat-data-standard"
+    notes: "The schema this spoke's data validates against."

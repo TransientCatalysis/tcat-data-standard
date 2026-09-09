@@ -1,0 +1,83 @@
+{
+  "$comment": [
+    "The spoke manifest. `tcat-spoke init` writes this FOR you -- run that",
+    "instead of editing this by hand, and delete this file when it has.",
+    "",
+    "It is kept here so the shape is readable before you run anything, and so",
+    "the `$comment` blocks can explain the two fields with consequences outside",
+    "the validator: `stewards`, which becomes a repository permission, and",
+    "`maturity`, which is what everyone else reads to decide how much weight to",
+    "put on what is in here."
+  ],
+
+  "standard_version": "0.2.0",
+  "spoke_id": "REPLACE",
+  "kind": "data",
+  "name": "REPLACE",
+
+  "granularity": "REPLACE",
+  "$comment_granularity": [
+    "lab | student | instrument | campaign | sub-project | monorepo | mixed --",
+    "or anything else. Nothing validates or joins on this; it exists so the",
+    "answer is written down rather than inferred from a directory listing. A",
+    "spoke whose granularity changed over time says `mixed`, which is honest."
+  ],
+
+  "stewards": [
+    { "name": "REPLACE", "institution": "REPLACE", "role": "data_steward",
+      "github": "REPLACE", "orcid": "REPLACE" },
+    { "name": "REPLACE", "institution": "REPLACE", "role": "instrument_owner",
+      "github": "REPLACE", "orcid": "REPLACE" }
+  ],
+  "$comment_stewards": [
+    "THE ONLY BLOCK HERE WITH A CONSEQUENCE OUTSIDE THE VALIDATOR.",
+    ".github/CODEOWNERS is GENERATED from it, so a github handle here is a real",
+    "repository permission and a typo is a wrong one. Run",
+    "`tcat-spoke codeowners` after any change; CI checks the two agree.",
+    "",
+    "`instrument_owner` is load-bearing: a calibration change is reviewed by",
+    "that person, and the review is worthless if nobody knows who it is. They",
+    "own the calibrations/ directory in the generated CODEOWNERS.",
+    "",
+    "Roles: data_steward | instrument_owner | analysis_owner | pi.",
+    "Add `credit_roles` (CRediT, ANSI/NISO Z39.104-2022) if you want authorship",
+    "contributions recorded -- that is a SEPARATE question from who is on call.",
+    "Add `until` when someone is leaving, so the name does not go stale while",
+    "still looking answered."
+  ],
+
+  "maturity": { "rung": "sandbox" },
+  "$comment_maturity": [
+    "The default for records here that make no claim of their own. `sandbox`",
+    "means: this may be rewritten or deleted without notice and nothing should",
+    "depend on it. That is the right answer while you are finding your feet, and",
+    "saying so is worth more than a claim you have not earned.",
+    "",
+    "A SPOKE may only say `sandbox` or `working`. The rungs above rest on facts",
+    "about a particular record -- a named reviewer of THAT record, a paper citing",
+    "THAT record -- so they are set per record, never inherited.",
+    "",
+    "It is a floor, not a ceiling: a sandbox spoke may hold one published dataset."
+  ],
+
+  "layout": {
+    "dataset": ["manifests", "canonical", "raw", "derived"],
+    "calibration": ["calibrations"],
+    "protocol": ["protocols"],
+    "sample": ["samples"]
+  },
+  "$comment_layout": [
+    "The values above ARE the defaults, so this block is redundant unless you",
+    "change it. Every entry is a list, so one kind can live in several places.",
+    "Directories are walked recursively, so listing a parent is usually enough."
+  ],
+
+  "exclude": ["scratch", "notebooks/.ipynb_checkpoints"],
+  "strict": false,
+  "$comment_strict": [
+    "When true, a JSON file whose kind cannot be inferred is an ERROR rather",
+    "than a skip. Worth turning on once your layout has settled."
+  ],
+
+  "notes": "REPLACE -- how this spoke is organised and why, and anything that changed."
+}

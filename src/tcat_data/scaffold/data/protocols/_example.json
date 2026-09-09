@@ -1,0 +1,109 @@
+{
+  "$comment": [
+    "COPY THIS, then delete every $comment. Files beginning with '_' are skipped by",
+    "`tcat-validate all`.",
+    "",
+    "A protocol is a NAMED PROTOCOL PLUS ITS PARAMETERS -- never a raw time series.",
+    "Transient experiments make the design space a function space, since one of the",
+    "knobs is when transients fire, but real transient experiments are",
+    "parameterised, so the parameterisation is the representation.",
+    "",
+    "THE SAME OBJECT is stored alongside executed data and emitted by experiment",
+    "design. One representation, so closing the loop later is plumbing rather than",
+    "translation.",
+    "",
+    "Available: prbs | pulse_train | temperature_ramp | step_change | multi_pulse |",
+    "steady_state. Each owns its own parameter space; the schema enforces per",
+    "protocol. Two worked examples below -- keep the one you need."
+  ],
+
+  "protocol": "prbs",
+  "parameters": {
+    "species": "CO",
+    "low_mol_frac": 0.005,
+    "high_mol_frac": 0.02,
+    "waveform": {
+      "form": "lfsr",
+      "register_length": 7,
+      "taps": [7, 6],
+      "seed": 1,
+      "bit_period_s": 2.0,
+      "n_bits": 127
+    }
+  },
+  "$comment_prbs": [
+    "waveform is REQUIRED and comes in three forms. What all three deliver is the",
+    "ability to reconstruct the actual perturbation; what differs is how much of it",
+    "survived.",
+    "",
+    "  lfsr          register_length, taps, seed, bit_period_s, n_bits.",
+    "                Three integers regenerate the sequence exactly. Shown above.",
+    "                n_bits = 2**register_length - 1 is one full period; truncating",
+    "                loses the balanced-spectrum property that makes PRBS worth",
+    "                using in the first place.",
+    "",
+    "  recorded      switch_times_s: the schedule as executed, plus an optional",
+    "                initial_level. Use this when the valve controller can log what",
+    "                it did. A randomised-dwell train has no generator state, so the",
+    "                executed schedule IS the reproducible object.",
+    "",
+    "  reconstructed tracer_channel and reason. The honest fallback when neither of",
+    "                the above exists and the inlet has to be recovered from an",
+    "                inert tracer. Everything downstream inherits that",
+    "                reconstruction's assumptions, so the reason is not optional.",
+    "",
+    "If you are reaching for the third form, that is an instrument work item rather",
+    "than a metadata one -- logging the schedule is usually a small change.",
+    "",
+    "There is also an optional `label` for the operator's own sequence name. It is",
+    "recorded verbatim and trusted for nothing: in the first real dataset the",
+    "project ingested, the identical label appeared on five runs at five different",
+    "temperatures."
+  ],
+
+  "base_conditions": {
+    "temperature_K": 473.0,
+    "pressure_kPa": 101.3,
+    "total_flow_sccm": 100.0,
+    "carrier": "He",
+    "feed_mol_frac": { "O2": 0.05, "He": 0.93 },
+    "catalyst_mass_g": 0.05
+  },
+  "$comment_base": [
+    "The steady operating point the perturbation is applied around. Separate from",
+    "parameters because it is shared across every protocol, while parameters differ."
+  ],
+
+  "time_base": {
+    "t0": "2026-09-01T14:03:00Z",
+    "dt_s": 0.05,
+    "n_samples": 5080
+  },
+  "$comment_time_base": [
+    "UTC with an explicit offset. This is what lets simultaneously-acquired MS, IR,",
+    "and XAS streams be ALIGNED rather than merely parallel -- which is the",
+    "difference between a multimodal dataset and three datasets.",
+    "",
+    "Set irregular: true and name a time_column if sampling is not uniform and a",
+    "column carries the truth."
+  ],
+
+  "notes": "REPLACE -- pretreatment, conditioning, or any deviation from the protocol as written.",
+
+  "$comment_chemical_looping": [
+    "Chemical-looping ODH -- a held-out prediction target for this study -- is a",
+    "multi_pulse protocol with labelled segments. Replace the three fields above",
+    "with:",
+    "",
+    "  \"protocol\": \"multi_pulse\",",
+    "  \"parameters\": {",
+    "    \"segments\": [",
+    "      {\"species\": \"C3H8\", \"duration_s\": 120.0, \"mol_frac\": 0.05, \"label\": \"reduction\"},",
+    "      {\"species\": \"He\",   \"duration_s\":  30.0, \"mol_frac\": 1.00, \"label\": \"purge\"},",
+    "      {\"species\": \"O2\",   \"duration_s\": 180.0, \"mol_frac\": 0.10, \"label\": \"reoxidation\"}",
+    "    ],",
+    "    \"cycles\": 3",
+    "  },",
+    "  \"base_conditions\": {\"temperature_K\": 723.0, \"pressure_kPa\": 101.3}"
+  ]
+}

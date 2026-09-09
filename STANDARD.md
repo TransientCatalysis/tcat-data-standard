@@ -1,6 +1,6 @@
 # tcat Data Standard
 
-<!-- VERSION: 0.5.1 -->
+<!-- VERSION: 0.6.0 -->
 <!-- MAINTAINER: A. J. Medford (Georgia Tech) -->
 <!-- LAST_REVIEWED: 2026-09-01 -->
 <!--
@@ -16,7 +16,7 @@
   against main. See CONTRIBUTING.md.
 -->
 
-**Standards version:** 0.5.1
+**Standards version:** 0.6.0
 **Schema version:** 0.3.0 (`src/tcat_data/schema/0.3.0/`; `0.2.0/` and `0.1.0/` are frozen and retained)
 **Status:** accepted by the team, September 2026, and exercised against a real campaign — 26 PSU CO-oxidation PRBS runs across four batches, ingested and validating. Six schema changes came out of that exercise rather than out of anticipation, which is the difference between this version and the last.
 
@@ -679,6 +679,7 @@ route to a person.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.6.0 | 2026-09-09 | **Skeletons ship with their standards; the template repositories are retired.** `tcat-spoke init --kind data|tool|campaign <new-dir>` materialises the skeleton from the installed standard that defines that kind (`tcat_data.scaffold`) and then fills it as before; `tcat-campaign init` is the campaign alias. A skeleton kept in a separate repository drifted from its standard; one shipped inside it cannot. |
 | 0.5.1 | 2026-09-09 | **The identity digest hashes normalised TEXT, not an AST dump.** `ast.dump` differs between Python 3.11 and 3.12, so the same tool source produced two digests -- two identities for one tool depending on who ran it, the silent split the identity rule exists to prevent (measured on `tcat_spec`: 31d9dfe7 vs a5cc39be). `normalised_source_text` removes docstrings (by AST position) and comments (by token), strips trailing whitespace and blank lines, and that text is hashed; identical on both interpreters. Every digest moves once. Reformatting now moves a digest where it did not before; interpreter-independence is worth more. |
 | 0.5.0 | 2026-09-09 | **The package is `tcat_data`** (was `tcat_standard`), so the three standards read data / tool / campaign and the most generic name in the org no longer belongs to the narrowest hub. Import paths change; nothing in the schema does -- schema stays `0.3.0`, no artifact id moves on the data side. Paired with the analysis hub becoming `tcat-tool-standard` (package `tcat_tool`); decided 2026-09-08, `tcat-tool-standard/ARCHITECTURE.md` "Names". |
 | 0.4.0 | 2026-09-08 | **Schema `0.3.0` is minted and `0.2.0` is frozen** with a checked-in manifest, because every artifact in every store declares 0.2.0. Two additive blocks, both for IDENTITY. `provenance.tool` gains **`source_digest`** -- a sha256 over the tool package's source with docstrings and comments stripped, combined with the same digest of every `tcat-*` library it imports -- and **`libraries`**, the list of those libraries as installed; the artifact id hashes `<version>+<digest8>` as its tool_version, so a code change re-hashes exactly the tools whose closure includes it and nobody bumps a version for a bug fix. `tool.version` becomes the CONTRACT version. `tool.git_sha` is corrected to mean the TOOL's repository rather than the analysis hub's, which could not see the spoke at all. `campaign.spokes` entries may be objects pinning `{name, kind, version, digest}`, so a campaign record is a lockfile: which code produced a study is answerable without walking its artifacts. `tcat-spoke fingerprint` becomes per package and its file becomes the index from a digest to a commit. Absence of every new field means what the record meant before. |

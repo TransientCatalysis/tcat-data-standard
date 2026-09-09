@@ -1,0 +1,200 @@
+{
+  "$comment": [
+    "COPY THIS, then delete every $comment. It is a dataset document -- the thing",
+    "the validator checks and the only place a file's location is written down.",
+    "",
+    "Generate the files[] entry rather than typing it:",
+    "  from tcat_data import ManifestEntry",
+    "  print(ManifestEntry.from_file('raw/prbs/run-014.csv', repo_root='.').to_dict())",
+    "",
+    "Then: tcat-validate dataset manifests/<this file>"
+  ],
+  "schema_version": "0.2.0",
+  "dataset_id": "REPLACE-lab-system-run-001",
+  "batch_id": "REPLACE-one-synthesis-batch-or-beamtime",
+  "lineage_id": "REPLACE-groups-data-sharing-a-provenance-chain",
+  "$comment_ids": [
+    "batch_id and lineage_id are NOT the same thing, and neither can be",
+    "reconstructed later -- which is why both are required now.",
+    "  batch_id  : data that must never be split across a train/test boundary.",
+    "              One synthesis batch. One catalyst charge. One beamtime.",
+    "  lineage_id: data sharing a provenance chain. Repeated conditions, the same",
+    "              sample measured across modalities, a trace and its reprocessing.",
+    "Two batches can share a lineage; one batch can span lineages."
+  ],
+  "layer": "canonical",
+  "status": "ok",
+  "$comment_status": [
+    "'ok' | 'flagged' | 'failed'. FLAG, NEVER DELETE. Anything other than 'ok'",
+    "requires a non-empty status_reason. A deleted failed run cannot be counted in",
+    "an exclusion table at manuscript time, and that table is a requirement."
+  ],
+  "autonomy_level": "A1",
+  "$comment_autonomy": "TRACE-AI scale A0-A5. This project is A1-A2, human-gated.",
+  "measurement_type": "prbs_kinetics",
+  "$comment_measurement": [
+    "prbs_kinetics | ms | ir_gas | ir_transient | xas_mes | steady_state |",
+    "characterization | computational. Every experimental type must also declare",
+    "a protocol."
+  ],
+  "sample_id": "REPLACE-your-own-sample-label",
+  "$comment_sample": [
+    "The lab's OWN label, verbatim -- what is written on the vial. A",
+    "project-assigned relabelling scheme that disagrees with the physical label",
+    "is a scheme that gets ignored. This is the join key between kinetics,",
+    "spectroscopy, and characterization of the same material."
+  ],
+  "instrument": {
+    "model": "REPLACE",
+    "identifier": "REPLACE-SHORT-STABLE-ID",
+    "site": "REPLACE"
+  },
+  "$comment_instrument": [
+    "identifier must be stable across runs: it is what joins a dataset to the",
+    "calibration that applies to it."
+  ],
+  "channels": {
+    "time_s": {
+      "units": "s",
+      "quantity": "time",
+      "uncertainty": {
+        "kind": "constant_sigma",
+        "value": 0.001,
+        "noise_model": {
+          "family": "calibrated_estimate",
+          "notes": "Sampling jitter."
+        }
+      }
+    },
+    "m44": {
+      "units": "A",
+      "quantity": "ion_current",
+      "mz": 44,
+      "species": "CO2",
+      "uncertainty": {
+        "kind": "sigma_column",
+        "column": "m44_sigma",
+        "noise_model": {
+          "family": "counting",
+          "notes": "REPLACE"
+        }
+      }
+    }
+  },
+  "$comment_channels": [
+    "Units and uncertainty are required PER CHANNEL, so a channel cannot exist",
+    "with a unit and no uncertainty. quantity is what distinguishes a raw ion",
+    "current from a derived concentration -- do not write 'concentration' here",
+    "unless a calibration was actually applied, in which case layer is 'derived'",
+    "and calibration_ref is required."
+  ],
+  "files": [
+    {
+      "path": "raw/prbs/2026-09-01/run-014.csv",
+      "sha256": "REPLACE-64-hex-characters",
+      "size_bytes": 0,
+      "format": "csv",
+      "rows": 0
+    }
+  ],
+  "$comment_files": [
+    "Exactly ONE of path, url, or lfs_oid per entry. When a set outgrows the",
+    "repository, REPLACE path with url -- do not add it alongside. The checksum is",
+    "what proves the bytes did not change, so every downstream consumer keeps",
+    "working without being re-verified."
+  ],
+  "protocol": {
+    "protocol": "prbs",
+    "parameters": {
+      "species": "CO",
+      "low_mol_frac": 0.005,
+      "high_mol_frac": 0.02,
+      "waveform": {
+        "form": "lfsr",
+        "register_length": 7,
+        "taps": [
+          7,
+          6
+        ],
+        "seed": 1,
+        "bit_period_s": 2.0,
+        "n_bits": 127
+      }
+    },
+    "base_conditions": {
+      "temperature_K": 473.0,
+      "pressure_kPa": 101.3,
+      "total_flow_sccm": 100.0,
+      "carrier": "He",
+      "catalyst_mass_g": 0.05
+    },
+    "time_base": {
+      "t0": "2026-09-01T14:03:00Z",
+      "dt_s": 0.05,
+      "n_samples": 5080
+    }
+  },
+  "$comment_protocol": [
+    "waveform is REQUIRED for prbs, in one of three forms -- lfsr (shown here),",
+    "recorded (the executed switch_times_s), or reconstructed (recovered from a",
+    "tracer, with the reason no better record exists). See protocols/_example.json",
+    "for when each applies.",
+    "",
+    "t0 must be UTC with an explicit offset. Three institutions in two time zones",
+    "plus a synchrotron cannot align transients on a wall clock. It may be omitted",
+    "only for legacy data that never recorded one, and then t0_absent_reason says",
+    "so -- do not omit it for data you are acquiring now.",
+    "",
+    "If your instrument timestamps each species separately -- a scanning quadrupole",
+    "does -- set time_base.kind to per_channel and give each channel its own",
+    "time_column, rather than pretending they share one."
+  ],
+  "access_status": "internal",
+  "embargo_until": "2027-07-31T00:00:00Z",
+  "license": "CC-BY-4.0",
+  "$comment_access": [
+    "internal (project only) | staged (manuscript in preparation) | public.",
+    "This field, not repository visibility, is what governs release."
+  ],
+  "provenance": {
+    "artifact_id": "canon-REPLACE-2026-09-01-abc123",
+    "tool": {
+      "name": "tcat-ingest",
+      "version": "0.1.0",
+      "git_sha": "unknown"
+    },
+    "inputs": [],
+    "parameters": {
+      "converter": "ms-csv"
+    },
+    "data_schema_version": "0.1.0",
+    "autonomy_level": "A1",
+    "durability": "durable",
+    "created_at": "2026-09-01T14:20:00Z",
+    "host": "REPLACE"
+  },
+  "$comment_provenance": [
+    "Normally written by the tool, not by hand. Hand-authored raw-layer datasets",
+    "are the exception, since there was no tool run to record."
+  ],
+  "calibration_ref": null,
+  "$comment_calibration_ref": [
+    "For a DERIVED dataset: art://<calibration-id>. Required in practice, because",
+    "a derived trace that does not cite its sensor model cannot be re-derived when",
+    "the calibration is revised."
+  ],
+  "reaction_system": "REPLACE",
+  "catalyst_family": "REPLACE",
+  "notes": "REPLACE. Pretreatment history, reactor conditioning, deviations from protocol, and anything that went wrong. Optional, and the field most worth filling in -- this context is routinely essential to interpreting a catalysis experiment and routinely absent from structured fields. The validator warns when it is empty.",
+  "extensions": {
+    "$comment": [
+      "YOUR ESCAPE HATCH. The validator IGNORES this object rather than rejecting",
+      "it, so anything the schema does not have yet goes here and nothing blocks",
+      "you. Unknown TOP-LEVEL fields are rejected -- that is the point of having a",
+      "designated namespace.",
+      "",
+      "When the same field shows up in three labs' extensions, it gets promoted",
+      "into the schema. Open a schema-change issue to start that."
+    ]
+  }
+}
