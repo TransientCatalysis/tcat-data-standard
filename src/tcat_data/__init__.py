@@ -54,7 +54,22 @@ from .validate import (
     validate_uncertainty_ensemble,
 )
 
-__version__ = "0.6.0"
+#: THE PACKAGE's version: this distribution, its CLIs, its helpers. Moves for a
+#: bug fix or a tooling feature and needs nobody's approval.
+__version__ = "0.6.1"
+
+#: THE STANDARD's version: what STANDARD.md says a valid record is. Moves only on
+#: a normative change and needs written approval (COLLABORATION.md section 5),
+#: which is why it cannot be the same number as the one above -- tonight's three
+#: package releases would each have spent it. Separate again from the SCHEMA
+#: version (`CURRENT_SCHEMA_VERSION`), which is what a record declares and what
+#: the frozen directories are named after. Three numbers, three questions:
+#:   __version__            "which code is installed?"
+#:   STANDARDS_VERSION      "which rulebook am I holding?"
+#:   CURRENT_SCHEMA_VERSION "which shape does a record declare?"
+#: They start equal at 0.6.0/0.6.0 and diverge from 2026-09-09 onward; the three
+#: bumps of that day are not re-litigated.
+STANDARDS_VERSION = "0.6.0"
 
 __all__ = [
     "CURRENT_SCHEMA_VERSION",
@@ -86,4 +101,5 @@ __all__ = [
     "validate_spoke",
     "validate_uncertainty_ensemble",
     "__version__",
+    "STANDARDS_VERSION",
 ]

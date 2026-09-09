@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.6.1 — 2026-09-09
+
+**The package version and the standards version are separate numbers.** `__version__` (with
+`pyproject.toml` and `CITATION.cff`) describes this distribution and moves freely;
+`STANDARDS_VERSION` (with STANDARD.md's two statements of itself) describes the rulebook and
+moves only on a normative change, which `COLLABORATION.md` section 5 reserves for written
+approval. The schema version stays a third number, as it already was.
+
+Why: one number served both, so every tooling release spent a standards version — three did on
+2026-09-09 alone (the package rename, the text-normalised digest, the scaffolds), which made
+"a standards bump needs approval" either a formality or a blocker. The two start equal at 0.6.0
+and diverge from here; those three bumps are not re-litigated. This release is itself the
+demonstration: package 0.6.0 → 0.6.1, standards unchanged at 0.6.0.
+
 **The package version and the schema version are different numbers and move
 independently.** This file used to say they moved together; they did not, and
 the claim is what let four files drift to three different answers. Today the

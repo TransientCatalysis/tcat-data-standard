@@ -118,38 +118,67 @@ def test_every_documented_field_has_a_description():
     assert not missing, f"undocumented properties: {missing}"
 
 
-def test_the_package_version_matches_the_standard_document():
-    """Four places record a version and they had all drifted apart.
+def _pyproject_version() -> str:
+    import re
+    from pathlib import Path
 
-    `pyproject.toml` and `__init__` said 0.1.0 while `STANDARD.md` and the
-    changelog said 0.2.0, and a commit subject claimed 0.2.1 that no file
-    recorded. The repository whose subject is version discipline is the last one
-    that should be guessing at its own version, so this parses all four.
+    text = (Path(__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8")
+    return re.search(r'^version = "([^"]+)"', text, re.M).group(1)
 
-    Note the package version and the SCHEMA version are deliberately different
-    numbers and move independently -- the changelog used to claim they moved
-    together, which is what produced the drift.
-    """
+
+def test_the_package_version_is_recorded_consistently():
+    """`pyproject.toml`, `__version__` and CITATION.cff describe the DISTRIBUTION,
+    so they must agree. They had all drifted apart once -- pyproject and
+    `__init__` said 0.1.0 while the document and the changelog said 0.2.0, and a
+    commit subject claimed a 0.2.1 that no file recorded. The repository whose
+    subject is version discipline is the last one that should be guessing at its
+    own version."""
     import re
     from pathlib import Path
 
     import tcat_data
 
-    root = Path(__file__).resolve().parents[1]
-    pyproject = (root / "pyproject.toml").read_text(encoding="utf-8")
-    pkg = re.search(r'^version = "([^"]+)"', pyproject, re.M).group(1)
-
-    standard = (root / "STANDARD.md").read_text(encoding="utf-8")
-    doc_comment = re.search(r"<!-- VERSION: ([^ ]+) -->", standard).group(1)
-    doc_header = re.search(r"\*\*Standards version:\*\* (\S+)", standard).group(1)
-
-    citation = (root / "CITATION.cff").read_text(encoding="utf-8")
+    citation = (Path(__file__).resolve().parents[1] / "CITATION.cff").read_text(encoding="utf-8")
     cff = re.search(r"^version: (\S+)", citation, re.M).group(1)
-
-    assert pkg == tcat_data.__version__ == doc_comment == doc_header == cff, (
-        f"pyproject={pkg} __version__={tcat_data.__version__} "
-        f"STANDARD comment={doc_comment} STANDARD header={doc_header} CITATION={cff}"
+    pkg = _pyproject_version()
+    assert pkg == tcat_data.__version__ == cff, (
+        f"pyproject={pkg} __version__={tcat_data.__version__} CITATION={cff}"
     )
+
+
+def test_the_standards_version_is_recorded_consistently():
+    """`STANDARDS_VERSION` and the two places STANDARD.md states itself describe
+    the RULEBOOK, and are deliberately a different number from the package's.
+
+    One number used to serve both, so a tooling change could not ship without
+    spending a standards version -- and on 2026-09-09 three did, which is what
+    separated them. A reader holding STANDARD.md and a caller reading
+    `tcat_data.STANDARDS_VERSION` must be told the same thing."""
+    import re
+    from pathlib import Path
+
+    import tcat_data
+
+    document = (Path(__file__).resolve().parents[1] / "STANDARD.md").read_text(encoding="utf-8")
+    comment = re.search(r"<!-- VERSION: (\S+) -->", document).group(1)
+    header = re.search(r"\*\*Standards version:\*\* (\S+)", document).group(1)
+    assert tcat_data.STANDARDS_VERSION == comment == header, (
+        f"STANDARDS_VERSION={tcat_data.STANDARDS_VERSION} "
+        f"STANDARD comment={comment} STANDARD header={header}"
+    )
+
+
+def test_the_two_versions_are_allowed_to_differ():
+    """The counter-case, and the whole point of the split: nothing may re-couple
+    them. A test that only ever saw them equal would pass under the old rule too,
+    so this asserts the mechanism rather than today's values."""
+    import tcat_data
+
+    assert isinstance(tcat_data.STANDARDS_VERSION, str) and isinstance(tcat_data.__version__, str)
+    # Both are read from their own source of truth above; neither test consults
+    # the other's. Equality today is a coincidence of the split's first day and
+    # is deliberately NOT asserted.
+    assert "STANDARDS_VERSION" in tcat_data.__all__, "callers need a supported way to read it"
 
 
 def test_the_standard_document_names_the_schema_version_that_ships():

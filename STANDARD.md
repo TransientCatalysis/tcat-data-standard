@@ -16,7 +16,8 @@
   against main. See CONTRIBUTING.md.
 -->
 
-**Standards version:** 0.6.0
+**Standards version:** 0.6.0 — what this document says. Moves only on a normative change, and that needs written approval (`COLLABORATION.md` section 5). Read it from `tcat_data.STANDARDS_VERSION`.
+**Package version:** separate on purpose, and free to move — `tcat_data.__version__`, `pip show tcat-data-standard`. A tooling fix or a new `tcat-spoke` feature is not a change to what a valid record is, and before 2026-09-09 one number served both, so every tooling release spent a standards version.
 **Schema version:** 0.3.0 (`src/tcat_data/schema/0.3.0/`; `0.2.0/` and `0.1.0/` are frozen and retained)
 **Status:** accepted by the team, September 2026, and exercised against a real campaign — 26 PSU CO-oxidation PRBS runs across four batches, ingested and validating. Six schema changes came out of that exercise rather than out of anticipation, which is the difference between this version and the last.
 
