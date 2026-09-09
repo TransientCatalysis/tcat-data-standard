@@ -1,6 +1,6 @@
 # tcat Data Standard
 
-<!-- VERSION: 0.3.0 -->
+<!-- VERSION: 0.4.0 -->
 <!-- MAINTAINER: A. J. Medford (Georgia Tech) -->
 <!-- LAST_REVIEWED: 2026-09-01 -->
 <!--
@@ -16,8 +16,8 @@
   against main. See CONTRIBUTING.md.
 -->
 
-**Standards version:** 0.3.0
-**Schema version:** 0.2.0 (`src/tcat_standard/schema/0.2.0/`; `0.1.0/` is frozen and retained)
+**Standards version:** 0.4.0
+**Schema version:** 0.3.0 (`src/tcat_standard/schema/0.3.0/`; `0.2.0/` and `0.1.0/` are frozen and retained)
 **Status:** accepted by the team, September 2026, and exercised against a real campaign — 26 PSU CO-oxidation PRBS runs across four batches, ingested and validating. Six schema changes came out of that exercise rather than out of anticipation, which is the difference between this version and the last.
 
 ---
@@ -141,7 +141,7 @@ Semver on the schema.
 
 **The validator retains every old version forever.** This is structural, not a promise: versions live in `src/tcat_standard/schema/<version>/` and nothing is removed. A dataset that declares `schema_version: 0.1.0` is validated against 0.1.0 for as long as the repository exists.
 
-**Retention now applies, and `0.1.0` is frozen.** The honest history, because it is
+**Retention now applies, and `0.1.0` and `0.2.0` are frozen.** The honest history, because it is
 short and someone will otherwise find it: `0.1.0` was amended in place four times
 between 2026-08-20 and 2026-08-29 — three document kinds after the first draft,
 then the changes the first real dataset forced. The last two of those amendments
@@ -679,6 +679,7 @@ route to a person.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.4.0 | 2026-09-08 | **Schema `0.3.0` is minted and `0.2.0` is frozen** with a checked-in manifest, because every artifact in every store declares 0.2.0. Two additive blocks, both for IDENTITY. `provenance.tool` gains **`source_digest`** -- a sha256 over the tool package's source with docstrings and comments stripped, combined with the same digest of every `tcat-*` library it imports -- and **`libraries`**, the list of those libraries as installed; the artifact id hashes `<version>+<digest8>` as its tool_version, so a code change re-hashes exactly the tools whose closure includes it and nobody bumps a version for a bug fix. `tool.version` becomes the CONTRACT version. `tool.git_sha` is corrected to mean the TOOL's repository rather than the analysis hub's, which could not see the spoke at all. `campaign.spokes` entries may be objects pinning `{name, kind, version, digest}`, so a campaign record is a lockfile: which code produced a study is answerable without walking its artifacts. `tcat-spoke fingerprint` becomes per package and its file becomes the index from a digest to a commit. Absence of every new field means what the record meant before. |
 | 0.3.0 | 2026-09-01 | Accepted by the team, and the first version written against real data rather than in anticipation of it. **Schema `0.2.0` is minted and `0.1.0` is frozen** — 47 real PSU documents declare 0.1.0, and amending a version that real data declares is the thing `schema_version` exists to prevent. Adds **`maturity`** (`sandbox` / `working` / `reviewed` / `published`, plus the terminal `superseded`), whose absence means `sandbox` so nothing already written changes meaning, and every rung of which has an entry criterion a validator can check — including `warnings_accepted`, which makes a `working` claim falsifiable and is the only place an advisory check gains a consequence. Adds **`stewards`**, required on the spoke manifest, with a closed duty enum and CRediT contributor roles, and generating `.github/CODEOWNERS` so ownership metadata and repository permission cannot drift; `personnel` stays alongside it, because who did the work and who answers for it now are different questions. The spoke manifest also gains `spoke_id` and `kind`, and loses `contacts` (zero instances anywhere, and 0.1.0 still accepts it — pinned by a test). **Fixed:** a spoke's `standard_version` was applied as an override that beat each document's own `schema_version`, which would have silently revalidated a whole tree against a schema it was never written against on the first manifest anyone wrote; it is now a fallback, and the precedence is documented. `_infer_kind` learned about spoke manifests, which it had been skipping in silence. Examples now source the current version instead of hardcoding one, and a `spoke-example.json` exists because the manifest is the one document every new spoke must write. |
 | 0.2.0 | 2026-08-20 | Second pass, driven by a clause-by-clause audit against the project DMSP (see `DMSP-COMPLIANCE.md` alongside the spec). Adds three document kinds the DMSP commits to and the first draft lacked: **`sample`** (materials data, and the measured properties milestone M9 joins a rate constant against), **`model`** (fitted and trained models as research products, with grouped splits, metrics with intervals, and limitations on appropriate use), and **`publication`** (the data-to-publication link, and the unit the release gate operates on). Adds the last of the DMSP's enumerated metadata fields — `project`, `objective`, `software`, and per-channel `chemical_identifiers` — all optional, because none is lost by being backfilled. Schema `0.1.0` was amended in place rather than forked to `0.2.0`: it is a pre-release draft nobody has used, and manufacturing a fake version history would have been worse than saying so. Retention now explicitly begins at the first tagged release. AmSC/ModCon moved from an open question to a stated position with a watch item. |
 | 0.1.0 | 2026-08-20 | Initial draft, for team review before any real data exists. Required-field set is the infrastructure spec's §3.1 list plus the fields the DMSP commits to that would be unrecoverable if retrofitted (`sample_id`, `measurement_type`, `access_status`, `license`, `protocol`, `layer`). Units and uncertainty are per-channel rather than two top-level maps, so the inconsistent state is unrepresentable. The artifact hash rule is normative and lives here rather than in the analysis hub, because content addressing is only site-independent if the rule is shared. TRACE-AI is pinned at v2.2.0 — see `profiles/trace-ai/pin.json` for why not v2.0.0. Nothing in this version has been exercised against real instrument data. |

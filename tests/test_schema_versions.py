@@ -165,39 +165,34 @@ def test_the_standard_document_names_the_schema_version_that_ships():
     assert named == CURRENT_SCHEMA_VERSION
 
 
-def test_schema_0_1_0_is_byte_identical_to_the_manifest_committed_when_it_froze():
-    """Retention, made structural rather than promised.
+@pytest.mark.parametrize("frozen", ["0.1.0", "0.2.0"])
+def test_a_frozen_schema_is_byte_identical_to_the_manifest_committed_when_it_froze(frozen):
+    """Retention is not a policy statement. It is a checked-in manifest.
 
-    STANDARD.md 6 says a shipped version is never edited. Prose said that
-    before, and 0.1.0 was nonetheless amended four times -- twice after real
-    data already declared it. Real PSU documents declare 0.1.0, so an edit here
-    silently changes what those documents were checked against, and the change
-    is invisible in review because a schema diff looks like every other diff.
-
-    If this fails, the fix is essentially never to update the manifest. It is to
-    put the change in the CURRENT version directory instead.
+    `0.1.0` was amended four times after real PSU documents already declared it,
+    which is the thing `schema_version` exists to prevent; `0.2.0` froze on
+    2026-09-08 when 0.3.0 was minted, for the same reason -- every artifact in
+    every store today declares it. If this fails, the fix is essentially never
+    to update the manifest. It is to mint the next version.
     """
     import hashlib
     import json
     from pathlib import Path
 
-    root = Path(__file__).resolve().parents[1] / "src" / "tcat_standard" / "schema" / "0.1.0"
+    root = Path(__file__).resolve().parents[1] / "src" / "tcat_standard" / "schema" / frozen
     expected = json.loads(
-        (Path(__file__).resolve().parent / "data" / "schema-0.1.0-frozen.sha256.json").read_text()
+        (Path(__file__).resolve().parent / "data" / f"schema-{frozen}-frozen.sha256.json").read_text()
     )
     actual = {
         str(f.relative_to(root)): hashlib.sha256(f.read_bytes()).hexdigest()
-        for f in sorted(root.rglob("*"))
-        if f.is_file()
+        for f in sorted(root.rglob("*")) if f.is_file()
     }
     assert actual == expected, (
-        "schema/0.1.0 has changed since it was frozen. It is retained forever and "
-        "real data declares it; put the change in the current version instead."
+        f"schema/{frozen} has changed since it was frozen. It is retained forever and "
+        "never amended: real records declare it. Mint the next version instead."
     )
 
 
-#: Milestone identifiers belong to a PROJECT, not to a standard. `M9` means
-#: something specific on one DOE award and nothing at all to a lab in Leipzig.
 _MILESTONE_ID = re.compile(r"(?<![A-Za-z0-9_])M\d{1,2}\b")
 
 

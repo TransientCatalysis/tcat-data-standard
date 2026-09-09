@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://transientcatalysis.github.io/tcat-data-standard/0.3.0/campaign.schema.json",
+  "title": "Campaign",
+  "description": "A named study: the set of artifacts that together answer one question. Tools produce artifacts and provenance chains explain each one, but the STUDY -- these datasets, these calibrations, these competing fits, this designed next experiment, as one unit with a goal -- was previously nobody's record; it existed only as whatever a pipeline script happened to do. A campaign record makes the composition itself registrable, checkable, and diagrammable. DRAFT (2026-08): added on the real-data-revision branch for the September meeting to accept or overrule, alongside the other changes the real data forced.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "campaign_id",
+    "title",
+    "status",
+    "artifacts"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "The schema version this document was written against."
+    },
+    "campaign_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$",
+      "description": "Stable, human-chosen identifier, e.g. 'coox-b29-prbs'. Not content-addressed: a campaign accretes members over its life, and its identity is the QUESTION, not the bytes."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable name of the study."
+    },
+    "description": {
+      "type": "string",
+      "description": "What question this campaign exists to answer, in a sentence or two."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "planned",
+        "active",
+        "complete",
+        "abandoned"
+      ],
+      "description": "abandoned is a legal, honest state; deleting the record of a study that fizzled is how the same dead end gets explored twice."
+    },
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The campaign's members, each with the role it plays. Same shape as publication.artifacts, deliberately: one referencing convention means one implementation of reference-checking (tcat-index's referenced_ids) covers both. List the ROOTS -- fits, designs, reports; their full lineage is reachable through provenance and does not need re-listing.",
+      "items": {
+        "type": "object",
+        "required": [
+          "ref",
+          "role"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "ref": {
+            "type": "string",
+            "description": "An artifact id, an art:// reference, a dataset_id, or a model_id."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "artifact",
+              "dataset",
+              "sample",
+              "model",
+              "calibration",
+              "ensemble",
+              "protocol",
+              "external"
+            ],
+            "description": "Which registry to resolve `ref` against. 'external' names something outside this project, which must still be named rather than implied."
+          },
+          "role": {
+            "type": "string",
+            "minLength": 1,
+            "description": "What this member IS to the campaign: 'baseline fit', 'topology control', 'designed next experiment'. Free text; the roles are the campaign's own vocabulary."
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "milestone": {
+      "type": "string",
+      "description": "The project milestone this campaign serves, when there is one. Free text: a milestone identifier means whatever the project that set it says it means, and this standard does not define any."
+    },
+    "spokes": {
+      "type": "array",
+      "description": "The repositories whose data and tools this campaign runs on. Since 0.3.0 an entry may be the PINNED identity a tool spoke ran at -- name, contract version and source digest -- which makes the campaign record a lockfile: 'which code produced this study' is answerable from the record without walking every artifact, and installing what it names reproduces it. A bare string is still accepted (a data spoke has no version to pin, and older records name spokes by name only).",
+      "items": {
+        "oneOf": [
+          {
+            "type": "string",
+            "description": "A spoke by name, e.g. 'tcat-data-psu-coox'."
+          },
+          {
+            "type": "object",
+            "required": [
+              "name"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "The spoke or tool repository, e.g. 'tcat-fit'."
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "data",
+                  "tool",
+                  "library"
+                ],
+                "description": "What the spoke holds."
+              },
+              "version": {
+                "$ref": "defs/common.schema.json#/$defs/semver",
+                "description": "Contract version the campaign ran with."
+              },
+              "digest": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{8,64}$",
+                "description": "Normalised source digest the campaign ran with; matches provenance tool.source_digest on its artifacts."
+              },
+              "notes": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "notes": {
+      "type": "string",
+      "description": "Anything a future reader needs that no structured field carries."
+    },
+    "extensions": {
+      "$ref": "defs/common.schema.json#/$defs/extensions"
+    },
+    "maturity": {
+      "$ref": "defs/common.schema.json#/$defs/maturity",
+      "description": "How much weight someone else may put on this record. Absent means `sandbox`, which is true of everything written before the field existed."
+    }
+  }
+}

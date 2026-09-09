@@ -437,8 +437,9 @@ def _cmd_fingerprint(args: argparse.Namespace) -> int:
             return 1
         print("the shipped source matches the recorded version")
         return 0
-    version, digest, n = write_fingerprint(root)
-    print(f"recorded {version} -> {digest[:12]}… ({n} source files)")
+    record = write_fingerprint(root)
+    for name, entry in record["packages"].items():
+        print(f"recorded {name} {entry['version']}+{entry['digest'][:8]} ({entry['files']} modules)")
     return 0
 
 

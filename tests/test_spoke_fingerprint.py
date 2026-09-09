@@ -45,16 +45,20 @@ def test_changing_shipped_code_without_the_version_is_caught(spoke):
     (spoke / "src" / "tcat_demo" / "science.py").write_text("def rate(k):\n    return k * 3\n")
     findings = check_fingerprint(spoke)
     assert findings
-    assert "VERSION DID NOT" in str(findings[0])
+    assert "out of date" in str(findings[0])
 
 
-def test_the_message_says_what_to_do_in_both_cases(spoke):
-    """A check that only says "wrong" gets worked around. This one has to
-    distinguish "bump it" from "you considered it and it cannot change output"."""
+def test_the_message_names_the_command_and_the_reason(spoke):
+    """Before 2026-09-08 there were two cases -- bump the version, or record that
+    you considered it -- because the version was what invalidated a cache. The
+    digest now does that automatically, so a code change with no bump is the
+    normal case and the ONE thing a stale file breaks is the digest-to-commit
+    index. The message has to say that, and say what to run."""
     (spoke / "src" / "tcat_demo" / "science.py").write_text("def rate(k):\n    return k * 3\n")
     msg = str(check_fingerprint(spoke)[0])
-    assert "bump __version__" in msg
-    assert "cannot change output" in msg
+    assert "tcat-spoke fingerprint" in msg
+    assert "out of date" in msg
+    assert "traceable" in msg or "commit" in msg
 
 
 def test_bumping_the_version_is_also_caught_until_recorded(spoke):

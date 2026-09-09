@@ -279,13 +279,15 @@ _SHIPPED = ("src",)
 
 
 def source_digest(root: Path) -> tuple[str, int]:
-    """A digest of the spoke's shipped source, and how many files went into it.
+    """Byte-level digest of everything under `src/`, and how many files went into it.
 
-    Sorted, path-qualified, and content-hashed, so it is stable across machines
-    and checkouts and changes if and only if the shipped code changes.
+    The REPOSITORY-level fingerprint: sorted, path-qualified, content-hashed, so
+    it changes if and only if any shipped byte changes -- docstrings included.
+    Kept for the notebook builders' "did the source move under this run" guard,
+    where any change at all is the question. For IDENTITY, which must not move on
+    a comment, see `normalised_source_digest`.
     """
     import hashlib
-
     root = Path(root)
     files = sorted(
         p for base in _SHIPPED for p in (root / base).rglob("*.py")
@@ -300,6 +302,58 @@ def source_digest(root: Path) -> tuple[str, int]:
     return h.hexdigest(), len(files)
 
 
+def _strip_docstrings(tree):
+    """Remove every docstring. Comments never reach the AST, so they are gone already."""
+    import ast
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+            body = node.body
+            if (body and isinstance(body[0], ast.Expr)
+                    and isinstance(getattr(body[0], "value", None), ast.Constant)
+                    and isinstance(body[0].value.value, str)):
+                node.body = body[1:] or [ast.Pass()]
+    return tree
+
+
+def normalised_source_digest(package_dir: Path) -> tuple[str, int]:
+    """The IDENTITY digest of one package: sha256 over (module name, normalised AST) pairs.
+
+    Four properties, each pinned by a test, each load-bearing for the identity
+    rule in CONTRACT.md:
+
+    * a docstring or comment edit does not move it -- prose is not behaviour, and
+      a rule that re-hashed every artifact on a typo would be switched off within
+      a week;
+    * a code edit does move it -- behaviour is behaviour, and nobody has to
+      remember to bump anything for a bug fix;
+    * it is independent of where the package sits on disk, so extracting a
+      package to its own repository is a directory move that leaves every
+      artifact id where it is;
+    * it is independent of the package DIRECTORY's name (module names are
+      relative to the package), because the package name is carried separately
+      as the tool's name.
+
+    A file that does not parse contributes its raw bytes under a `!raw:` marker
+    rather than being skipped: skipping would let a broken module change
+    behaviour without changing identity, which is the one failure this exists
+    to prevent.
+    """
+    import ast
+    import hashlib
+    package_dir = Path(package_dir)
+    files = sorted(p for p in package_dir.rglob("*.py") if "__pycache__" not in p.parts)
+    h = hashlib.sha256()
+    for f in files:
+        rel = f.relative_to(package_dir).with_suffix("").as_posix()
+        raw = f.read_bytes()
+        try:
+            dumped = ast.dump(_strip_docstrings(ast.parse(raw)), include_attributes=False).encode()
+        except SyntaxError:
+            dumped = b"!raw:" + raw
+        h.update(rel.encode()); h.update(b"\0"); h.update(dumped); h.update(b"\0")
+    return h.hexdigest(), len(files)
+
+
 #: Where a package may declare `__version__`, in the order searched. `version.py`
 #: is here because re-exporting (`from .version import __version__`) is a normal
 #: layout and the regex cannot see through an import -- the analysis hub does
@@ -307,112 +361,127 @@ def source_digest(root: Path) -> tuple[str, int]:
 #: repository in the project with shipped source went ungated. Duplicating the
 #: literal into `__init__.py` to satisfy the reader would create two places to
 #: forget, which is the drift this check exists to catch.
-_VERSION_FILES = ("*/__init__.py", "*/version.py", "*/_version.py")
+_VERSION_FILES = ("__init__.py", "version.py", "_version.py")
 
 
-def read_version(root: Path) -> str | None:
-    """The spoke package's declared `__version__`, without importing it.
+def packages(root: Path) -> list[Path]:
+    """Every importable package shipped under `src/`, in name order."""
+    src = Path(root) / "src"
+    if not src.is_dir():
+        return []
+    return sorted(p for p in src.iterdir()
+                  if p.is_dir() and (p / "__init__.py").is_file() and ".egg-info" not in p.name)
+
+
+def package_version(package_dir: Path) -> str | None:
+    """A package's declared `__version__`, read rather than imported.
 
     Read rather than imported: importing a spoke means installing its
     dependencies, and this check has to run in a CI job that may deliberately
     not have them.
     """
     import re
-
-    for pattern in _VERSION_FILES:
-        for path in sorted((Path(root) / "src").glob(pattern)):
-            m = re.search(r'^__version__\s*=\s*["\']([^"\']+)["\']',
-                          path.read_text(encoding="utf-8"), re.M)
+    for name in _VERSION_FILES:
+        path = Path(package_dir) / name
+        if path.is_file():
+            m = re.search(r'^__version__\s*=\s*["\']([^"\']+)["\']', path.read_text(encoding="utf-8"), re.M)
             if m:
                 return m.group(1)
     return None
 
 
+def read_version(root: Path) -> str | None:
+    """The FIRST package's `__version__` under `src/`. Kept for callers that assume
+    one package per repository; a multi-package repository should use
+    `package_version` per package, which is what the fingerprint does."""
+    for pkg in packages(root):
+        v = package_version(pkg)
+        if v:
+            return v
+    return None
+
+
+def fingerprint_record(root: Path) -> dict:
+    """What `.tcat-fingerprint.json` holds: per package, the contract version and
+    the identity digest of the source as committed."""
+    return {
+        "$comment": (
+            "GENERATED by `tcat-spoke fingerprint`. Per shipped package: the CONTRACT version "
+            "and the normalised source digest at this commit. The digest, not the version, is "
+            "what identifies the code in an artifact id (tool_version = <version>+<digest8>), and "
+            "it is computed from the installed source at run time -- so this file is not what "
+            "makes identity work. It is the INDEX from a digest found in an artifact's provenance "
+            "back to the commit that produced it (`git log -S<digest8> -- .tcat-fingerprint.json`), "
+            "which is how a defect recorded against a digest is traced. CI fails when it is out "
+            "of date, because an index with a gap cannot answer that question. Do not edit by hand."
+        ),
+        "format": 2,
+        "packages": {
+            p.name: {
+                "version": package_version(p) or "unknown",
+                "digest": normalised_source_digest(p)[0],
+                "files": normalised_source_digest(p)[1],
+            }
+            for p in packages(Path(root))
+        },
+    }
+
+
 def check_fingerprint(root: Path) -> list[Finding]:
-    """Did the shipped code change without the version changing?
+    """Is the committed fingerprint the current source?
 
-    This is the mechanical half of a rule that is otherwise pure discipline:
-    **if a change alters what a tool outputs, it needs a new version.** The
-    version is hashed into every artifact id, so bumping it is what makes older
-    artifacts stale instead of silently reused -- and forgetting to bump it is
-    invisible, which is precisely why it cannot be left to memory.
-
-    Especially so where spokes are developed by agents: an agent will happily fix
-    a solver and not think about artifact identity, and nothing downstream will
-    complain until somebody compares two numbers that were never comparable.
+    Before 2026-09-08 this asked "did the code change without the version
+    changing?", because the hand-maintained version was what invalidated a cache.
+    Identity now derives from the source itself, so a code change with no version
+    bump is the NORMAL case and not a finding. What the file guards instead is
+    the digest-to-commit index described in `fingerprint_record`: a stale file
+    means a digest that appears in provenance cannot be traced to a commit.
 
     THE HONEST LIMIT: this watches `src/`. A behaviour change that arrives
-    through a dependency bump, a data file, or a compiled extension will not trip
-    it. Those are real, and this is not a substitute for thinking -- it is a
-    floor under the cases that are easy to miss.
+    through a dependency the tool does not list, a data file, or a compiled
+    extension will not appear in any digest. Those are real, and this is not a
+    substitute for thinking -- it is a floor under the cases that are easy to miss.
     """
     root = Path(root)
-    if not (root / "src").is_dir():
+    pkgs = packages(root)
+    if not pkgs:
         return []  # not a packaged spoke; nothing ships
-
-    version = read_version(root)
-    if version is None:
-        return [Finding(FINGERPRINT, "no __version__ found under src/*/__init__.py")]
-
-    digest, n_files = source_digest(root)
     path = root / FINGERPRINT
     if not path.is_file():
-        return [
-            Finding(
-                FINGERPRINT,
-                f"missing. Run `tcat-spoke fingerprint` and commit it -- without "
-                f"it nothing notices when the code changes and the version does not.",
-            )
-        ]
-
+        return [Finding(FINGERPRINT,
+                        "missing. Run `tcat-spoke fingerprint` and commit it -- without it a digest in an "
+                        "artifact's provenance cannot be traced back to the commit that produced it.")]
     recorded = json.loads(path.read_text(encoding="utf-8"))
-    if recorded.get("version") != version:
-        return [
-            Finding(
+    if recorded.get("format") != 2:
+        return [Finding(FINGERPRINT,
+                        "is in the pre-2026-09-08 single-version format. Run `tcat-spoke fingerprint` "
+                        "and commit the result.")]
+    findings = []
+    current = fingerprint_record(root)["packages"]
+    for name, now in current.items():
+        was = recorded.get("packages", {}).get(name)
+        if was is None:
+            findings.append(Finding(FINGERPRINT, f"{name}: not recorded. Run `tcat-spoke fingerprint` and commit."))
+            continue
+        if now["version"] == "unknown":
+            findings.append(Finding(FINGERPRINT, f"{name}: no __version__ in {'/'.join(_VERSION_FILES)}."))
+        if was.get("version") != now["version"] or was.get("digest") != now["digest"]:
+            findings.append(Finding(
                 FINGERPRINT,
-                f"records version {recorded.get('version')!r} but the package says "
-                f"{version!r}. Run `tcat-spoke fingerprint` and commit the result.",
-            )
-        ]
-    if recorded.get("digest") != digest:
-        return [
-            Finding(
-                FINGERPRINT,
-                f"THE SHIPPED CODE CHANGED BUT THE VERSION DID NOT (still {version!r}, "
-                f"{n_files} files).\n"
-                f"    If the change alters what any tool OUTPUTS, bump __version__ "
-                f"and run `tcat-spoke fingerprint` -- the version is hashed into "
-                f"artifact ids, so without a bump the store keeps serving the "
-                f"pre-change results under ids that look correct.\n"
-                f"    If it genuinely cannot change output (a comment, a type "
-                f"annotation, a rename), just run `tcat-spoke fingerprint` and "
-                f"commit -- you are recording that you considered it.",
-            )
-        ]
-    return []
+                f"{name}: out of date (recorded {was.get('version')}+{str(was.get('digest'))[:8]}, "
+                f"source is {now['version']}+{now['digest'][:8]}). Run `tcat-spoke fingerprint` and "
+                f"commit the result in the same commit as the change, so the digest this source "
+                f"stamps into provenance is traceable to a commit."))
+    for name in set(recorded.get("packages", {})) - set(current):
+        findings.append(Finding(FINGERPRINT, f"{name}: recorded but no longer shipped. Run `tcat-spoke fingerprint`."))
+    return findings
 
 
-def write_fingerprint(root: Path) -> tuple[str, str, int]:
-    """Record the current version and source digest."""
+def write_fingerprint(root: Path) -> dict:
+    """Record every shipped package's version and identity digest."""
     root = Path(root)
-    version = read_version(root) or "unknown"
-    digest, n_files = source_digest(root)
-    (root / FINGERPRINT).write_text(
-        json.dumps(
-            {
-                "$comment": (
-                    "GENERATED by `tcat-spoke fingerprint`. Records which shipped "
-                    "source produced which version, so that changing the code "
-                    "without changing the version is caught rather than silently "
-                    "reusing cached artifacts. Do not edit by hand."
-                ),
-                "version": version,
-                "digest": digest,
-                "files": n_files,
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    return version, digest, n_files
+    record = fingerprint_record(root)
+    (root / FINGERPRINT).write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    return record
+
+
