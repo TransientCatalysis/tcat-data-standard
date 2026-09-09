@@ -102,5 +102,5 @@ class NotImplementedConverter:
             f"converter {self.name!r} is a stub in tcat-data-standard 0.1.0. "
             f"Blocked on: {self.blocked_on}. "
             "The interface is fixed; only the body is missing. See "
-            "src/tcat_standard/converters/__init__.py for what to collect first."
+            "src/tcat_data/converters/__init__.py for what to collect first."
         )

@@ -21,8 +21,8 @@ import math
 import random
 from pathlib import Path
 
-from tcat_standard import ManifestEntry, make_artifact_id
-from tcat_standard.schema import CURRENT_SCHEMA_VERSION
+from tcat_data import ManifestEntry, make_artifact_id
+from tcat_data.schema import CURRENT_SCHEMA_VERSION
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
@@ -503,8 +503,8 @@ def build_model(ensemble_ref: str, dataset_id: str) -> dict:
             "catalyst, and only one of its three rate constants is identifiable."
         ),
         "software": {
-            "name": "tcat-analysis",
-            "repository": "https://github.com/TransientCatalysis/tcat-analysis",
+            "name": "tcat-tool-standard",
+            "repository": "https://github.com/TransientCatalysis/tcat-tool-standard",
             "version": "0.1.0",
             "license": "MIT",
         },
@@ -535,7 +535,7 @@ def build_campaign(dataset_id: str, model_id: str) -> dict:
                        "model's constants? Exists to exercise the schema.",
         "status": "active",
         "milestone": "baseline-reproduction",
-        "spokes": ["tcat-data-standard (examples)", "tcat-analysis"],
+        "spokes": ["tcat-data-standard (examples)", "tcat-tool-standard"],
         "artifacts": [
             {"ref": dataset_id, "kind": "dataset", "role": "measured campaign"},
             {"ref": model_id, "kind": "model", "role": "baseline fit"},
@@ -856,7 +856,7 @@ def build_publication(dataset_id: str, model_id: str) -> dict:
             {"ref": SAMPLE_ID, "kind": "sample", "role": "supporting",
              "notes": "Catalyst the trace was measured on."},
             {"ref": model_id, "kind": "model", "role": "model", "locator": "Figure 2"},
-            {"ref": "tcat-analysis", "kind": "external", "role": "software",
+            {"ref": "tcat-tool-standard", "kind": "external", "role": "software",
              "notes": "Analysis code; a release DOI would go in `software` below."},
         ],
         "data_availability_statement": (
@@ -865,8 +865,8 @@ def build_publication(dataset_id: str, model_id: str) -> dict:
         ),
         "software": [
             {
-                "name": "tcat-analysis",
-                "repository": "https://github.com/TransientCatalysis/tcat-analysis",
+                "name": "tcat-tool-standard",
+                "repository": "https://github.com/TransientCatalysis/tcat-tool-standard",
                 "version": "0.1.0",
                 "license": "MIT",
             }

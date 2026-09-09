@@ -13,8 +13,8 @@ from pathlib import Path
 
 import pytest
 
-from tcat_standard import ValidationError, validate_dataset
-from tcat_standard.validate import validate_or_raise
+from tcat_data import ValidationError, validate_dataset
+from tcat_data.validate import validate_or_raise
 
 DATA = Path(__file__).resolve().parent / "data"
 

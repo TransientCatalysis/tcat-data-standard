@@ -7,7 +7,7 @@
     "released": "2026-06-12",
     "checklist_version": "2.2.0",
     "license": "CC-BY-4.0",
-    "vendored_at": "src/tcat_standard/profiles/trace_ai/trace-ai-checklist-2.2.0.json",
+    "vendored_at": "src/tcat_data/profiles/trace_ai/trace-ai-checklist-2.2.0.json",
     "vendored_sha256": "b9dbf917a663f62f13096b728f8d96b64adb78c79cf588645b1943f3de6a8db5",
     "$vendored_comment": "Vendored as PACKAGE data, not a repo-root file: a report generator installed from a wheel must be able to find its checklist, and one that cannot would emit a document that looks complete and asserts nothing. The sha256 is here so drift from the pinned upstream commit is detectable rather than assumed absent."
   },

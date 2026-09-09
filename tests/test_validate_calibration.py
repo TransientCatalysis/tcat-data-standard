@@ -12,7 +12,7 @@ import copy
 
 import pytest
 
-from tcat_standard import validate_calibration
+from tcat_data import validate_calibration
 
 
 def test_the_example_is_valid(valid_calibration):

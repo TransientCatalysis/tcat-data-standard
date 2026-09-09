@@ -13,8 +13,8 @@ from pathlib import Path
 
 import pytest
 
-from tcat_standard import spoke
-from tcat_standard.spoke_cli import main
+from tcat_data import spoke
+from tcat_data.spoke_cli import main
 
 _ORCID = "0000-0001-8311-9581"
 

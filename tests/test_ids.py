@@ -11,14 +11,14 @@ from __future__ import annotations
 
 import pytest
 
-from tcat_standard import (
+from tcat_data import (
     compute_artifact_hash,
     format_artifact_id,
     is_valid_artifact_id,
     make_artifact_id,
     parse_artifact_id,
 )
-from tcat_standard.ids import ArtifactId
+from tcat_data.ids import ArtifactId
 
 BASE = dict(
     tool_name="tcat-fit",

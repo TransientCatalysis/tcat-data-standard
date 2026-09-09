@@ -6,7 +6,7 @@ import copy
 
 import pytest
 
-from tcat_standard import (
+from tcat_data import (
     validate_protocol,
     validate_provenance,
     validate_uncertainty_ensemble,
@@ -358,7 +358,7 @@ def _spec(name):
 
 
 def test_both_example_specifications_are_valid():
-    from tcat_standard import validate_model_spec
+    from tcat_data import validate_model_spec
 
     for name in ("model-spec-co-ox-irreversible.json", "model-spec-co-ox-reversible.json"):
         report = validate_model_spec(_spec(name))
@@ -386,7 +386,7 @@ def test_the_two_variants_really_are_different_models():
 
 
 def test_a_microkinetic_specification_must_carry_a_mechanism():
-    from tcat_standard import validate_model_spec
+    from tcat_data import validate_model_spec
 
     doc = _spec("model-spec-co-ox-irreversible.json")
     doc.pop("mechanism")
@@ -399,7 +399,7 @@ def test_a_step_must_declare_its_reversibility():
     """Required rather than defaulted, because an unstated reversibility is the
     difference between an eight-parameter and a ten-parameter fit -- and a
     default would silently pick one."""
-    from tcat_standard import validate_model_spec
+    from tcat_data import validate_model_spec
 
     doc = _spec("model-spec-co-ox-irreversible.json")
     doc["mechanism"]["steps"][0].pop("reversible")
@@ -412,7 +412,7 @@ def test_a_neural_specification_needs_an_architecture_not_a_mechanism():
     """The same document kind covers a neural-network baseline. A trained network's
     architecture is as much 'what was fitted' as a mechanism is, and it has been
     exactly as likely to live only in a script."""
-    from tcat_standard import validate_model_spec
+    from tcat_data import validate_model_spec
 
     doc = {
         "schema_version": "0.1.0",
@@ -430,7 +430,7 @@ def test_two_specifications_differing_anywhere_get_different_ids():
     """What content addressing buys, and what the registry was protecting: two
     mechanisms cannot collide on one id, and nobody has to coordinate to
     guarantee it."""
-    from tcat_standard import make_artifact_id
+    from tcat_data import make_artifact_id
 
     a = _spec("model-spec-co-ox-irreversible.json")
     b = _spec("model-spec-co-ox-reversible.json")

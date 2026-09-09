@@ -89,7 +89,7 @@ jobs:
           python -m venv v && ./v/bin/pip install "$GITHUB_WORKSPACE"/dist/*.whl
           ./v/bin/tcat-validate versions
           ./v/bin/python -c "
-          from tcat_standard import CURRENT_SCHEMA_VERSION, load_schema
+          from tcat_data import CURRENT_SCHEMA_VERSION, load_schema
           assert load_schema('dataset')['\$id']
           print('schema tree survived the wheel build:', CURRENT_SCHEMA_VERSION)
           "

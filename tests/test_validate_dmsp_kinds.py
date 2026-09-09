@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-from tcat_standard import validate_model, validate_publication, validate_sample
+from tcat_data import validate_model, validate_publication, validate_sample
 
 EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
 

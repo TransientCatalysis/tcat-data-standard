@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from tcat_standard import validate
+from tcat_data import validate
 
 V = "0.2.0"
 _ORCID = "0000-0001-8311-9581"
@@ -255,7 +255,7 @@ def test_published_maturity_on_a_non_public_record_warns_here_but_does_not_fail(
 def test_every_kind_that_carries_maturity_refs_the_shared_definition(kind):
     """Nobody re-inlines the enum. A second copy is how two rungs called
     `published` come to mean different things."""
-    from tcat_standard.schema import load_schema
+    from tcat_data.schema import load_schema
 
     schema = load_schema(kind, V)
     ref = schema["properties"]["maturity"]["$ref"]
@@ -268,7 +268,7 @@ def test_the_kinds_that_deliberately_do_not_carry_maturity(kind):
     rung points at; provenance is an immutable fact about a computation that
     happened; a manifest entry is a checksummed pointer, and bytes do not
     mature."""
-    from tcat_standard.schema import load_schema
+    from tcat_data.schema import load_schema
 
     assert "maturity" not in load_schema(kind, V).get("properties", {})
 

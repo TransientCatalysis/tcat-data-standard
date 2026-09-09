@@ -1,6 +1,6 @@
 # tcat Data Standard
 
-<!-- VERSION: 0.4.0 -->
+<!-- VERSION: 0.5.0 -->
 <!-- MAINTAINER: A. J. Medford (Georgia Tech) -->
 <!-- LAST_REVIEWED: 2026-09-01 -->
 <!--
@@ -16,8 +16,8 @@
   against main. See CONTRIBUTING.md.
 -->
 
-**Standards version:** 0.4.0
-**Schema version:** 0.3.0 (`src/tcat_standard/schema/0.3.0/`; `0.2.0/` and `0.1.0/` are frozen and retained)
+**Standards version:** 0.5.0
+**Schema version:** 0.3.0 (`src/tcat_data/schema/0.3.0/`; `0.2.0/` and `0.1.0/` are frozen and retained)
 **Status:** accepted by the team, September 2026, and exercised against a real campaign — 26 PSU CO-oxidation PRBS runs across four batches, ingested and validating. Six schema changes came out of that exercise rather than out of anticipation, which is the difference between this version and the last.
 
 ---
@@ -43,7 +43,7 @@ The design goal beyond this project is that the standard survives it — a trans
 
 If a new analysis or design feature appears to require a change here, that is evidence the schema is wrong, not that the boundary should be crossed. Fusing the two means every experimental-analysis feature touches the artifact three institutions depend on for data validity, and the artifact stops being stable.
 
-Concretely: `tcat-analysis` pins a version of `tcat-data-standard`. This repository has no knowledge of `tcat-analysis` and never imports from it.
+Concretely: `tcat-tool-standard` pins a version of `tcat-data-standard`. This repository has no knowledge of `tcat-tool-standard` and never imports from it.
 
 ---
 
@@ -139,7 +139,7 @@ Semver on the schema.
 - **Minor**: adds optional fields only. Existing data stays valid.
 - **Major**: rare. Ships a migration script rather than demanding labs fix existing data.
 
-**The validator retains every old version forever.** This is structural, not a promise: versions live in `src/tcat_standard/schema/<version>/` and nothing is removed. A dataset that declares `schema_version: 0.1.0` is validated against 0.1.0 for as long as the repository exists.
+**The validator retains every old version forever.** This is structural, not a promise: versions live in `src/tcat_data/schema/<version>/` and nothing is removed. A dataset that declares `schema_version: 0.1.0` is validated against 0.1.0 for as long as the repository exists.
 
 **Retention now applies, and `0.1.0` and `0.2.0` are frozen.** The honest history, because it is
 short and someone will otherwise find it: `0.1.0` was amended in place four times
@@ -203,7 +203,7 @@ The prefix is for humans and **carries no authority**; only the hash is trusted.
 
 ### The hash rule is normative and lives here
 
-The digest covers **tool name + tool version + ordered input ids + parameters**, canonicalised as specified in `tcat_standard.ids`.
+The digest covers **tool name + tool version + ordered input ids + parameters**, canonicalised as specified in `tcat_data.ids`.
 
 This rule lives in the data hub rather than the analysis hub for a specific reason. The distributed design rests on the claim that an artifact id computed at Georgia Tech is byte-identical to one computed on a cluster at Penn State, so multiple stores can agree on names without a central authority. That claim is only true if the hashing rule is shared. If each site canonicalises parameters slightly differently — key order, float formatting, how an empty input list is encoded — the same computation yields two ids, the cross-site cache never hits, and the design degrades into per-site scratch directories without anyone noticing.
 
@@ -254,7 +254,7 @@ A calibration is a versioned, content-addressed artifact in its own right, with 
 1. **Time-indexed from the start**, even with one entry. A fixed calibration is the degenerate case of a drifting one; code written against the general shape needs no change the day someone hands you a before/after bracket. The alternative — every consumer growing a branch for the single-entry case — produces exactly the branches that break when the second entry arrives.
 2. **A derived concentration cites both** the raw artifact id **and** the calibration artifact id. That pairing is what lets one calibration id be swapped to re-derive every affected trace, and content addressing then tells you exactly which downstream fits are stale.
 3. **Never silently applied to existing artifacts.** A calibration change produces new artifacts with new ids; it does not mutate old ones. The schema enforces a content-addressed `calibration_id` so a hand-written label cannot be edited in place.
-4. **Stricter promotion gate.** Everything downstream depends on calibration code, so it gets a tighter gate than a fitting tool: reviewed by whoever owns the instrument. See `tcat-analysis/PROMOTION.md`.
+4. **Stricter promotion gate.** Everything downstream depends on calibration code, so it gets a tighter gate than a fitting tool: reviewed by whoever owns the instrument. See `tcat-tool-standard/PROMOTION.md`.
 5. **Background subtraction and reference selection are transformations with their own artifacts**, not silent preprocessing. This applies to IR backgrounds, XAS reference standards, MS fragmentation matrices, and MES phase conventions alike.
 6. Calibration channels have **no per-channel escape hatch**. `extensions` exists at the document level, but a channel's fields are closed, because this is the tightest gate in the system.
 
@@ -579,7 +579,7 @@ and requiring otherwise would be bureaucrat's arithmetic.
 
 ### The analysis side uses one of these words for something else
 
-`tcat-analysis`'s tool declarations carry `sandbox` / `wrapping` / `conforming`.
+`tcat-tool-standard`'s tool declarations carry `sandbox` / `wrapping` / `conforming`.
 That vocabulary answers **is this code wired to the contract**; this one answers
 **how much scrutiny has this artifact survived**. `sandbox` is deliberately the
 same word in both, because it means compatibly the same thing — not connected,
@@ -612,7 +612,7 @@ Four caveats, without which the table is decoration:
 - **`superseded` maps to `Deprecated`, never `Withdrawn`.** Withdrawn means
   retracted, and a retraction here is `status: failed`.
 - **Trove is about code**, and is listed only so the two axes are visibly not the
-  same one. The code side has its own ladder in `tcat-analysis/PROMOTION.md`.
+  same one. The code side has its own ladder in `tcat-tool-standard/PROMOTION.md`.
 
 Sources: NASA Earthdata, *Data Maturity Levels*; the stewardship-matrix lineage
 is Bates & Privette (2012, *Eos*) and the NOAA Data Stewardship Maturity Matrix;
@@ -642,7 +642,7 @@ carrying two blocks.
 `role` is a closed set — `data_steward`, `instrument_owner`, `analysis_owner`,
 `pi` — because the point is that each duty has an owner and a validator can check
 the set is covered. **`instrument_owner` is load-bearing**: §9 and
-`tcat-analysis/PROMOTION.md` both make a calibration change that person's review,
+`tcat-tool-standard/PROMOTION.md` both make a calibration change that person's review,
 and the review is worthless if nobody knows who it is.
 
 `credit_roles` is separate from `role`, and closed at exactly the fourteen CRediT
@@ -679,6 +679,7 @@ route to a person.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.5.0 | 2026-09-09 | **The package is `tcat_data`** (was `tcat_standard`), so the three standards read data / tool / campaign and the most generic name in the org no longer belongs to the narrowest hub. Import paths change; nothing in the schema does -- schema stays `0.3.0`, no artifact id moves on the data side. Paired with the analysis hub becoming `tcat-tool-standard` (package `tcat_tool`); decided 2026-09-08, `tcat-tool-standard/ARCHITECTURE.md` "Names". |
 | 0.4.0 | 2026-09-08 | **Schema `0.3.0` is minted and `0.2.0` is frozen** with a checked-in manifest, because every artifact in every store declares 0.2.0. Two additive blocks, both for IDENTITY. `provenance.tool` gains **`source_digest`** -- a sha256 over the tool package's source with docstrings and comments stripped, combined with the same digest of every `tcat-*` library it imports -- and **`libraries`**, the list of those libraries as installed; the artifact id hashes `<version>+<digest8>` as its tool_version, so a code change re-hashes exactly the tools whose closure includes it and nobody bumps a version for a bug fix. `tool.version` becomes the CONTRACT version. `tool.git_sha` is corrected to mean the TOOL's repository rather than the analysis hub's, which could not see the spoke at all. `campaign.spokes` entries may be objects pinning `{name, kind, version, digest}`, so a campaign record is a lockfile: which code produced a study is answerable without walking its artifacts. `tcat-spoke fingerprint` becomes per package and its file becomes the index from a digest to a commit. Absence of every new field means what the record meant before. |
 | 0.3.0 | 2026-09-01 | Accepted by the team, and the first version written against real data rather than in anticipation of it. **Schema `0.2.0` is minted and `0.1.0` is frozen** — 47 real PSU documents declare 0.1.0, and amending a version that real data declares is the thing `schema_version` exists to prevent. Adds **`maturity`** (`sandbox` / `working` / `reviewed` / `published`, plus the terminal `superseded`), whose absence means `sandbox` so nothing already written changes meaning, and every rung of which has an entry criterion a validator can check — including `warnings_accepted`, which makes a `working` claim falsifiable and is the only place an advisory check gains a consequence. Adds **`stewards`**, required on the spoke manifest, with a closed duty enum and CRediT contributor roles, and generating `.github/CODEOWNERS` so ownership metadata and repository permission cannot drift; `personnel` stays alongside it, because who did the work and who answers for it now are different questions. The spoke manifest also gains `spoke_id` and `kind`, and loses `contacts` (zero instances anywhere, and 0.1.0 still accepts it — pinned by a test). **Fixed:** a spoke's `standard_version` was applied as an override that beat each document's own `schema_version`, which would have silently revalidated a whole tree against a schema it was never written against on the first manifest anyone wrote; it is now a fallback, and the precedence is documented. `_infer_kind` learned about spoke manifests, which it had been skipping in silence. Examples now source the current version instead of hardcoding one, and a `spoke-example.json` exists because the manifest is the one document every new spoke must write. |
 | 0.2.0 | 2026-08-20 | Second pass, driven by a clause-by-clause audit against the project DMSP (see `DMSP-COMPLIANCE.md` alongside the spec). Adds three document kinds the DMSP commits to and the first draft lacked: **`sample`** (materials data, and the measured properties milestone M9 joins a rate constant against), **`model`** (fitted and trained models as research products, with grouped splits, metrics with intervals, and limitations on appropriate use), and **`publication`** (the data-to-publication link, and the unit the release gate operates on). Adds the last of the DMSP's enumerated metadata fields — `project`, `objective`, `software`, and per-channel `chemical_identifiers` — all optional, because none is lost by being backfilled. Schema `0.1.0` was amended in place rather than forked to `0.2.0`: it is a pre-release draft nobody has used, and manufacturing a fake version history would have been worse than saying so. Retention now explicitly begins at the first tagged release. AmSC/ModCon moved from an open question to a stated position with a watch item. |

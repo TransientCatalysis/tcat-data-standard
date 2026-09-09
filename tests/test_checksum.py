@@ -6,7 +6,7 @@ import hashlib
 
 import pytest
 
-from tcat_standard import sha256_file, sha256_tree
+from tcat_data import sha256_file, sha256_tree
 
 
 def test_file_checksum_matches_hashlib(tmp_path):

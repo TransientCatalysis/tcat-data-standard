@@ -27,7 +27,7 @@
       "locator": "Figure 2"
     },
     {
-      "ref": "tcat-analysis",
+      "ref": "tcat-tool-standard",
       "kind": "external",
       "role": "software",
       "notes": "Analysis code; a release DOI would go in `software` below."
@@ -36,8 +36,8 @@
   "data_availability_statement": "SYNTHETIC. Drafted here rather than written from memory at submission, so that what it promises can be checked against what is actually registered.",
   "software": [
     {
-      "name": "tcat-analysis",
-      "repository": "https://github.com/TransientCatalysis/tcat-analysis",
+      "name": "tcat-tool-standard",
+      "repository": "https://github.com/TransientCatalysis/tcat-tool-standard",
       "version": "0.1.0",
       "license": "MIT"
     }

@@ -7,6 +7,10 @@ package is 0.3.0 and the schema directory is 0.2.0.
 `test_the_package_version_matches_the_standard_document` now parses all four
 places, so the drift cannot come back.
 
+## 0.5.0 — 2026-09-09
+
+**Package renamed `tcat_standard` → `tcat_data`.** `import tcat_data`; console scripts (`tcat-validate`, `tcat-spoke`) and the distribution name `tcat-data-standard` are unchanged. Schema stays 0.3.0. The reason is the org's naming: three standards, one per kind of thing that has one — `tcat-data-standard` / `tcat_data`, `tcat-tool-standard` / `tcat_tool` (was `tcat-analysis` / `tcat_analysis`), and a `tcat-campaign-standard` to come. See `tcat-tool-standard/ARCHITECTURE.md`.
+
 ## 0.3.0 — 2026-09-01
 
 Accepted by the team, and the first release written against real data rather than

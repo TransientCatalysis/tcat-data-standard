@@ -13,8 +13,8 @@ import json
 
 import pytest
 
-from tcat_standard import validate
-from tcat_standard.schema import load_schema, schema_dir
+from tcat_data import validate
+from tcat_data.schema import load_schema, schema_dir
 
 V = "0.2.0"
 _ORCID = "0000-0001-8311-9581"
@@ -210,7 +210,7 @@ def test_personnel_no_longer_accepts_arbitrary_keys():
 def test_a_spoke_manifest_away_from_a_spoke_root_is_still_checked(tmp_path):
     """It used to fall through to None and be skipped in silence. `spoke_id`
     gives the contents fallback something unique to key on."""
-    from tcat_standard.cli import _infer_kind
+    from tcat_data.cli import _infer_kind
 
     f = tmp_path / "somewhere" / "a-manifest.json"
     f.parent.mkdir()

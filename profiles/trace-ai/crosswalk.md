@@ -8,7 +8,7 @@ Two structural differences shape the whole mapping, and they are worth stating b
 
 **When it is written.** TRACE-AI's manifest is authored at publication. A tcat dataset document is authored at acquisition. This is why fields like `doi_or_url` and `landing_page` have no counterpart at write time: they do not exist yet, and inventing a placeholder for them is how placeholders end up in published records.
 
-Consequence: the TRACE-AI manifest is a **generated artifact** in this project, produced at manuscript time by `tcat-analysis/report/trace_ai.py` from accumulated provenance. It is not a file anyone hand-maintains.
+Consequence: the TRACE-AI manifest is a **generated artifact** in this project, produced at manuscript time by `tcat-tool-standard/report/trace_ai.py` from accumulated provenance. It is not a file anyone hand-maintains.
 
 ---
 
@@ -40,7 +40,7 @@ Consequence: the TRACE-AI manifest is a **generated artifact** in this project, 
 
 | TRACE-AI | tcat | Notes |
 |---|---|---|
-| `processing.code_repo` | `provenance.tool.name` | Names the tool, which resolves to `tcat-analysis`. |
+| `processing.code_repo` | `provenance.tool.name` | Names the tool, which resolves to `tcat-tool-standard`. |
 | `processing.entrypoint` | `provenance.tool.name` | Ours is a CLI verb, not a script path. Script paths move; tool names are part of the contract. |
 | `processing.version` | `provenance.tool.version` | Stamped by the tool, never hand-entered. |
 | `processing.hash_or_commit` | `provenance.tool.git_sha` | Ours permits the literal `dirty`, which is the honest answer for a working-tree run and disqualifies the artifact from promotion. |

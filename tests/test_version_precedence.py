@@ -15,8 +15,8 @@ import json
 
 import pytest
 
-from tcat_standard import validate
-from tcat_standard.schema import CURRENT_SCHEMA_VERSION, available_versions
+from tcat_data import validate
+from tcat_data.schema import CURRENT_SCHEMA_VERSION, available_versions
 
 
 def _minimal_spoke(version: str) -> dict:
@@ -83,7 +83,7 @@ def test_the_cli_does_not_carry_one_trees_pin_into_the_next(tmp_path):
     The pin used to be written onto the parsed arguments, so it survived the
     loop iteration and silently applied to every later root on the command line.
     """
-    from tcat_standard.cli import main
+    from tcat_data.cli import main
 
     pinned = tmp_path / "pinned"
     (pinned / "protocols").mkdir(parents=True)

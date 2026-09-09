@@ -7,7 +7,7 @@
   "milestone": "baseline-reproduction",
   "spokes": [
     "tcat-data-standard (examples)",
-    "tcat-analysis"
+    "tcat-tool-standard"
   ],
   "artifacts": [
     {

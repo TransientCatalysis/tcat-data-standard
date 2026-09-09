@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from tcat_standard.converters import find_converter, register, registry
+from tcat_data.converters import find_converter, register, registry
 
 
 def test_all_three_modalities_are_registered():

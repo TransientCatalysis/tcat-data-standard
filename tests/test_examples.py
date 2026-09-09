@@ -11,7 +11,7 @@ import json
 
 import pytest
 
-from tcat_standard import (
+from tcat_data import (
     ManifestEntry,
     is_valid_artifact_id,
     sha256_file,

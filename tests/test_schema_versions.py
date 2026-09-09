@@ -13,8 +13,8 @@ import re
 
 import pytest
 
-from tcat_standard import available_versions, load_schema, schema_dir
-from tcat_standard.schema import CURRENT_SCHEMA_VERSION, KINDS, load_all_schemas
+from tcat_data import available_versions, load_schema, schema_dir
+from tcat_data.schema import CURRENT_SCHEMA_VERSION, KINDS, load_all_schemas
 
 
 def test_at_least_one_version_is_present():
@@ -101,7 +101,7 @@ def test_unknown_kinds_and_versions_fail_clearly():
 def test_versions_sort_numerically_not_lexically():
     """So 0.10.0 lands after 0.9.0. Only meaningful once there are ten minor
     versions, which is exactly when nobody will remember to check."""
-    from tcat_standard.schema import available_versions as av
+    from tcat_data.schema import available_versions as av
 
     assert av() == sorted(av(), key=lambda v: tuple(int(x) for x in v.split(".")))
 
@@ -133,7 +133,7 @@ def test_the_package_version_matches_the_standard_document():
     import re
     from pathlib import Path
 
-    import tcat_standard
+    import tcat_data
 
     root = Path(__file__).resolve().parents[1]
     pyproject = (root / "pyproject.toml").read_text(encoding="utf-8")
@@ -146,8 +146,8 @@ def test_the_package_version_matches_the_standard_document():
     citation = (root / "CITATION.cff").read_text(encoding="utf-8")
     cff = re.search(r"^version: (\S+)", citation, re.M).group(1)
 
-    assert pkg == tcat_standard.__version__ == doc_comment == doc_header == cff, (
-        f"pyproject={pkg} __version__={tcat_standard.__version__} "
+    assert pkg == tcat_data.__version__ == doc_comment == doc_header == cff, (
+        f"pyproject={pkg} __version__={tcat_data.__version__} "
         f"STANDARD comment={doc_comment} STANDARD header={doc_header} CITATION={cff}"
     )
 
@@ -158,7 +158,7 @@ def test_the_standard_document_names_the_schema_version_that_ships():
     import re
     from pathlib import Path
 
-    from tcat_standard.schema import CURRENT_SCHEMA_VERSION
+    from tcat_data.schema import CURRENT_SCHEMA_VERSION
 
     standard = (Path(__file__).resolve().parents[1] / "STANDARD.md").read_text(encoding="utf-8")
     named = re.search(r"\*\*Schema version:\*\* (\S+)", standard).group(1)
@@ -179,7 +179,7 @@ def test_a_frozen_schema_is_byte_identical_to_the_manifest_committed_when_it_fro
     import json
     from pathlib import Path
 
-    root = Path(__file__).resolve().parents[1] / "src" / "tcat_standard" / "schema" / frozen
+    root = Path(__file__).resolve().parents[1] / "src" / "tcat_data" / "schema" / frozen
     expected = json.loads(
         (Path(__file__).resolve().parent / "data" / f"schema-{frozen}-frozen.sha256.json").read_text()
     )
@@ -212,7 +212,7 @@ def test_no_shipped_schema_names_a_project_milestone():
     import json
     from pathlib import Path
 
-    from tcat_standard.schema import available_versions, schema_dir
+    from tcat_data.schema import available_versions, schema_dir
 
     offenders: list[str] = []
     for version in available_versions():
@@ -236,7 +236,7 @@ def test_the_objective_milestone_field_still_exists():
     import json
     from pathlib import Path
 
-    from tcat_standard.schema import schema_dir
+    from tcat_data.schema import schema_dir
 
     common = json.loads((Path(schema_dir()) / "defs" / "common.schema.json").read_text())
     assert "milestone" in common["$defs"]["objective"]["properties"]

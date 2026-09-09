@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from tcat_standard import ManifestEntry
+from tcat_data import ManifestEntry
 
 
 def _csv(tmp_path):

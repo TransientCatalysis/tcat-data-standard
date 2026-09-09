@@ -49,13 +49,13 @@ prevent. See STANDARD.md §6.
 
 ### Version retention
 
-Versions live in `src/tcat_standard/schema/<version>/` and **are never removed or edited**. A dataset declaring `0.1.0` is validated against `0.1.0` for as long as this repository exists, so a bump never obliges a lab to rewrite data.
+Versions live in `src/tcat_data/schema/<version>/` and **are never removed or edited**. A dataset declaring `0.1.0` is validated against `0.1.0` for as long as this repository exists, so a bump never obliges a lab to rewrite data.
 
 Retention applies from the **first tagged release**. `0.1.0` is a pre-release draft under team review and may still be amended in place — after the first tag, that stops.
 
 ### Adding a document kind
 
-1. `src/tcat_standard/schema/<version>/<kind>.schema.json`, with `$schema` and a versioned `$id`
+1. `src/tcat_data/schema/<version>/<kind>.schema.json`, with `$schema` and a versioned `$id`
 2. Register it in `KINDS` in `schema.py`
 3. `validate_<kind>` in `validate.py`, exported from `__init__.py`
 4. Kind inference in `cli.py` — both the directory map and the contents fallback
@@ -132,4 +132,4 @@ Not a dependency bump. Revised item wording changes what we are *claiming to sat
 
 ## Downstream
 
-`tcat-analysis` pins this package; `tcat-index` validates every record against it; every spoke's CI installs it. **The dependency runs one way and has no exceptions.** If a feature elsewhere seems to require a change here, that is evidence the schema is wrong — not that the boundary should be crossed.
+`tcat-tool-standard` pins this package; `tcat-index` validates every record against it; every spoke's CI installs it. **The dependency runs one way and has no exceptions.** If a feature elsewhere seems to require a change here, that is evidence the schema is wrong — not that the boundary should be crossed.

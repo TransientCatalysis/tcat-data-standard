@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from tcat_standard.spoke import (
+from tcat_data.spoke import (
     FINGERPRINT,
     check_fingerprint,
     read_version,
@@ -123,7 +123,7 @@ def test_a_version_re_exported_from_version_py_is_still_found(tmp_path):
     cannot see through an import. The analysis hub uses it, so before this the
     fingerprint reported `no __version__ found` and the one repository in the
     project with shipped source and no fingerprint gate stayed ungated."""
-    from tcat_standard.spoke import read_version
+    from tcat_data.spoke import read_version
 
     pkg = tmp_path / "src" / "somepkg"
     pkg.mkdir(parents=True)
@@ -136,7 +136,7 @@ def test_a_version_re_exported_from_version_py_is_still_found(tmp_path):
 def test_a_literal_in_init_still_wins(tmp_path):
     """The counter-case: `__init__.py` is searched first, so a package that
     declares the literal there is unaffected by the fallback."""
-    from tcat_standard.spoke import read_version
+    from tcat_data.spoke import read_version
 
     pkg = tmp_path / "src" / "somepkg"
     pkg.mkdir(parents=True)

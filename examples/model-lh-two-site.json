@@ -101,8 +101,8 @@
   },
   "limitations": "SYNTHETIC MODEL -- not usable for any real prediction. Even taken on its own terms it was fit at a single temperature (473 K), on one synthetic sample, under PRBS forcing only. It has not been validated on chemical-looping operation, on any temperature ramp, or on any other catalyst, and only one of its three rate constants is identifiable.",
   "software": {
-    "name": "tcat-analysis",
-    "repository": "https://github.com/TransientCatalysis/tcat-analysis",
+    "name": "tcat-tool-standard",
+    "repository": "https://github.com/TransientCatalysis/tcat-tool-standard",
     "version": "0.1.0",
     "license": "MIT"
   },

@@ -6,7 +6,7 @@ from that directory. A dataset written against 0.1.0 still validates against
 0.1.0 in five years, which means a minor bump never obliges a lab to rewrite
 existing data -- and a major bump ships a migration script rather than a demand.
 
-The tree lives INSIDE the package, at ``src/tcat_standard/schema/``, rather than
+The tree lives INSIDE the package, at ``src/tcat_data/schema/``, rather than
 at the repository root. One extra path segment buys a working ``pip install
 git+https://...`` -- which is how a spoke's CI installs the validator, and
 therefore how the ingestion gate actually runs. Schemas that only exist in a
@@ -14,7 +14,7 @@ source checkout are schemas that silently stop being enforced.
 
 Layout::
 
-    src/tcat_standard/schema/
+    src/tcat_data/schema/
       VERSION            <- the current version, one line
       0.1.0/
         dataset.schema.json

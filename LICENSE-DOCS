@@ -11,10 +11,10 @@ Human-readable deed: https://creativecommons.org/licenses/by/4.0/
 WHAT THIS COVERS
   STANDARD.md, README.md, CONTRIBUTING.md, everything under profiles/, and the
   "description" text carried inside the JSON Schema documents under
-  src/tcat_standard/schema/.
+  src/tcat_data/schema/.
 
 WHAT IT DOES NOT COVER
-  The Python source under src/tcat_standard/ (excluding schema/), which is MIT
+  The Python source under src/tcat_data/ (excluding schema/), which is MIT
   licensed -- see LICENSE.
 
 WHY TWO LICENSES
