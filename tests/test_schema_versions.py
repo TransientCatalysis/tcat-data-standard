@@ -194,7 +194,7 @@ def test_the_standard_document_names_the_schema_version_that_ships():
     assert named == CURRENT_SCHEMA_VERSION
 
 
-@pytest.mark.parametrize("frozen", ["0.1.0", "0.2.0"])
+@pytest.mark.parametrize("frozen", ["0.1.0", "0.2.0", "0.3.0"])
 def test_a_frozen_schema_is_byte_identical_to_the_manifest_committed_when_it_froze(frozen):
     """Retention is not a policy statement. It is a checked-in manifest.
 
@@ -269,3 +269,69 @@ def test_the_objective_milestone_field_still_exists():
 
     common = json.loads((Path(schema_dir()) / "defs" / "common.schema.json").read_text())
     assert "milestone" in common["$defs"]["objective"]["properties"]
+
+
+# ---------------------------------------------------- 0.4.0: an open modality
+
+def test_a_modality_the_standard_never_heard_of_validates_and_is_nudged():
+    """Through 0.3.0 `measurement_type` was an enum of eight, so a raman, drifts
+    or tpd dataset was refused for its NAME while `channel.quantity` -- what the
+    instrument actually measures -- was already a free string and
+    `surface_coverage` validated. The standard does not decide which experiments
+    exist. It does keep a shared vocabulary, so an unknown value draws advice."""
+    import copy
+    import json
+    from pathlib import Path
+
+    from tcat_data import validate
+
+    base = json.loads((Path(__file__).resolve().parents[1] / "examples"
+                       / "dataset-prbs-co-ox.json").read_text(encoding="utf-8"))
+    for modality in ("raman", "drifts", "tpd"):
+        report = validate({**copy.deepcopy(base), "measurement_type": modality}, "dataset")
+        assert report.ok, [e.message for e in report.errors]
+        nudge = [w for w in report.warnings if w.pointer == "/measurement_type"]
+        assert nudge and "not one of the modalities" in nudge[0].message
+
+    known = validate({**copy.deepcopy(base), "measurement_type": "ms"}, "dataset")
+    assert known.ok and not [w for w in known.warnings if w.pointer == "/measurement_type"], (
+        "a known modality must draw no advice, or the nudge becomes noise and gets ignored")
+
+
+def test_an_unanticipated_modality_inherits_the_protocol_requirement():
+    """The exemption is the thing that must be named. Under the old enum a
+    modality nobody had listed escaped `protocol` silently, which is the wrong
+    default for a rule about reproducibility."""
+    import copy
+    import json
+    from pathlib import Path
+
+    from tcat_data import validate
+
+    base = json.loads((Path(__file__).resolve().parents[1] / "examples"
+                       / "dataset-prbs-co-ox.json").read_text(encoding="utf-8"))
+    without = {k: v for k, v in copy.deepcopy(base).items() if k != "protocol"}
+    assert not validate({**without, "measurement_type": "raman"}, "dataset").ok, (
+        "a new modality is presumed to be a driven experiment")
+    for exempt in ("characterization", "computational"):
+        assert validate({**without, "measurement_type": exempt}, "dataset").ok, exempt
+
+
+def test_the_quantity_a_channel_reports_was_always_free():
+    """The other half of the same question, and the reason the enum was the only
+    thing blocking a new modality: an IR or XAS chain emitting coverages rather
+    than mole fractions needs no schema change and no new declared tool."""
+    import copy
+    import json
+    from pathlib import Path
+
+    from tcat_data import validate
+
+    base = json.loads((Path(__file__).resolve().parents[1] / "examples"
+                       / "dataset-prbs-co-ox.json").read_text(encoding="utf-8"))
+    for quantity, units in (("surface_coverage", "dimensionless"),
+                            ("active_site_concentration", "mol/g")):
+        record = copy.deepcopy(base)
+        first = next(iter(record["channels"]))
+        record["channels"][first] = {**record["channels"][first], "quantity": quantity, "units": units}
+        assert validate(record, "dataset").ok, quantity

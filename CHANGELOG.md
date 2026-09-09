@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.7.0 — 2026-09-09 · schema 0.4.0
+
+**`measurement_type` is a free string, and an unanticipated modality is presumed experimental.**
+
+Through schema 0.3.0 it was an enum of eight, so a `raman`, `drifts` or `tpd` dataset could not
+validate — refused for its NAME, while `channel.quantity`, what the instrument actually measures,
+was already free and `surface_coverage` validated unchanged. The standard should not decide which
+experiments exist. An unknown value now validates and draws an advisory nudge toward the shared
+vocabulary (`KNOWN_MEASUREMENT_TYPES`), never an error.
+
+The protocol rule inverts with it: it now reads "not `characterization` or `computational`", so a
+modality nobody anticipated inherits the requirement to declare a protocol instead of escaping it
+silently. The exemption is the thing that must be named — the same asymmetry the spec hash uses.
+No existing record changes meaning: all eight previous values behave exactly as before.
+
+`0.3.0` is frozen with a checksum manifest and retained, as `0.2.0` and `0.1.0` are.
+
 ## 0.6.1 — 2026-09-09
 
 **The package version and the standards version are separate numbers.** `__version__` (with

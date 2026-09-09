@@ -1,0 +1,15 @@
+{
+  "calibration.schema.json": "ea61f87fb089d79f245dbafef1b1eba772df24792b93e0f672d5080838b0d214",
+  "campaign.schema.json": "cff0f2e27bdb72afbdefb1f530c83ba818b6ae1f61b4529f15228ca7c770cc9b",
+  "dataset.schema.json": "9e35363d6ffc6cfdc918588cc858d9c0f030d71fce67a21769cfe65edd48a8cf",
+  "defs/common.schema.json": "6fbd73e93ac012efdae3f1b5d708cbc35b4103cd9f04addde578747ea78b9185",
+  "manifest-entry.schema.json": "4cba564d430357dce761536c13c9a1a98636da10590954e28ae66dfc8d523555",
+  "model-spec.schema.json": "6f3f85ddb9d5ef0aa4d01a6f5335db66ed52cdce327607bed38647757452921d",
+  "model.schema.json": "c8a920ab0ee3b91943ed2ca671e1024ad84e293ef311b791db79fbf11389b653",
+  "protocol.schema.json": "87e2c4831090ff48ebc4fcead2628a009ee55815695b86721af37846f3827692",
+  "provenance.schema.json": "d87a97a29f9c5137cddfda1a6145789fcede3a870c7ab4dce457beb9be540bb3",
+  "publication.schema.json": "6a8810c09bbcbf859bfa9f91d38c11b7151cbe6668824df2cd1f87c4ac668aa6",
+  "sample.schema.json": "1c36172cd46122259e7a2f2dfe1762c66eee51453d66772a0edf0d71e9b3be4e",
+  "spoke.schema.json": "b9a0a35b4457d003fdee7538fed55ce977882f5e8e16dff77f3970073b52d550",
+  "uncertainty-ensemble.schema.json": "605451af629c12ed24df5f20a04f12484b63d944965218fab40602db0a0b9408"
+}

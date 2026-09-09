@@ -727,6 +727,19 @@ def _steward_advice(document: Any) -> list[Problem]:
     return out
 
 
+#: The modalities the standard knows about. NOT a constraint -- `measurement_type`
+#: became a free string in schema 0.4.0, because through 0.3.0 an enum of these
+#: eight refused a raman, drifts or tpd dataset for its NAME while the quantity it
+#: measured was already free. This list drives an advisory nudge toward shared
+#: vocabulary, and the first six are the driven experiments that must declare a
+#: protocol (the schema states that as "not characterization or computational", so
+#: an unanticipated modality is presumed experimental rather than exempt).
+KNOWN_MEASUREMENT_TYPES = frozenset({
+    "prbs_kinetics", "ms", "ir_gas", "ir_transient", "xas_mes", "steady_state",
+    "characterization", "computational",
+})
+
+
 def _advisory_checks(document: Any, kind: str, version: str) -> list[Problem]:
     """Checks that are advice, not law.
 
@@ -739,6 +752,18 @@ def _advisory_checks(document: Any, kind: str, version: str) -> list[Problem]:
         return out
 
     if kind == "dataset":
+        mt = document.get("measurement_type")
+        if mt and mt not in KNOWN_MEASUREMENT_TYPES:
+            out.append(
+                Problem(
+                    "/measurement_type",
+                    f"{mt!r} is not one of the modalities the standard knows "
+                    f"({', '.join(sorted(KNOWN_MEASUREMENT_TYPES))}). That is allowed and always "
+                    "will be -- the standard does not decide which experiments exist. But tools "
+                    "and queries key on these names, so reuse one where it fits, and propose "
+                    "yours for the known list if others will use it.",
+                )
+            )
         if document.get("schema_version") and document["schema_version"] != CURRENT_SCHEMA_VERSION:
             out.append(
                 Problem(

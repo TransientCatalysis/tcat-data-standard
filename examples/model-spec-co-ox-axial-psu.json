@@ -1,5 +1,5 @@
 {
-  "schema_version": "0.3.0",
+  "schema_version": "0.4.0",
   "spec_id": "co-ox-5step-psu-axial",
   "family": "microkinetic",
   "name": "CO oxidation, five-step LH, PSU treatment in the axial bed",
