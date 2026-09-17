@@ -159,12 +159,30 @@ jobs:
           print(f"verified {checked} local manifest entr{'y' if checked == 1 else 'ies'}; "
                 f"{len(remote)} remote")
           if checked == 0 and remote:
-              # The whole spoke is off-repo. That may be correct, but this job then
-              # verifies nothing, and a green tick would say the opposite. Whoever
-              # makes that move wires the credentialed fetch check, or says here in
-              # writing that this spoke is deliberately unverifiable locally.
-              print("::error::this sweep verified nothing: every manifest entry is remote. "
-                    "A check that cannot fail is not a check.")
-              sys.exit(1)
+              # Every entry is off-repo, so this job verified nothing. That is a
+              # legitimate steady state -- integrity is checked where it matters,
+              # at fetch (fetch_entry recomputes sha256 and size before returning
+              # bytes) and at rest by the host -- but it has to be DECLARED, not
+              # assumed. A spoke that silently drifted into verifying nothing and
+              # a spoke that deliberately delegates look identical from here, and
+              # only one of them is fine.
+              spoke = Path(".tcat-spoke.json")
+              declared = False
+              if spoke.exists():
+                  try:
+                      cfg = json.loads(spoke.read_text(encoding="utf-8"))
+                      declared = (cfg.get("extensions", {}).get("integrity", {})
+                                     .get("local_verification") == "delegated")
+                  except json.JSONDecodeError:
+                      pass
+              if not declared:
+                  print("::error::this sweep verified nothing: every manifest entry is remote, "
+                        "and .tcat-spoke.json does not declare that local verification is "
+                        "delegated. Add extensions.integrity.local_verification=\"delegated\" "
+                        "with a note saying where integrity IS checked, or keep an entry local. "
+                        "A check that cannot fail is not a check.")
+                  sys.exit(1)
+              print("note: no local entries to verify; this spoke declares local "
+                    "verification delegated (checked at fetch, and at rest by the host)")
           sys.exit(1 if problems else 0)
           PY
