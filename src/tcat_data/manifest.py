@@ -27,7 +27,7 @@ Format = Literal["csv", "zarr", "json", "instrument-native"]
 class ManifestEntry:
     """An indirect, checksummed reference to bytes.
 
-    Exactly one of ``path``, ``url``, or ``lfs_oid`` is set. That is enforced by
+    Exactly one of ``path``, ``url``, ``lfs_oid`` or ``uri`` is set. That is enforced by
     the schema too, but checked here so a Python caller fails at construction
     rather than at validation.
     """
@@ -38,6 +38,7 @@ class ManifestEntry:
     path: str | None = None
     url: str | None = None
     lfs_oid: str | None = None
+    uri: str | None = None
     media_type: str | None = None
     compression: str | None = None
     rows: int | None = None
@@ -45,11 +46,20 @@ class ManifestEntry:
     notes: str | None = None
 
     def __post_init__(self) -> None:
-        locations = [n for n in ("path", "url", "lfs_oid") if getattr(self, n) is not None]
+        locations = [
+            n for n in ("path", "url", "lfs_oid", "uri") if getattr(self, n) is not None
+        ]
         if len(locations) != 1:
             raise ValueError(
-                "a manifest entry needs exactly one location -- path, url, or lfs_oid -- "
-                f"but {len(locations)} were given ({', '.join(locations) or 'none'})"
+                "a manifest entry needs exactly one location -- path, url, lfs_oid, "
+                f"or uri -- but {len(locations)} were given "
+                f"({', '.join(locations) or 'none'})"
+            )
+        if self.uri is not None and self.uri.split("://", 1)[0] in ("http", "https"):
+            raise ValueError(
+                f"uri must not be http(s), got {self.uri!r} -- that is what `url` is "
+                "for. One address expressible in two fields is the ambiguity the "
+                "exactly-one rule exists to prevent."
             )
         if self.path is not None:
             p = PurePosixPath(self.path)
