@@ -102,7 +102,7 @@ jobs:
           from pathlib import Path
           from tcat_data import ManifestEntry, sha256_file, sha256_tree
 
-          problems, checked = [], 0
+          problems, checked, remote = [], 0, []
           SKIP_DIRS = {".github", "tests", "node_modules", ".venv"}
           for path in sorted(Path(".").rglob("*.json")):
               # '_'-prefixed files are templates; 'tests' holds deliberately
@@ -123,7 +123,15 @@ jobs:
                       problems.append(f"{path}: {exc}")
                       continue
                   if entry.path is None:
-                      continue          # url / lfs form: nothing local to verify
+                      # url / lfs / uri form: nothing LOCAL to verify. Counted and
+                      # named, never silently skipped -- once a spoke moves its
+                      # bytes off-repo this branch takes every entry, and a sweep
+                      # that printed "verified 0" and exited 0 would be a check
+                      # reporting success without running.
+                      form = next((f for f in ("url", "lfs_oid", "uri")
+                                   if getattr(entry, f, None) is not None), "none")
+                      remote.append(f"{path}: {form} form, verified at fetch, not here")
+                      continue
                   target = Path(entry.path)
                   if not target.exists():
                       problems.append(f"{path}: {entry.path} does not exist")
@@ -146,6 +154,17 @@ jobs:
 
           for p in problems:
               print(f"::error::{p}")
-          print(f"verified {checked} manifest entr{'y' if checked == 1 else 'ies'}")
+          for r in remote:
+              print(f"  skipped: {r}")
+          print(f"verified {checked} local manifest entr{'y' if checked == 1 else 'ies'}; "
+                f"{len(remote)} remote")
+          if checked == 0 and remote:
+              # The whole spoke is off-repo. That may be correct, but this job then
+              # verifies nothing, and a green tick would say the opposite. Whoever
+              # makes that move wires the credentialed fetch check, or says here in
+              # writing that this spoke is deliberately unverifiable locally.
+              print("::error::this sweep verified nothing: every manifest entry is remote. "
+                    "A check that cannot fail is not a check.")
+              sys.exit(1)
           sys.exit(1 if problems else 0)
           PY
