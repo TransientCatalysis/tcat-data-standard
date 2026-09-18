@@ -165,7 +165,14 @@ def validate(
     return report
 
 
-_LOCATION_FIELDS = ("path", "url", "lfs_oid")
+_LOCATION_FIELDS = ("path", "url", "lfs_oid", "uri")
+
+#: The forms that are as durable as the repository, because the bytes ARE the
+#: repository: `path` is in git, `lfs_oid` is in the repository's LFS. Naming
+#: the EXEMPTION rather than the offence is what makes a location form added
+#: after this was written inherit the durability warning instead of escaping
+#: it silently -- the same asymmetry the protocol rule and the spec hash use.
+_DURABLE_LOCATION_FIELDS = ("path", "lfs_oid")
 
 
 def _manifest_location_problem(entry: Any, pointer: str) -> Problem | None:
@@ -184,12 +191,12 @@ def _manifest_location_problem(entry: Any, pointer: str) -> Problem | None:
     if not present:
         return Problem(
             pointer,
-            "manifest entry has no location: set exactly one of path, url, or lfs_oid",
+            "manifest entry has no location: set exactly one of path, url, lfs_oid, or uri",
         )
     return Problem(
         pointer,
         f"manifest entry has {len(present)} locations ({', '.join(present)}); set exactly "
-        "one. To move data off-repo, REPLACE path with url or lfs_oid rather than adding "
+        "one. To move data off-repo, REPLACE path with url, lfs_oid or uri rather than adding "
         "alongside it -- the checksum is what proves the bytes are unchanged.",
     )
 
@@ -640,10 +647,13 @@ def _permanent_home_advice(document: Any, rung: str | None) -> list[Problem]:
     Checked rather than asserted, because "we should really deposit that" is how
     the obligation quietly becomes nothing.
 
-    A `url` entry is the case this catches: it means the bytes are somewhere this
-    project does not control, and a share link can be revoked, re-issued, or
-    expire with an institutional account. `path` (in the repository, so in git)
-    and `lfs_oid` are as durable as the repository itself. A `deposit_doi` on the
+    `path` (in the repository, so in git) and `lfs_oid` are as durable as the
+    repository itself. EVERY OTHER FORM inherits this warning -- `url`, `uri`, and
+    whatever is added after this was written -- because the bytes are then
+    somewhere this project does not control, and a share link or a hosted asset
+    can be revoked, re-issued, or expire with an institutional account. The
+    exemption is the thing that has to be named; a form nobody anticipated must
+    not escape the requirement by not being listed. A `deposit_doi` on the
     maturity block settles it either way, because that is a promise a repository
     has made rather than one a share link implies.
     """
@@ -656,15 +666,21 @@ def _permanent_home_advice(document: Any, rung: str | None) -> list[Problem]:
         return out
 
     for i, entry in enumerate(document.get("files") or []):
-        if isinstance(entry, dict) and entry.get("url"):
+        if not isinstance(entry, dict):
+            continue
+        for field in _LOCATION_FIELDS:
+            if field in _DURABLE_LOCATION_FIELDS or not entry.get(field):
+                continue
+            where = entry[field].split("://", 1)[0] if "://" in entry[field] else field
             out.append(
                 Problem(
-                    f"/files/{i}/url",
-                    f"rung {rung!r} but the bytes are at a url this project does "
-                    "not control, and no deposit_doi is recorded. A share link "
-                    "can be revoked or expire with an account, and a reviewed "
-                    "record is one somebody may cite. Deposit it and record the "
-                    "DOI, or keep the copy in the repository",
+                    f"/files/{i}/{field}",
+                    f"rung {rung!r} but the bytes are at a {where} location this "
+                    "project does not control, and no deposit_doi is recorded. A "
+                    "share link or a hosted asset can be revoked or expire with an "
+                    "account, and a reviewed record is one somebody may cite. "
+                    "Deposit it and record the DOI, or keep the copy in the "
+                    "repository",
                 )
             )
     return out

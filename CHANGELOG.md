@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.8.0 — 2026-09-18 · schema 0.5.0
+
+**A fourth location form, `uri`, and the exactly-one rule stops being quadratic.**
+
+A manifest entry could point at a repository path, a plain URL, or a git-LFS object.
+None of those describes bytes held by a service where retrieval is a negotiation rather
+than a GET -- which is what the project's data platform is, and what a facility archive
+or an object store would be. `uri` is a scheme-tagged string; the SCHEME selects a
+resolver, so a second host arrives by registering a resolver rather than by minting a
+schema version again.
+
+`http` and `https` are deliberately refused in `uri`: those are `url`, and one address
+expressible in two fields is the ambiguity the exactly-one rule exists to prevent.
+
+An authority with no dot in it is a deployment ALIAS, resolved at fetch time. That is
+what lets a locator committed to git survive a host migration -- the platform this was
+written against carries its environment inside its identifiers, so a literal hostname in
+a manifest would have to be rewritten across every record at a production cutover.
+
+The cardinality rule is now `oneOf` over four `required` clauses rather than `anyOf`
+plus one `not` per pair. The old form needed three not-clauses for three forms and would
+have needed six for four and ten for five -- quadratic in the number of location forms,
+which is precisely the thing this field exists to stop being expensive. `oneOf` says
+both halves at once: zero locations points at nothing, two leaves a consumer unable to
+tell which is authoritative. Its error text is poor, and `validate.py` already pays that
+cost for this rule with a readable message.
+
+**The durability advisory now names the EXEMPTION.** It warned about `url` by name, so
+`uri` -- and anything added later -- would have escaped it silently. It now exempts
+`path` and `lfs_oid`, because those are as durable as the repository itself, and warns
+about everything else. Same asymmetry as the protocol rule in 0.4.0 and the spec hash:
+the thing that gets away with something is the thing that has to be named.
+
+No existing record changes meaning. `0.4.0` is frozen with a checksum manifest and
+retained, as `0.3.0`, `0.2.0` and `0.1.0` are.
+
 ## 0.7.0 — 2026-09-09 · schema 0.4.0
 
 **`measurement_type` is a free string, and an unanticipated modality is presumed experimental.**

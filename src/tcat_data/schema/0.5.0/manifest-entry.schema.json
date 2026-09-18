@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://transientcatalysis.github.io/tcat-data-standard/0.5.0/manifest-entry.schema.json",
+  "title": "Manifest entry",
+  "description": "A pointer to bytes. Datasets reference their files ONLY through manifest entries, never through a filename written into code. Exactly one location form is allowed per entry -- path, url, lfs_oid, or uri -- so a set that outgrows a git repo is relocated by editing one field, with the checksum proving the bytes did not change.",
+
+  "type": "object",
+  "required": ["sha256", "size_bytes", "format"],
+
+  "properties": {
+    "path": {
+      "type": "string",
+      "description": "Repository-relative POSIX path. Must not be absolute and must not escape the repository root.",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$",
+      "examples": ["raw/prbs/2026-09-01/run-014.csv"]
+    },
+    "url": {
+      "type": "string",
+      "description": "Absolute URL, for data held off-repo. Swapping path for url must not require any downstream change.",
+      "format": "uri",
+      "pattern": "^https?://"
+    },
+    "lfs_oid": {
+      "type": "string",
+      "description": "Git LFS object id, for data tracked by LFS in this repository.",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "uri": {
+      "type": "string",
+      "description": "Scheme-tagged location for bytes held by a service that is neither this repository nor a plain web server. The SCHEME selects a resolver, so a second host arrives by registering a resolver rather than by minting a schema version. `http` and `https` are deliberately excluded: those are `url`, and one address expressible in two fields is the ambiguity the exactly-one rule exists to prevent. An authority with no dot in it is a deployment ALIAS resolved at fetch time, which is what lets a locator committed to git survive a host migration. The checksum still proves the bytes, so a consumer with no resolver for the scheme fails loudly rather than reading something else.",
+      "format": "uri",
+      "pattern": "^(?!https?:)[a-z][a-z0-9+.\\-]*://[^\\s]+$",
+      "examples": ["dataerai://tcat/asset/4e9bb6e7-5005-4801-b11c-dc33ee3972c8/content/920d140e-de34-4140-accf-db39b18882b6?file=run1_200C_counts.csv"]
+    },
+    "sha256": { "$ref": "defs/common.schema.json#/$defs/sha256" },
+    "size_bytes": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Size in bytes. Checked alongside the checksum, and used by the artifact store to decide whether a transfer is worth making."
+    },
+    "format": {
+      "type": "string",
+      "description": "CSV for tabular data, Zarr for bulk arrays, JSON for metadata. Anything else is an instrument-native file that has not been converted yet, and must be layer raw.",
+      "enum": ["csv", "zarr", "json", "instrument-native"]
+    },
+    "media_type": {
+      "type": "string",
+      "description": "IANA media type, for consumers that dispatch on it. Advisory; format is the authoritative field.",
+      "examples": ["text/csv", "application/json"]
+    },
+    "compression": {
+      "type": "string",
+      "enum": ["none", "gzip", "zstd", "blosc"],
+      "default": "none",
+      "description": "Compression applied to the stored bytes. The checksum is over the STORED bytes, not the decompressed ones, so recompressing a file changes its manifest entry."
+    },
+    "rows": { "type": "integer", "minimum": 0, "description": "For csv: row count excluding header. A cheap equivalence check (TRACE-AI A2)." },
+    "shape": {
+      "type": "array",
+      "items": { "type": "integer", "minimum": 0 },
+      "description": "For zarr: array shape."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Anything a reader needs in order to use this file that the structured fields do not carry."
+    }
+  },
+
+  "oneOf": [
+    { "required": ["path"] },
+    { "required": ["url"] },
+    { "required": ["lfs_oid"] },
+    { "required": ["uri"] }
+  ],
+  "$comment": "EXACTLY one location, and `oneOf` says both halves at once: zero matches is an entry pointing at nothing, two matches is an entry whose authoritative location a consumer cannot know. The previous form (anyOf plus one `not` per pair) needed three not-clauses for three forms and would need six for four, ten for five -- quadratic in the number of location forms, which is the thing this field exists to stop being expensive. The cost is oneOf's poor error text, and `validate.py::_manifest_location_problem` already pays it for this rule: it is the message a reader actually sees.",
+
+  "additionalProperties": false
+}

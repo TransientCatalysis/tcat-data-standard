@@ -69,7 +69,7 @@ __version__ = "0.7.0"
 #:   CURRENT_SCHEMA_VERSION "which shape does a record declare?"
 #: They start equal at 0.6.0/0.6.0 and diverge from 2026-09-09 onward; the three
 #: bumps of that day are not re-litigated.
-STANDARDS_VERSION = "0.7.0"
+STANDARDS_VERSION = "0.8.0"
 
 __all__ = [
     "CURRENT_SCHEMA_VERSION",

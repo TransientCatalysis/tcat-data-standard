@@ -194,14 +194,14 @@ def test_the_standard_document_names_the_schema_version_that_ships():
     assert named == CURRENT_SCHEMA_VERSION
 
 
-@pytest.mark.parametrize("frozen", ["0.1.0", "0.2.0", "0.3.0"])
+@pytest.mark.parametrize("frozen", ["0.1.0", "0.2.0", "0.3.0", "0.4.0"])
 def test_a_frozen_schema_is_byte_identical_to_the_manifest_committed_when_it_froze(frozen):
     """Retention is not a policy statement. It is a checked-in manifest.
 
     `0.1.0` was amended four times after real PSU documents already declared it,
     which is the thing `schema_version` exists to prevent; `0.2.0` froze on
-    2026-09-08 when 0.3.0 was minted, for the same reason -- every artifact in
-    every store today declares it. If this fails, the fix is essentially never
+    2026-09-08 when 0.3.0 was minted, and `0.4.0` on 2026-09-18 when 0.5.0 was,
+    for the same reason -- every artifact in every store today declares it. If this fails, the fix is essentially never
     to update the manifest. It is to mint the next version.
     """
     import hashlib
