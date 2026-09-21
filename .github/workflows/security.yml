@@ -1,0 +1,18 @@
+# The org's security gate: the hidden-character scan and the workflow
+# credential lint. Both are defined ONCE in TransientCatalysis/.github and
+# called from here, because a copied check drifts and the copy that drifts is
+# always the one nobody is looking at.
+#
+# To change what is checked, edit .github/workflows/security.yml in the
+# TransientCatalysis/.github repository -- not this file.
+name: security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  security:
+    uses: TransientCatalysis/.github/.github/workflows/security.yml@main
