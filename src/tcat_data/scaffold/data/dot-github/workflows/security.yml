@@ -1,0 +1,19 @@
+# The org security gate: the hidden-character scan and the workflow
+# credential lint, defined once in TransientCatalysis/.github and called from
+# here. A copied check drifts; the copy that drifts is the one nobody is
+# looking at.
+#
+# It is also a REQUIRED CHECK on `main` in this organisation, so leaving this
+# file out does not make a spoke more permissive -- it makes it unmergeable.
+# To change what is checked, edit the workflow in the .github repository.
+name: security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  security:
+    uses: TransientCatalysis/.github/.github/workflows/security.yml@main
