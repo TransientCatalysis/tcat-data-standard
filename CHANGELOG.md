@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.9.0 — 2026-09-28 · schema 0.6.0
+
+**A step may declare the power of the vacancy in its forward rate.** `rate_law.site_exponent`,
+optional, integer, possibly negative. It exists for one reason: a step LUMPED through a
+quasi-equilibrated intermediate. With `CO* + O* <=> CO2* + *` at equilibrium and
+`CO2* -> CO2 + *` slow, the intermediate's coverage is K theta_CO theta_O / theta_* and the
+CO2 rate is k K theta_CO theta_O / theta_*; the limit K -> 0, k -> inf at fixed product
+removes CO2* and leaves one step, `CO* + O* -> CO2 + 2 *`, whose forward rate divides by the
+vacancy -- the site the equilibrium released before the slow step. The equation's mass
+action would read theta_*^0 there, so the grammar alone could not carry the limit that a
+fit's flat direction (K4 and k5 loaded with opposite signs: the data sees only their
+product) asks for. Recorded on the step because it changes what the step's constant MEANS.
+
+Absent, the rate law is the equation's mass action; no existing record changes meaning.
+Hashed into a specification's id like every science block (`tcat-spec`'s deny-list of prose
+is unchanged). `0.5.0` is frozen with a checksum manifest and retained.
+
+Package 0.8.0. **Needs the PI's written approval as a standards bump (COLLABORATION.md
+section 5); opened as a pull request for that reason.**
+
 ## 0.8.0 — 2026-09-18 · schema 0.5.0
 
 **A fourth location form, `uri`, and the exactly-one rule stops being quadratic.**
