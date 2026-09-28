@@ -236,14 +236,68 @@
               },
               "rate_law": {
                 "type": "object",
-                "description": "Overrides of the mass-action rate law that the equation implies. Present only on a step that is the LIMIT of two others -- a step lumped through a quasi-equilibrated intermediate releases a site in the equilibrium before its slow step, and its rate carries that site's activity as a divisor. Recorded on the step because it changes what the step's constant means; a reader who sees only the equation would infer a different rate law.",
-                "required": [
-                  "site_exponent"
-                ],
+                "description": "Departures from the mass-action rate law the equation implies, for a step that is the LIMIT of others. Structured, never an expression string: a numerator vacancy exponent and a rational denominator with named constants, so the law is hashed, packed and integrated without parsing. Absent, the rate is the equation's mass action. A step quasi-steady-lumped through an intermediate (Briggs-Haldane) has rate k m_p / (1 + sum_l Q_l m_l); a step lumped through a quasi-equilibrated intermediate has the released site as a divisor (site_exponent -1, no denominator).",
                 "properties": {
                   "site_exponent": {
                     "type": "integer",
-                    "description": "The power of the free-site activity in the forward rate. Defaults, when absent, to the number of free sites on the left of the equation. May be negative: `CO* + O* -> CO2 + 2 *` lumped through an equilibrated `CO* + O* <=> CO2* + *` has rate k theta_CO theta_O / theta_* and declares -1."
+                    "description": "The power of the free-site activity in the forward rate's NUMERATOR. Defaults, when absent, to the number of free sites on the left of the equation. May be negative: `CO* + O* -> CO2 + 2 *` lumped through an equilibrated `CO* + O* <=> CO2* + *` has rate k theta_CO theta_O / theta_* and declares -1."
+                  },
+                  "denominator": {
+                    "type": "object",
+                    "description": "The forward rate is divided by `constant_term + sum over terms of (the named constant times the product of its factors)`. Each term's constant is a FREE PARAMETER of the specification (declared in free_parameters, packed after the step's forward constant), so the denominator's shape is data and its numbers are fitted. With constant_term 1 the denominator is bounded below by one for non-negative coverages, which is what makes a quasi-steady-state lump numerically ordinary where an equilibrium lump is singular.",
+                    "required": [
+                      "terms"
+                    ],
+                    "properties": {
+                      "constant_term": {
+                        "type": "number",
+                        "default": 1.0
+                      },
+                      "terms": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "constant",
+                            "factors"
+                          ],
+                          "properties": {
+                            "constant": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "Name of the free parameter multiplying this term (convention: Q<step><letter>, e.g. Q4a)."
+                            },
+                            "factors": {
+                              "type": "object",
+                              "description": "Adsorbate name or '*' (the free site) -> integer power; a gas species name is allowed, in the mechanism's activity basis.",
+                              "additionalProperties": {
+                                "type": "integer"
+                              }
+                            },
+                            "ratio_of": {
+                              "type": "object",
+                              "required": [
+                                "numerator",
+                                "denominator"
+                              ],
+                              "properties": {
+                                "numerator": {
+                                  "type": "string"
+                                },
+                                "denominator": {
+                                  "type": "string"
+                                }
+                              },
+                              "additionalProperties": false,
+                              "description": "Which two constants of the parent specification this constant is the ratio of (numerator over denominator), so a fit anchored on the parent can seed it. Prose to the integrator, lineage to a reader."
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "additionalProperties": false
                   },
                   "notes": {
                     "type": "string"

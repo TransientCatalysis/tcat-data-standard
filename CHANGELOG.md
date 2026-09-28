@@ -2,8 +2,14 @@
 
 ## 0.9.0 — 2026-09-28 · schema 0.6.0
 
-**A step may declare the power of the vacancy in its forward rate.** `rate_law.site_exponent`,
-optional, integer, possibly negative. It exists for one reason: a step LUMPED through a
+**A step may declare a structured rate law: a numerator vacancy exponent and a rational
+denominator with named constants.** `rate_law.site_exponent` (optional, integer, possibly
+negative) and `rate_law.denominator` (`constant_term` + terms, each a named FREE constant
+times a product of coverage / vacancy factors). The denominator form is the Briggs-Haldane
+quasi-steady-state lump: `CO* + O* -> CO2 + 2 *` with rate k4 theta_CO theta_O / (1 + Q4a
+theta_*), Q4a = k_4/k5, obtained by imposing d theta_CO2*/dt = 0 in the parent and taking
+the fast-intermediate limit at fixed ratio -- bounded below by one, so numerically ordinary
+where the equilibrium lump (site_exponent -1, its Q -> inf corner) is singular. `site_exponent` It exists for one reason: a step LUMPED through a
 quasi-equilibrated intermediate. With `CO* + O* <=> CO2* + *` at equilibrium and
 `CO2* -> CO2 + *` slow, the intermediate's coverage is K theta_CO theta_O / theta_* and the
 CO2 rate is k K theta_CO theta_O / theta_*; the limit K -> 0, k -> inf at fixed product
