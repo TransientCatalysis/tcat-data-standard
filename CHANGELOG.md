@@ -23,6 +23,13 @@ Absent, the rate law is the equation's mass action; no existing record changes m
 Hashed into a specification's id like every science block (`tcat-spec`'s deny-list of prose
 is unchanged). `0.5.0` is frozen with a checksum manifest and retained.
 
+Two additions for thermodynamically consistent reduction, same day: a closure constraint may be
+`equilibrated: true` (the step carries no constant, its K is derived, its rate is a multiplier --
+the consistent form of 'this step is fast'), and a denominator term may be `derived` from two
+named slots (ratio or product) rather than free, so a Briggs-Haldane Q built on a closed reverse
+stays closed. There is deliberately no way to declare a step irreversible AS A REDUCTION: k_-i -> 0
+breaks the cycle constraint; `reversible: false` stays a hypothesis a human writes.
+
 Package 0.8.0. **Needs the PI's written approval as a standards bump (COLLABORATION.md
 section 5); opened as a pull request for that reason.**
 

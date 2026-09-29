@@ -213,7 +213,7 @@
                       "fixed",
                       "equilibrated"
                     ],
-                    "description": "thermodynamic_closure: reverse constant derived from the others plus an overall equilibrium constant. fixed: held at `value`. equilibrated: step assumed at quasi-equilibrium."
+                    "description": "thermodynamic_closure: reverse constant derived from the others plus an overall equilibrium constant. fixed: held at `value`. equilibrated: step assumed at quasi-equilibrium. A closure step with `equilibrated: true` has neither constant free: K derived, rate a multiplier."
                   },
                   "value": {
                     "type": "number"
@@ -227,6 +227,10 @@
                   },
                   "notes": {
                     "type": "string"
+                  },
+                  "equilibrated": {
+                    "type": "boolean",
+                    "description": "With kind `thermodynamic_closure`: the step is ALSO at quasi-equilibrium, so it carries no rate constant at all -- its equilibrium constant is derived by closure and its net rate is the multiplier that keeps the relation satisfied. The thermodynamically consistent form of 'this step is fast': nothing is assumed about the direction, and the cycle constraint still holds."
                   }
                 },
                 "additionalProperties": false
@@ -291,6 +295,32 @@
                               },
                               "additionalProperties": false,
                               "description": "Which two constants of the parent specification this constant is the ratio of (numerator over denominator), so a fit anchored on the parent can seed it. Prose to the integrator, lineage to a reader."
+                            },
+                            "derived": {
+                              "type": "object",
+                              "required": [
+                                "kind",
+                                "of"
+                              ],
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "ratio",
+                                    "product"
+                                  ]
+                                },
+                                "of": {
+                                  "type": "array",
+                                  "minItems": 2,
+                                  "maxItems": 2,
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              "additionalProperties": false,
+                              "description": "When present the term's constant is NOT a free parameter: it is computed from the two named slots (free constants or closure-derived ones, e.g. `k_4~closure` over `k5`) at every evaluation. This is what keeps a Briggs-Haldane lump thermodynamically consistent when the reverse it is built from is itself derived by closure. Hashed, because it changes what the step computes."
                             }
                           },
                           "additionalProperties": false
