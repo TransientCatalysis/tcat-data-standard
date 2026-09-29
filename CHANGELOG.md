@@ -2,6 +2,17 @@
 
 ## 0.9.0 — 2026-09-28 · schema 0.6.0
 
+**Quasi-steady species (2026-09-29, additive within the unreleased 0.6.0).**
+`mechanism.quasi_steady`: species whose coverage has gone to zero in a limit of a parent
+mechanism -- every rate term carrying theta_X^p has had its constant taken to infinity as
+lambda^p while theta_X ~ 1/lambda, so the SCALED coverage w_X = lambda theta_X is an
+algebraic unknown fixed by X's own balance. For the vacancy `*` this is the saturated
+surface: the remaining coverages sum to one and the site balance is the algebraic row. One
+`reference` term per species carries no constant (w_X is in its units) and every other
+scaled term's constant is k / k_ref^p. Motivated by the 186 C CO-oxidation reduction, whose
+two remaining flat directions were exactly these limits (k1 + k2 + k3 on the vacancy,
+k_3 + k4 / 2 on O*). The free-parameter-count advisory counts reference terms out.
+
 **A step may declare a structured rate law: a numerator vacancy exponent and a rational
 denominator with named constants.** `rate_law.site_exponent` (optional, integer, possibly
 negative) and `rate_law.denominator` (`constant_term` + terms, each a named FREE constant

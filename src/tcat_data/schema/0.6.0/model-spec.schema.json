@@ -339,6 +339,55 @@
             "additionalProperties": false
           }
         },
+        "quasi_steady": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Species whose coverage has gone to ZERO in a quasi-steady-state limit of a parent mechanism: every rate term that carries the species' coverage theta_X to a power p has had its constant taken to infinity as lambda^p while theta_X -> 0 as 1/lambda, so the SCALED coverage w_X = lambda theta_X stays finite and is an algebraic unknown fixed by the species' own balance (0 = production - consumption; for the vacancy '*', the site balance sum(theta) = 1 of the remaining adsorbates -- the SATURATED-SURFACE limit). The absolute scale of those constants is not identifiable in the limit, so ONE term, the `reference`, carries no constant (it is 1: w_X is measured in its units), and every other term carrying theta_X^p has the constant k / k_reference^p. The species keeps its place in `adsorbates` (its coverage is identically zero; w_X is reported instead). Absent, no species is quasi-steady and no record changes meaning. Only mass-action steps may carry a quasi-steady species' coverage; a denominator, a negative site exponent or an equilibrated step beside one is refused by the integrator.",
+          "items": {
+            "type": "object",
+            "required": [
+              "species",
+              "reference"
+            ],
+            "properties": {
+              "species": {
+                "type": "string",
+                "minLength": 1,
+                "description": "An adsorbate name, or '*' for the free site.",
+                "examples": [
+                  "*",
+                  "O*"
+                ]
+              },
+              "reference": {
+                "type": "object",
+                "required": [
+                  "step",
+                  "direction"
+                ],
+                "description": "The rate term whose constant w_X absorbs: it must carry theta_X to the first power.",
+                "properties": {
+                  "step": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "direction": {
+                    "type": "string",
+                    "enum": [
+                      "forward",
+                      "reverse"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "notes": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
         "activity_basis": {
           "type": "string",
           "enum": [
