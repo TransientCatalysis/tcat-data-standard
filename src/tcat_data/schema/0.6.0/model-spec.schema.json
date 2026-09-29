@@ -383,6 +383,15 @@
               },
               "notes": {
                 "type": "string"
+              },
+              "gauge": {
+                "type": "object",
+                "minProperties": 2,
+                "maxProperties": 2,
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "description": "JOINT (thermodynamic) specifications only: the parameter pair the limit made unmeasurable, held at these values -- the species' own (dH, dS) for an adsorbate, the reference term's forward (prefactor, barrier) pair for the vacancy. The limit is G_X -> +inf with every transition state and every other species fixed, so the child does not depend on where along that direction the pair sits; the values fix a representative. A quantity that moves along the limit is not measured whatever value is written here."
               }
             },
             "additionalProperties": false
