@@ -41,8 +41,8 @@ named slots (ratio or product) rather than free, so a Briggs-Haldane Q built on 
 stays closed. There is deliberately no way to declare a step irreversible AS A REDUCTION: k_-i -> 0
 breaks the cycle constraint; `reversible: false` stays a hypothesis a human writes.
 
-Package 0.8.0. **Needs the PI's written approval as a standards bump (COLLABORATION.md
-section 5); opened as a pull request for that reason.**
+**Approved by the PI as a standards bump on 2026-09-30 (COLLABORATION.md
+section 5)**, together with `thermodynamics.reverse_barriers` and `steps[].modified`.
 
 ## 0.8.0 — 2026-09-18 · schema 0.5.0
 
