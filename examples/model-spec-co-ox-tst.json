@@ -26,7 +26,8 @@
     "gas_data_source": "gas-thermo-codata-shomate-2026-08-25",
     "pressure_Pa": 101325.0,
     "notes": "Prefactors are ANCHORED, not fitted: kT/h for a surface step, the collision-limited impingement rate for a step whose forward side consumes a gas molecule. Fitted forward parameters are the activation entropy and enthalpy, so dS# = 0 is textbook transition-state theory. Constants are per-site on the mole-fraction basis, identical to the axial twin's, so the same anchors apply and the two reactor models remain comparable by subtraction. site_area_m2 is the one assumption the record does not measure. ON THE FITTED SCALE AND dSact_k5: the observable is scale * k5 * theta(CO2*), which invites the conclusion that the two enter through one product and only their sum is estimable. MEASURED on this campaign (2026-08-31) that is FALSE: theta(CO2*) itself depends on k5 -- a faster step drains the intermediate it consumes -- so compensating dSact_k5 by -dS/(R ln10) in the scale moved the residual by 32-52% of its range rather than leaving it fixed. The pair is strongly correlated, not degenerate, and the exact-degeneracy reading holds only in the fast-desorption limit where theta(CO2*) is set by the other steps. The axial twin does not pose the question at all, because the bed supplies the coupling from the measured loading instead of fitting it.",
-    "site_area_m2": 1e-19
+    "site_area_m2": 1e-19,
+    "reverse_barriers": "non-negative"
   },
   "mechanism": {
     "sites": [

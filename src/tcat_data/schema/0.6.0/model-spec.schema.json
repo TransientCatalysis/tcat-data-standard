@@ -599,6 +599,14 @@
           "type": "number",
           "exclusiveMinimum": 0,
           "description": "Area per active site, m^2. Required in spirit by 'tst-detailed-balance' and meaningless without it: the collision anchor is an impingement flux per unit AREA, while a manifest reports site density per unit MASS, and converting between them needs a specific surface area that transient records do not carry. So this is the one declared assumption behind the adsorption anchor, and it is specification content because the value used is part of what the fitted activation entropies MEAN. ~1e-19 m^2 (10 A^2) is the conventional single-site area. NOTE that an active-site FRACTION is deliberately not a parameter anywhere: it would enter as -R ln f, perfectly correlated with dS#, so only the combination is estimable and fitting both would be structurally non-identifiable."
+        },
+        "reverse_barriers": {
+          "type": "string",
+          "enum": [
+            "unconstrained",
+            "non-negative"
+          ],
+          "description": "What the fit requires of each step's REVERSE barrier. The forward barrier is bounded by the parameter box (dH# >= 0); the reverse barrier is dH# minus the step's reaction enthalpy (adsorbate enthalpies plus the gas-phase term), a linear function of several parameters. 'non-negative' requires it to be >= 0 at every run temperature -- every transition state above both of its end states -- as linear inequality constraints on the fit, carried onto every reduced model wherever a limit leaves them defined. Absent = 'unconstrained' (the behaviour before 2026-09-30). Hashed, because the constraint changes the feasible set and hence the optimum."
         }
       }
     },
