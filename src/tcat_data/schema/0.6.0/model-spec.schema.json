@@ -334,6 +334,19 @@
                   }
                 },
                 "additionalProperties": false
+              },
+              "modified": {
+                "type": "array",
+                "uniqueItems": true,
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "forward",
+                    "reverse"
+                  ]
+                },
+                "description": "Directions whose rate constant is a combination of a parent mechanism's constants (written by a reduction: k2 / k1 on a saturated surface, K4 k5 for a lumped step, k_-p k_-j / k_j for a reversible Briggs-Haldane lump). The constant's name carries a prime (k2', k_4') so that a modified constant is never read as the elementary one of the same name; `extensions.parameter_lineage` says what it is."
               }
             },
             "additionalProperties": false
