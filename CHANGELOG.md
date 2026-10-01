@@ -1,5 +1,49 @@
 # Changelog
 
+## 0.9.0 — 2026-09-28 · schema 0.6.0
+
+**Quasi-steady species (2026-09-29, additive within the unreleased 0.6.0).**
+`mechanism.quasi_steady`: species whose coverage has gone to zero in a limit of a parent
+mechanism -- every rate term carrying theta_X^p has had its constant taken to infinity as
+lambda^p while theta_X ~ 1/lambda, so the SCALED coverage w_X = lambda theta_X is an
+algebraic unknown fixed by X's own balance. For the vacancy `*` this is the saturated
+surface: the remaining coverages sum to one and the site balance is the algebraic row. One
+`reference` term per species carries no constant (w_X is in its units) and every other
+scaled term's constant is k / k_ref^p. Motivated by the 186 C CO-oxidation reduction, whose
+two remaining flat directions were exactly these limits (k1 + k2 + k3 on the vacancy,
+k_3 + k4 / 2 on O*). The free-parameter-count advisory counts reference terms out.
+
+**A step may declare a structured rate law: a numerator vacancy exponent and a rational
+denominator with named constants.** `rate_law.site_exponent` (optional, integer, possibly
+negative) and `rate_law.denominator` (`constant_term` + terms, each a named FREE constant
+times a product of coverage / vacancy factors). The denominator form is the Briggs-Haldane
+quasi-steady-state lump: `CO* + O* -> CO2 + 2 *` with rate k4 theta_CO theta_O / (1 + Q4a
+theta_*), Q4a = k_4/k5, obtained by imposing d theta_CO2*/dt = 0 in the parent and taking
+the fast-intermediate limit at fixed ratio -- bounded below by one, so numerically ordinary
+where the equilibrium lump (site_exponent -1, its Q -> inf corner) is singular. `site_exponent` It exists for one reason: a step LUMPED through a
+quasi-equilibrated intermediate. With `CO* + O* <=> CO2* + *` at equilibrium and
+`CO2* -> CO2 + *` slow, the intermediate's coverage is K theta_CO theta_O / theta_* and the
+CO2 rate is k K theta_CO theta_O / theta_*; the limit K -> 0, k -> inf at fixed product
+removes CO2* and leaves one step, `CO* + O* -> CO2 + 2 *`, whose forward rate divides by the
+vacancy -- the site the equilibrium released before the slow step. The equation's mass
+action would read theta_*^0 there, so the grammar alone could not carry the limit that a
+fit's flat direction (K4 and k5 loaded with opposite signs: the data sees only their
+product) asks for. Recorded on the step because it changes what the step's constant MEANS.
+
+Absent, the rate law is the equation's mass action; no existing record changes meaning.
+Hashed into a specification's id like every science block (`tcat-spec`'s deny-list of prose
+is unchanged). `0.5.0` is frozen with a checksum manifest and retained.
+
+Two additions for thermodynamically consistent reduction, same day: a closure constraint may be
+`equilibrated: true` (the step carries no constant, its K is derived, its rate is a multiplier --
+the consistent form of 'this step is fast'), and a denominator term may be `derived` from two
+named slots (ratio or product) rather than free, so a Briggs-Haldane Q built on a closed reverse
+stays closed. There is deliberately no way to declare a step irreversible AS A REDUCTION: k_-i -> 0
+breaks the cycle constraint; `reversible: false` stays a hypothesis a human writes.
+
+**Approved by the PI as a standards bump on 2026-09-30 (COLLABORATION.md
+section 5)**, together with `thermodynamics.reverse_barriers` and `steps[].modified`.
+
 ## 0.8.0 — 2026-09-18 · schema 0.5.0
 
 **A fourth location form, `uri`, and the exactly-one rule stops being quadratic.**

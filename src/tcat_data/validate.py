@@ -892,6 +892,9 @@ def _advisory_checks(document: Any, kind: str, version: str) -> list[Problem]:
                 implied += 1
                 if step.get("reversible") and not step.get("constraint"):
                     implied += 1
+            # A quasi-steady species' reference term carries no constant: in the
+            # limit its constant is the unit the scaled coverage is measured in.
+            implied -= len(body.get("quasi_steady") or [])
             if implied != len(declared):
                 out.append(
                     Problem(
