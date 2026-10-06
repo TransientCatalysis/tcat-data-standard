@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.10.0 — 2026-10-05 · schema 0.7.0
+
+Approved by the PI 2026-10-05 (COLLABORATION.md section 5). Package 0.9.0. `0.6.0` frozen
+with a checksum manifest and added to the retention test; examples and fixtures regenerated.
+
+**A campaign may be frozen.** `campaign.freeze` (`date`, `reason`, `environment`, optional
+`by`). Present means the campaign is checked against its own pins -- installed from the
+environment lock it names, written at freeze time -- and never against the toolchain's main,
+so tools can move on without making a finished study stale. A frozen campaign must be
+`complete` or `abandoned`. Absent, nothing changes meaning.
+
+**A campaign may hold notebooks.** `campaign.held`: each entry names a committed notebook,
+why and when it is held, and the tool identities it ran on. Inside a campaign that otherwise
+tracks main, a held notebook is checked against its own identities rather than the pins, so
+an expensive exhibit is not re-executed on every tool change -- and it must still have run on
+exactly those identities, so a hold never hides a notebook that ran on something else.
+
 ## 0.9.0 — 2026-09-28 · schema 0.6.0
 
 **Quasi-steady species (2026-09-29, additive within the unreleased 0.6.0).**
