@@ -1,6 +1,6 @@
 # tcat Data Standard
 
-<!-- VERSION: 0.9.0 -->
+<!-- VERSION: 0.10.0 -->
 <!-- MAINTAINER: A. J. Medford (Georgia Tech) -->
 <!-- LAST_REVIEWED: 2026-09-01 -->
 <!--
@@ -16,9 +16,9 @@
   against main. See CONTRIBUTING.md.
 -->
 
-**Standards version:** 0.9.0 — what this document says. Moves only on a normative change, and that needs written approval (`COLLABORATION.md` section 5). Read it from `tcat_data.STANDARDS_VERSION`.
+**Standards version:** 0.10.0 — what this document says. Moves only on a normative change, and that needs written approval (`COLLABORATION.md` section 5). Read it from `tcat_data.STANDARDS_VERSION`.
 **Package version:** separate on purpose, and free to move — `tcat_data.__version__`, `pip show tcat-data-standard`. A tooling fix or a new `tcat-spoke` feature is not a change to what a valid record is, and before 2026-09-09 one number served both, so every tooling release spent a standards version.
-**Schema version:** 0.6.0 (`src/tcat_data/schema/0.6.0/`; `0.5.0/`, `0.4.0/`, `0.3.0/`, `0.2.0/` and `0.1.0/` are frozen and retained)
+**Schema version:** 0.7.0 (`src/tcat_data/schema/0.7.0/`; `0.6.0/`, `0.5.0/`, `0.4.0/`, `0.3.0/`, `0.2.0/` and `0.1.0/` are frozen and retained)
 **Status:** accepted by the team, September 2026, and exercised against a real campaign — 26 PSU CO-oxidation PRBS runs across four batches, ingested and validating. Six schema changes came out of that exercise rather than out of anticipation, which is the difference between this version and the last.
 
 ---
@@ -680,6 +680,7 @@ route to a person.
 
 | Version | Date | Change |
 |---|---|---|
+| 0.10.0 | 2026-10-05 | **Schema `0.7.0` is minted and `0.6.0` is frozen.** A campaign may be **frozen** and may **hold** notebooks, so re-running every result whenever a tool changes stops being the only way to stay valid. `campaign.freeze` (`date`, `reason`, `environment`, optional `by`): present means the campaign is checked against its OWN pins, installed from an environment lock written at freeze time, and never against the toolchain's main; it requires `status` complete or abandoned. `campaign.held`: notebooks held at the identities they last ran on inside a campaign that otherwise tracks main, for exhibits too expensive to re-execute on every tool change; a held notebook must still have run on exactly its held identities, and is reported as held rather than passed. Freezing, unfreezing, holding and releasing are recorded decisions (`tcat-campaign freeze|unfreeze|hold|release`). Both blocks are optional and additive: absent, a campaign means what it meant under 0.6.0. Approved by the PI 2026-10-05 (COLLABORATION section 5). |
 | 0.7.0 | 2026-09-09 | **Schema `0.4.0`: `measurement_type` is a free string, and an unanticipated modality is presumed experimental.** Through 0.3.0 it was an enum of eight, so `raman`, `drifts` and `tpd` were refused for their NAME while `channel.quantity` -- what the instrument actually measures -- was already free, and `surface_coverage` validated. The standard should not decide which experiments exist. An unknown value now validates with an advisory nudge toward shared vocabulary, and the protocol requirement is stated as "not `characterization` or `computational`" so a new modality inherits it rather than escaping it silently; the exemption is the thing that must be named. No existing record changes meaning. `0.3.0` is frozen with a checksum manifest. |
 | 0.6.0 | 2026-09-09 | **Skeletons ship with their standards; the template repositories are retired.** `tcat-spoke init --kind data|tool|campaign <new-dir>` materialises the skeleton from the installed standard that defines that kind (`tcat_data.scaffold`) and then fills it as before; `tcat-campaign init` is the campaign alias. A skeleton kept in a separate repository drifted from its standard; one shipped inside it cannot. |
 | 0.5.1 | 2026-09-09 | **The identity digest hashes normalised TEXT, not an AST dump.** `ast.dump` differs between Python 3.11 and 3.12, so the same tool source produced two digests -- two identities for one tool depending on who ran it, the silent split the identity rule exists to prevent (measured on `tcat_spec`: 31d9dfe7 vs a5cc39be). `normalised_source_text` removes docstrings (by AST position) and comments (by token), strips trailing whitespace and blank lines, and that text is hashed; identical on both interpreters. Every digest moves once. Reformatting now moves a digest where it did not before; interpreter-independence is worth more. |

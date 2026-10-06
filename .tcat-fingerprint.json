@@ -3,8 +3,8 @@
   "format": 2,
   "packages": {
     "tcat_data": {
-      "version": "0.8.0",
-      "digest": "69da48cefa8a652745d34df3ff907a8d7048eb766b3dff4ace8b468b8b576a11",
+      "version": "0.9.0",
+      "digest": "5a478ca3fb76e2d42d6b609069fbf8cbc7eca26c04da99ced74c7a2859690218",
       "files": 16
     }
   }

@@ -9,8 +9,8 @@ abstract: >-
   simultaneously-acquired modalities, sensor models as versioned citable
   artifacts, and parameter uncertainty stored as a sample rather than a summary.
 type: software
-version: 0.8.0
-date-released: "2026-09-09"
+version: 0.9.0
+date-released: "2026-10-05"
 license: MIT
 license-url: "https://github.com/TransientCatalysis/tcat-data-standard/blob/main/LICENSE"
 repository-code: "https://github.com/TransientCatalysis/tcat-data-standard"
