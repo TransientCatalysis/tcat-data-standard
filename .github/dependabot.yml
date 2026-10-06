@@ -4,15 +4,26 @@
 # GitHub last force-pushed to that tag. A pin with nobody maintaining it is
 # just an old version, so dependabot owns the bumps and this file is what
 # makes SHA pinning sustainable rather than a chore.
+#
+# Monthly and grouped (PI, 2026-10-05): one weekly PR per action per repository
+# came to 56 open PRs across the org, which is noise nobody reads. Minor and
+# patch bumps share one PR; a major bump gets its own, because only the first
+# is eligible for dependabot-automerge.yml.
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
+      interval: monthly
+    groups:
+      actions-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+      actions-major:
+        patterns: ["*"]
+        update-types: ["major"]
   - package-ecosystem: pip
     directory: "/"
     schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
+      interval: monthly
+    open-pull-requests-limit: 0
