@@ -53,3 +53,36 @@ def test_the_skeleton_source_is_the_installed_standard(tmp_path):
     assert scaffold.source("data").is_dir()
     with pytest.raises(LookupError, match="unknown kind"):
         scaffold.source("nonsense")
+
+
+def test_a_spoke_in_a_personal_account_carries_its_owners_url_and_title(tmp_path):
+    """`--owner` (or `owner` in the answers): a student's spoke in their own account
+    is cited at its own url under its own title, while the links to the standards
+    still point where the toolchain lives. The owner is init-only -- the git remote
+    records it -- so it never reaches the manifest the schema validates."""
+    root = tmp_path / "echem-data"
+    rc = tcat_spoke(["init", str(root), "--kind", "data", "--answers",
+                     _answers(tmp_path, spoke_id="echem-data", kind="data", name="Potential steps", owner="jdoe")])
+    assert rc == 0
+    cff = (root / "CITATION.cff").read_text()
+    assert 'repository-code: "https://github.com/jdoe/echem-data"' in cff
+    assert 'title: "Potential steps"' in cff, "a study outside the collaboration is not titled as one of its spokes"
+    assert "github.com/TransientCatalysis/tcat-data-standard" in cff, "the standard it conforms to has not moved"
+    assert "owner" not in json.loads((root / ".tcat-spoke.json").read_text())
+    assert tcat_spoke(["check", str(root)]) == 0
+
+
+def test_the_owner_flag_overrides_the_answers_and_the_default_is_the_org(tmp_path):
+    a = tcat_spoke(["init", str(tmp_path / "a"), "--kind", "data", "--owner", "postdoc-lab", "--answers",
+                    _answers(tmp_path, spoke_id="a", kind="data", owner="jdoe")])
+    assert a == 0 and "github.com/postdoc-lab/a" in (tmp_path / "a" / "CITATION.cff").read_text()
+    b = tcat_spoke(["init", str(tmp_path / "b"), "--kind", "data", "--answers",
+                    _answers(tmp_path, spoke_id="b", kind="data", name="B")])
+    cff = (tmp_path / "b" / "CITATION.cff").read_text()
+    assert b == 0 and "github.com/TransientCatalysis/b" in cff and "transient kinetics spoke" in cff
+
+
+def test_an_owner_that_is_not_a_github_account_name_is_refused(tmp_path, capsys):
+    rc = tcat_spoke(["init", str(tmp_path / "c"), "--kind", "data", "--owner", "https://github.com/jdoe",
+                     "--answers", _answers(tmp_path, spoke_id="c", kind="data")])
+    assert rc == 1 and "not a GitHub account name" in capsys.readouterr().err
