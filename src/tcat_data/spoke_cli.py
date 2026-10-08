@@ -245,6 +245,7 @@ def _rename_package(root: Path, manifest: dict[str, Any], implements: str | None
         new = text.replace(old_pkg, package).replace(old_cmd, command)
         if manifest.get("kind") != "campaign":
             new = _point_at_declaration(new, command, implements)
+            new = new.replace('spoke="REPLACE-spoke-name"', f'spoke="{manifest["spoke_id"]}"')
         if new != text:
             path.write_text(new, encoding="utf-8")
             changed.append(str(path.relative_to(root)))

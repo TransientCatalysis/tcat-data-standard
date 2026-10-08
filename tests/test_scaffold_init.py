@@ -86,3 +86,17 @@ def test_an_owner_that_is_not_a_github_account_name_is_refused(tmp_path, capsys)
     rc = tcat_spoke(["init", str(tmp_path / "c"), "--kind", "data", "--owner", "https://github.com/jdoe",
                      "--answers", _answers(tmp_path, spoke_id="c", kind="data")])
     assert rc == 1 and "not a GitHub account name" in capsys.readouterr().err
+
+
+def test_the_data_skeletons_example_declares_the_installed_schema_and_fails_only_on_its_placeholders():
+    """Newcomers copy it. At 0.2.0 it refused `protocol: custom` with an error that
+    never mentioned the version (found by an outside-user walkthrough, 2026-10-08)."""
+    from tcat_data import scaffold, validate_dataset
+    from tcat_data.schema import CURRENT_SCHEMA_VERSION
+
+    doc = json.loads((scaffold.source("data") / "manifests" / "_example.json").read_text())
+    assert doc["schema_version"] == CURRENT_SCHEMA_VERSION
+    doc = {k: v for k, v in doc.items() if not k.startswith("$comment")}
+    errors = validate_dataset(doc).errors
+    assert all("REPLACE" in json.dumps(e.message) or "REPLACE" in e.message for e in errors), \
+        [f"{e.pointer}: {e.message}" for e in errors]
