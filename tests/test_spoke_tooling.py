@@ -223,7 +223,7 @@ def _analysis_template(tmp_path: Path) -> Path:
 
 def _analysis_answers(tmp_path: Path) -> str:
     m = _manifest(kind="analysis", spoke_id="gusmao-cqbax", name="Stiff DAE fitting")
-    return _answers(tmp_path, m)
+    return _answers(tmp_path, {**m, "implements": "tcat-fit"})
 
 
 def test_init_renames_the_example_package_to_this_spokes_own(tmp_path):

@@ -15,6 +15,18 @@ The validator names the input missing both, and an input channel absent from the
 
 **Also in package 0.10.0 (tooling):**
 
+**`tcat-spoke init` for a tool of one's own** (found by an outside-user walkthrough):
+- A tool spoke asks which HUB tool it implements. Left blank (the default), the tool is the
+  spoke's own:
+  - its command is `tcat-<name>`, with no doubled `tcat_tcat_` package;
+  - the skeleton's `declarations/<command>.tool.json` becomes its local declaration;
+  - tests and CI check it with `tcat-conform --declaration`.
+- `--answers` fills `kind` and `standard_version` from `--kind` (and accepts `tool`). The keys
+  are listed in `init --help`.
+- A data spoke's `.standard-version` is pinned to the installed standard.
+- Placeholders are filled in `.py` files, and `[SPOKE NAME]` / `[LAB OR CAMPAIGN NAME]` are
+  filled.
+
 **`tcat-spoke init --owner <account>`** (also `owner` in `--answers`; the interactive
 prompt asks, default `TransientCatalysis`). A spoke or campaign may live in someone's own
 GitHub account: its url, its CITATION title, and -- outside the org -- its copyright line
