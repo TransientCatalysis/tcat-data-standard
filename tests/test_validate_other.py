@@ -328,11 +328,15 @@ def test_each_protocol_owns_its_parameter_space():
     assert not validate_protocol(doc).ok
 
 
-def test_base_conditions_require_temperature_and_pressure():
+def test_base_conditions_require_temperature_and_since_0_8_0_not_pressure():
+    """Pressure became optional in 0.8.0 (a liquid-phase experiment has none worth
+    recording); a record declaring 0.7.0 is still held to the rule it was written under."""
     doc = {"protocol": "step_change",
            "parameters": {"species": "O2", "from_mol_frac": 0.0, "to_mol_frac": 0.05, "step_at_s": 10.0},
            "base_conditions": {"temperature_K": 573.0}}
-    assert not validate_protocol(doc).ok
+    assert validate_protocol(doc).ok
+    assert not validate_protocol({**doc, "schema_version": "0.7.0"}).ok
+    assert not validate_protocol({**doc, "base_conditions": {"pressure_kPa": 101.3}}).ok
 
 
 def test_unknown_protocol_names_are_rejected():
