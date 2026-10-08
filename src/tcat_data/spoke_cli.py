@@ -43,6 +43,15 @@ from . import scaffold as _scaffold
 
 _ROLES = ("data_steward", "instrument_owner", "analysis_owner", "pi")
 
+#: Where the toolchain lives, and the copyright line its own repositories carry.
+#: A spoke or campaign may live in any account (`init --owner`): links to the
+#: standards stay pointed here, while the spoke's own url, copyright holder and
+#: citation title become its owner's. Init-only: the owner is never written into
+#: a manifest, because the git remote already records it and two records of one
+#: fact drift.
+HOME_OWNER = "TransientCatalysis"
+HOME_COPYRIGHT = "Copyright (c) 2026 A. J. Medford and the TransientCatalysis collaboration"
+
 
 def _ask(prompt: str, default: str | None = None, *, required: bool = True) -> str:
     suffix = f" [{default}]" if default else ""
@@ -95,6 +104,7 @@ def _gather(root: Path, answers: dict[str, Any] | None, kind: str | None = None)
             "spoke_id": _ask("Campaign id (lowercase, hyphens)", _default_slug(root)),
             "kind": "campaign",
             "name": _ask("Title -- what the study asks, in one line", required=False),
+            "owner": _ask("GitHub account or org that will hold this repository", HOME_OWNER),
             "stewards": _ask_stewards(),
         }
     kind = {"tool": "analysis", "data": "data"}.get(kind) or _ask_choice("Kind", ("data", "analysis"), "data")
@@ -103,6 +113,7 @@ def _gather(root: Path, answers: dict[str, Any] | None, kind: str | None = None)
         "spoke_id": _ask("Spoke id (lowercase, hyphens)", _default_slug(root)),
         "kind": kind,
         "name": _ask("Human-readable name", required=False),
+        "owner": _ask("GitHub account or org that will hold this repository", HOME_OWNER),
         "stewards": _ask_stewards(),
     }
     if kind == "data":
@@ -202,7 +213,7 @@ def _rename_package(root: Path, manifest: dict[str, Any]) -> list[str]:
     return changed
 
 
-def _fill_citation(root: Path, manifest: dict[str, Any]) -> bool:
+def _fill_citation(root: Path, manifest: dict[str, Any], owner: str = HOME_OWNER) -> bool:
     """Fill CITATION.cff from the manifest.
 
     Separate from the token substitution because this file is structured rather
@@ -231,7 +242,10 @@ def _fill_citation(root: Path, manifest: dict[str, Any]) -> bool:
             skipping_authors = False
 
         if line.startswith("title:"):
-            out.append(f'title: "{name} -- transient kinetics spoke"')
+            # "Transient kinetics" names the collaboration; a study in another
+            # domain, in someone's own account, is titled by what it is.
+            out.append(f'title: "{name} -- transient kinetics spoke"' if owner == HOME_OWNER
+                       else f'title: "{name}"')
         elif line.strip().startswith("REPLACE. What"):
             kind = manifest.get("kind", "data")
             out.append(
@@ -245,10 +259,7 @@ def _fill_citation(root: Path, manifest: dict[str, Any]) -> bool:
         elif line.startswith("date-released:"):
             out.append(f'date-released: "{datetime.date.today().isoformat()}"')
         elif line.startswith("repository-code:") and "REPLACE" in line:
-            out.append(
-                f'repository-code: "https://github.com/TransientCatalysis/'
-                f'{manifest["spoke_id"]}"'
-            )
+            out.append(f'repository-code: "https://github.com/{owner}/{manifest["spoke_id"]}"')
         elif line.startswith("authors:"):
             out.append("authors:")
             for st in stewards:
@@ -271,7 +282,7 @@ def _fill_citation(root: Path, manifest: dict[str, Any]) -> bool:
     return True
 
 
-def _fill_pyproject(root: Path, manifest: dict[str, Any]) -> bool:
+def _fill_pyproject(root: Path, manifest: dict[str, Any], owner: str = HOME_OWNER) -> bool:
     """Fill an analysis spoke's pyproject from the manifest.
 
     The template leaves `name`, `description`, `authors` and the Homepage url as
@@ -308,12 +319,43 @@ def _fill_pyproject(root: Path, manifest: dict[str, Any]) -> bool:
         )
     text = text.replace(
         "https://github.com/TransientCatalysis/REPLACE",
-        f"https://github.com/TransientCatalysis/{manifest['spoke_id']}",
+        f"https://github.com/{owner}/{manifest['spoke_id']}",
     )
     if text != before:
         path.write_text(text, encoding="utf-8")
         return True
     return False
+
+
+def _fill_owner(root: Path, manifest: dict[str, Any], owner: str) -> list[Path]:
+    """Make the skeleton its owner's: the spoke's own url everywhere, and -- outside
+    the home org -- the copyright line, which would otherwise assign a student's
+    work in their own account to a collaboration they are not part of.
+
+    Links to the standards are left alone; they are where the toolchain lives
+    whoever owns the spoke. Runs before the citation and pyproject fills, which
+    would otherwise have written the home org into the url first.
+    """
+    import datetime
+
+    url_old = f"https://github.com/{HOME_OWNER}/REPLACE"
+    url_new = f"https://github.com/{owner}/{manifest['spoke_id']}"
+    holders = [s["name"] for s in (manifest.get("stewards") or []) if s.get("name")]
+    holder = f"Copyright (c) {datetime.date.today().year} {', '.join(holders) or owner}"
+    touched: list[Path] = []
+    for path in sorted(root.rglob("*")):
+        if not path.is_file() or ".git" in path.parts:
+            continue
+        if path.suffix not in {".md", ".cff", ".toml"} and not path.name.startswith("LICENSE"):
+            continue
+        text = path.read_text(encoding="utf-8")
+        new = text.replace(url_old, url_new)
+        if owner != HOME_OWNER:
+            new = new.replace(HOME_COPYRIGHT, holder)
+        if new != text:
+            path.write_text(new, encoding="utf-8")
+            touched.append(path.relative_to(root))
+    return touched
 
 
 def _write_codeowners(root: Path, manifest: dict[str, Any]) -> bool:
@@ -368,6 +410,11 @@ def _cmd_init(args: argparse.Namespace) -> int:
 
     answers = json.loads(Path(args.answers).read_text()) if args.answers else None
     manifest = _gather(root, answers, "campaign" if is_campaign else kind)
+    owner = args.owner or manifest.pop("owner", None) or HOME_OWNER
+    manifest.pop("owner", None)
+    if not re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})", owner):
+        print(f"tcat-spoke init: --owner {owner!r} is not a GitHub account name", file=sys.stderr)
+        return 1
 
     if is_campaign:
         # No .tcat-spoke.json: the record is the manifest. Everything else that
@@ -378,11 +425,13 @@ def _cmd_init(args: argparse.Namespace) -> int:
             print("filled campaign.json (id, title); `tcat-campaign pin .` writes the pins")
         for rel in _fill_placeholders(root, manifest):
             print(f"filled placeholders in {rel}")
-        if _fill_citation(root, manifest):
+        for rel in _fill_owner(root, manifest, owner):
+            print(f"made {rel} {owner}'s")
+        if _fill_citation(root, manifest, owner):
             print("filled CITATION.cff from the stewards block")
         for line in _rename_package(root, manifest):
             print(f"renamed: {line}")
-        if _fill_pyproject(root, manifest):
+        if _fill_pyproject(root, manifest, owner):
             print("filled pyproject.toml")
         if _write_codeowners(root, {**manifest, "kind": "analysis"}):
             print(f"wrote {CODEOWNERS}")
@@ -391,6 +440,7 @@ def _cmd_init(args: argparse.Namespace) -> int:
         print("\nNext, once the toolchain is installed:")
         print(f"  tcat-campaign pin {root}     # record the identities this study runs on")
         print(f"  tcat-campaign check {root}   # the gate, locally and in CI")
+        _print_outside_note(owner)
         return 0
 
     report = validate(manifest, "spoke")
@@ -403,13 +453,15 @@ def _cmd_init(args: argparse.Namespace) -> int:
 
     for rel in _fill_placeholders(root, manifest):
         print(f"filled placeholders in {rel}")
-    if _fill_citation(root, manifest):
+    for rel in _fill_owner(root, manifest, owner):
+        print(f"made {rel} {owner}'s")
+    if _fill_citation(root, manifest, owner):
         print("filled CITATION.cff from the stewards block")
 
     if manifest.get("kind") == "analysis":
         for line in _rename_package(root, manifest):
             print(f"renamed: {line}")
-        if _fill_pyproject(root, manifest):
+        if _fill_pyproject(root, manifest, owner):
             print("filled pyproject.toml from the manifest")
         if (root / "src").is_dir():
             write_fingerprint(root)
@@ -436,7 +488,21 @@ def _cmd_init(args: argparse.Namespace) -> int:
         print("\nAdvice on the manifest:", file=sys.stderr)
         for w in report.warnings:
             print(f"  {w.pointer}: {w.message}", file=sys.stderr)
+    _print_outside_note(owner)
     return 0
+
+
+def _print_outside_note(owner: str) -> None:
+    """The one thing an outside repository needs that init cannot do for it."""
+    if owner == HOME_OWNER:
+        return
+    print(
+        f"\nThis repository lives in {owner}, outside {HOME_OWNER}, so the org's\n"
+        "TCAT_HUB_TOKEN secret does not reach it. Before CI can install the private\n"
+        "toolchain, add a REPOSITORY secret named TCAT_HUB_TOKEN holding a classic\n"
+        "personal access token (`repo` scope) from an account that can read the org:\n"
+        f"  gh secret set TCAT_HUB_TOKEN --repo {owner}/<repo>"
+    )
 
 
 def _cmd_codeowners(args: argparse.Namespace) -> int:
@@ -534,6 +600,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--kind", choices=("data", "tool", "campaign"),
                    help="which skeleton to write into a NEW directory; each ships with its standard")
     p.add_argument("--answers", help="a JSON file of answers, so an agent can drive this")
+    p.add_argument("--owner", help=f"the GitHub account or org that will hold the repository "
+                   f"(default {HOME_OWNER}; also `owner` in --answers). Outside the org, the "
+                   "spoke's url, copyright and citation are its owner's; the toolchain stays where it is")
     p.add_argument("--force", action="store_true", help="overwrite an existing manifest")
     p.set_defaults(func=_cmd_init)
 

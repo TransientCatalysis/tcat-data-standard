@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased — tooling, not standards
+
+**`tcat-spoke init --owner <account>`** (also `owner` in `--answers`; the interactive
+prompt asks, default `TransientCatalysis`). A spoke or campaign may live in someone's own
+GitHub account: its url, its CITATION title, and -- outside the org -- its copyright line
+become the owner's, while every link to the standards still points at the org. The owner is
+init-only and never written to a manifest (the git remote records it). An outside repository
+is told at the end of init that CI needs a repository secret `TCAT_HUB_TOKEN`. No schema
+change; `tcat_data` is outside every tool identity (`import_closure` ignores it), so no
+artifact id moves.
+
 ## 0.10.0 — 2026-10-05 · schema 0.7.0
 
 Approved by the PI 2026-10-05 (COLLABORATION.md section 5). Package 0.9.0. `0.6.0` frozen
