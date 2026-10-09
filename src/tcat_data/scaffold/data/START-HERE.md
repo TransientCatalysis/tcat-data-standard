@@ -53,20 +53,17 @@ update rather than a migration. The one shape worth avoiding is one repository
 per dataset, because a repository is a unit of review and access control and
 neither of those varies per dataset.
 
-Then clone it:
+Then put it under git and give it a home -- in the org, or in your own account if
+you made it with `--owner <your-account>`:
 
 ```bash
-git clone https://github.com/TransientCatalysis/<your-repo>.git
-cd <your-repo>
+cd <your-repo> && git init && git add -A && git commit -m "spoke skeleton"
+gh repo create <owner>/<your-repo> --private --source . --push
 ```
 
-## 2. Run one command
+## 2. What init asked, and wrote
 
-```bash
-tcat-spoke init
-```
-
-It asks about eight questions and then writes everything: the spoke manifest,
+It asked about eight questions and then wrote everything: the spoke manifest,
 your `.github/CODEOWNERS`, your `CITATION.cff` with real authors and ORCIDs, and
 it fills in every placeholder in the README.
 

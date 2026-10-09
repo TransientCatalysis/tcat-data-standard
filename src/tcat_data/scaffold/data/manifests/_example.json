@@ -9,7 +9,7 @@
     "",
     "Then: tcat-validate dataset manifests/<this file>"
   ],
-  "schema_version": "0.2.0",
+  "schema_version": "0.8.0",
   "dataset_id": "REPLACE-lab-system-run-001",
   "batch_id": "REPLACE-one-synthesis-batch-or-beamtime",
   "lineage_id": "REPLACE-groups-data-sharing-a-provenance-chain",
@@ -174,11 +174,14 @@
     "host": "REPLACE"
   },
   "$comment_provenance": [
-    "Normally written by the tool, not by hand. Hand-authored raw-layer datasets",
-    "are the exception, since there was no tool run to record."
+    "Normally written by the tool, not by hand. A HAND-AUTHORED raw-layer dataset has",
+    "no tool run to record: give provenance as a bare artifact id instead of this",
+    "object -- \"provenance\": \"raw-<name>-YYYY-MM-DD-<6 hex>\" -- made with",
+    "tcat_data.ids.make_artifact_id(tool=\"raw\", name=..., when=..., tool_version=\"0\",",
+    "inputs=[], parameters={...}). An object's tool.name must be a tcat- command."
   ],
-  "calibration_ref": null,
   "$comment_calibration_ref": [
+    "Omit for a raw dataset (null is not accepted).",
     "For a DERIVED dataset: art://<calibration-id>. Required in practice, because",
     "a derived trace that does not cite its sensor model cannot be re-derived when",
     "the calibration is revised."

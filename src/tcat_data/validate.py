@@ -256,6 +256,36 @@ def _waveform_problems(protocol: Any, prefix: str) -> list[Problem]:
     return out
 
 
+def _custom_input_problems(protocol: Any, prefix: str, channels: Any = None) -> list[Problem]:
+    """Name what a `custom` protocol's input is missing, and check its channel.
+
+    The schema's anyOf (channel or schedule) fails as "not valid under any of the
+    given schemas" -- the error this standard promises not to emit, so this says
+    which input and what it needs. When the protocol is embedded in a dataset, a
+    named channel must exist there: the input is how a fit is FORCED, and a
+    reference that resolves to nothing looks satisfied until something follows it.
+    """
+    out: list[Problem] = []
+    if not isinstance(protocol, dict) or protocol.get("protocol") != "custom":
+        return out
+    inputs = (protocol.get("parameters") or {}).get("inputs") if isinstance(protocol.get("parameters"), dict) else None
+    if not isinstance(inputs, list):
+        return out
+    for i, item in enumerate(inputs):
+        if not isinstance(item, dict):
+            continue
+        at = f"{prefix}/parameters/inputs/{i}"
+        if "channel" not in item and "schedule" not in item:
+            out.append(Problem(at, f"input {item.get('quantity', i)!r} needs a `channel` (the dataset channel "
+                                   "recording the executed input) or a `schedule` (the programmed segments): "
+                                   "without one the perturbation cannot be reconstructed"))
+        target = item.get("channel")
+        if isinstance(channels, dict) and isinstance(target, str) and target not in channels:
+            out.append(Problem(f"{at}/channel", f"names channel {target!r}, which is not declared in /channels "
+                                                f"(declared: {', '.join(sorted(channels)) or 'none'})"))
+    return out
+
+
 _MATURITY_KINDS = frozenset(
     {
         "dataset",
@@ -362,10 +392,12 @@ def _structural_errors(document: Any, kind: str) -> list[Problem]:
                 out.append(p)
         out.extend(_waveform_problems(document.get("protocol"), "/protocol"))
         out.extend(_channel_reference_errors(document.get("channels")))
+        out.extend(_custom_input_problems(document.get("protocol"), "/protocol", document.get("channels")))
 
     if kind == "protocol":
         out.extend(_waveform_problems(document, ""))
         out.extend(_bed_uncertainty_errors(document, ""))
+        out.extend(_custom_input_problems(document, ""))
 
     if kind == "dataset":
         out.extend(_bed_uncertainty_errors(document.get("protocol"), "/protocol"))

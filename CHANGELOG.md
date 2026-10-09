@@ -1,6 +1,31 @@
 # Changelog
 
-## Unreleased — tooling, not standards
+## 0.11.0 — 2026-10-08 · schema 0.8.0
+
+Approved by the PI 2026-10-08 (COLLABORATION.md section 5). Package 0.10.0. `0.7.0` frozen
+with a checksum manifest and added to the retention test; examples and fixtures regenerated.
+
+**A protocol may be `custom`, and `base_conditions.pressure_kPa` is optional**, so experiments
+outside gas-phase catalysis (potential steps and sweeps, impedance, cooling profiles, dosing)
+are recorded honestly instead of by mislabelling. A custom protocol names itself, describes
+itself, and lists the quantities it drives (`parameters.inputs`), each with units and either the
+dataset channel recording the executed input or a programmed `schedule` of hold/ramp segments.
+The validator names the input missing both, and an input channel absent from the dataset's
+`channels`. Additive: no 0.7.0 record changes meaning.
+
+**Also in package 0.10.0 (tooling):**
+
+**`tcat-spoke init` for a tool of one's own** (found by an outside-user walkthrough):
+- A tool spoke asks which HUB tool it implements. Left blank (the default), the tool is the
+  spoke's own:
+  - its command is `tcat-<name>`, with no doubled `tcat_tcat_` package;
+  - the skeleton's `declarations/<command>.tool.json` becomes its local declaration;
+  - tests and CI check it with `tcat-conform --declaration`.
+- `--answers` fills `kind` and `standard_version` from `--kind` (and accepts `tool`). The keys
+  are listed in `init --help`.
+- A data spoke's `.standard-version` is pinned to the installed standard.
+- Placeholders are filled in `.py` files, and `[SPOKE NAME]` / `[LAB OR CAMPAIGN NAME]` are
+  filled.
 
 **`tcat-spoke init --owner <account>`** (also `owner` in `--answers`; the interactive
 prompt asks, default `TransientCatalysis`). A spoke or campaign may live in someone's own

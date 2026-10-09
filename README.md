@@ -2,14 +2,17 @@
 
 > ### New here?
 >
-> **Depositing data?** Don't start with this document. Create a repository from
-> [`tcat-data-spoke-template`](https://github.com/TransientCatalysis/tcat-data-spoke-template)
-> and open its **`START-HERE.md`** — four steps, one command, ending at a
-> validating spoke. `tcat-spoke init` writes the manifest, your CODEOWNERS and
+> **Depositing data?** Don't start with this document. Run
+> `tcat-spoke init --kind data <new-dir>` and open the **`START-HERE.md`** it
+> writes — four steps, ending at a validating spoke. `tcat-spoke init` writes the manifest, your CODEOWNERS and
 > your `CITATION.cff`, so there is nothing to hand-edit.
 >
-> **Writing analysis?** Same, from
-> [`tcat-tool-spoke-template`](https://github.com/TransientCatalysis/tcat-tool-spoke-template).
+> **Writing analysis?** Same, with `--kind tool`.
+>
+> **Outside the collaboration, or in another domain?** Read
+> [`tcat-campaign-standard/OUTSIDE-USE.md`](https://github.com/TransientCatalysis/tcat-campaign-standard/blob/main/OUTSIDE-USE.md).
+> A perturbation no named protocol describes (a potential step, impedance, a
+> cooling profile) is `protocol: custom`, since schema 0.8.0.
 >
 > **Working out how the project runs?**
 > [`COLLABORATION.md`](https://github.com/TransientCatalysis/.github/blob/main/COLLABORATION.md)
@@ -20,7 +23,7 @@
 
 **What counts as a valid dataset for the TransientCatalysis collaboration.** Schema, validator, and ingestion contract.
 
-> **Status: draft, 0.1.0.** Nothing here has been exercised against real instrument data, because none exists yet. That is the point at which the required-field set is cheapest to argue about, so please argue about it now — see [STANDARD.md](STANDARD.md) §4 and the [open questions](STANDARD.md#adaptable-13-open-questions).
+> **Status:** in use; exercised against PSU's PRBS-MS and transient-IR campaigns. Versions: `tcat_data.STANDARDS_VERSION` (the rulebook) and the schema version (`src/tcat_data/schema/VERSION`); every older schema version is retained. To argue about a required field, see [STANDARD.md](STANDARD.md) §4 and open an issue.
 
 This repository is deliberately small and deliberately boring. Three institutions depend on it for the answer to one question — *is this data ingestible?* — so it has to be stable. Everything that is scientific judgement lives in [`tcat-tool-standard`](https://github.com/TransientCatalysis/tcat-tool-standard) instead, where it is free to be argued about and revised.
 
@@ -109,7 +112,7 @@ The last three exist because the project's data-management plan commits to them.
 
 ## Depositing data: the short path
 
-1. Create a spoke from [`tcat-data-spoke-template`](https://github.com/TransientCatalysis/tcat-data-spoke-template) — one repository **per lab or per instrument campaign, not per dataset**.
+1. Create a spoke with `tcat-spoke init --kind data <new-dir>` — one repository **per lab or per instrument campaign, not per dataset**.
 2. Put instrument files in `raw/`, write a `dataset` document in `manifests/`.
 3. Run `tcat-validate all .` locally until it passes.
 4. Open a PR. CI runs the same validator. **Passing CI is the definition of ingestible.**

@@ -95,8 +95,34 @@ def _default_slug(root: Path) -> str:
     return root.resolve().name
 
 
+#: The keys `--answers` accepts, so an agent or a script can drive init without a tty.
+ANSWER_KEYS = """\
+  spoke_id      lowercase, hyphens (default: the directory name)
+  name          one line: what it holds, implements, or asks
+  owner         GitHub account or org that will hold the repository (default TransientCatalysis)
+  stewards      [{"name", "email", "role", "github", "institution", "orcid"}];
+                role is one of data_steward, instrument_owner, analysis_owner, pi
+  implements    tool spokes only: the HUB tool this implements (e.g. tcat-fit), or
+                absent/null for your own tool, declared locally in declarations/
+  granularity   data spokes only: lab / student / instrument / campaign / monorepo
+  maturity      {"rung": "sandbox" | "working"} (default sandbox)
+`kind` and `standard_version` are filled from --kind and the installed standard."""
+
+
 def _gather(root: Path, answers: dict[str, Any] | None, kind: str | None = None) -> dict[str, Any]:
     if answers is not None:
+        answers = dict(answers)
+        if kind == "campaign":
+            answers.setdefault("kind", "campaign")
+        elif kind is not None:
+            answers.setdefault("kind", {"tool": "analysis"}.get(kind, kind))
+        if answers.get("kind") == "tool":
+            answers["kind"] = "analysis"     # the manifest's word for a tool spoke
+        if answers.get("kind") != "campaign":
+            answers.setdefault("standard_version", CURRENT_SCHEMA_VERSION)
+        answers.setdefault("spoke_id", _default_slug(root))
+        if answers.get("kind") in ("data", "analysis"):
+            answers.setdefault("maturity", {"rung": "sandbox"})
         return answers
     print(f"Creating a {kind or 'spoke'} in {root.resolve()}\n")
     if kind == "campaign":
@@ -116,6 +142,11 @@ def _gather(root: Path, answers: dict[str, Any] | None, kind: str | None = None)
         "owner": _ask("GitHub account or org that will hold this repository", HOME_OWNER),
         "stewards": _ask_stewards(),
     }
+    if kind == "analysis":
+        manifest["implements"] = _ask(
+            "Hub tool this implements, e.g. tcat-fit (blank: your own tool, declared locally)",
+            required=False,
+        ) or None
     if kind == "data":
         manifest["granularity"] = _ask(
             "Granularity (lab / student / instrument / campaign / monorepo)",
@@ -139,6 +170,8 @@ def _fill_placeholders(root: Path, manifest: dict[str, Any]) -> list[Path]:
     first = stewards[0]
     subs = {
         "[BRACKETED]": manifest.get("name") or manifest["spoke_id"],
+        "[SPOKE NAME]": manifest.get("name") or manifest["spoke_id"],
+        "[LAB OR CAMPAIGN NAME]": manifest.get("name") or manifest["spoke_id"],
         "[YOUR NAME, EMAIL]": f"{first.get('name', '')} <{first.get('email', '')}>".strip(),
         "[YOUR LAB / INSTITUTION]": first.get("institution", ""),
         "[WHO APPROVES CALIBRATION CHANGES]": next(
@@ -148,7 +181,7 @@ def _fill_placeholders(root: Path, manifest: dict[str, Any]) -> list[Path]:
     }
     touched: list[Path] = []
     for path in sorted(root.rglob("*")):
-        if not path.is_file() or path.suffix not in {".md", ".cff", ".toml"}:
+        if not path.is_file() or path.suffix not in {".md", ".cff", ".toml", ".py"}:
             continue
         if ".git" in path.parts:
             continue
@@ -163,7 +196,7 @@ def _fill_placeholders(root: Path, manifest: dict[str, Any]) -> list[Path]:
     return touched
 
 
-def _rename_package(root: Path, manifest: dict[str, Any]) -> list[str]:
+def _rename_package(root: Path, manifest: dict[str, Any], implements: str | None = "tcat-fit") -> list[str]:
     """Rename the analysis template's example package to this spoke's own.
 
     The data side needs none of this: a data spoke has no package. The analysis
@@ -178,8 +211,11 @@ def _rename_package(root: Path, manifest: dict[str, Any]) -> list[str]:
     the `--as` argument, and the summary printed at the end says so.
     """
     slug = re.sub(r"[^a-z0-9]+", "_", manifest["spoke_id"].lower()).strip("_")
+    slug = re.sub(r"^tcat_", "", slug) or slug     # tcat-echem-fit -> tcat_echem_fit, not tcat_tcat_...
     package = f"tcat_{slug}"
-    command = f"tcat-fit-{slug.replace('_', '-')}"
+    # A competing implementation of a hub tool takes the hub name plus a suffix;
+    # a tool of your own (declared locally) takes its own `tcat-` name.
+    command = f"{implements}-{slug.replace('_', '-')}" if implements else f"tcat-{slug.replace('_', '-')}"
 
     old_pkg, old_cmd = "tcat_spoke_example", "tcat-fit-example"
     if manifest.get("kind") == "campaign":
@@ -201,16 +237,44 @@ def _rename_package(root: Path, manifest: dict[str, Any]) -> list[str]:
         changed.append(f"removed {stale.relative_to(root)} (stale build artifact)")
 
     for path in sorted(root.rglob("*")):
-        if not path.is_file() or path.suffix not in {".py", ".toml", ".md", ".yml", ".yaml"}:
+        if not path.is_file() or path.suffix not in {".py", ".toml", ".md", ".yml", ".yaml", ".json"}:
             continue
         if ".git" in path.parts:
             continue
         text = path.read_text(encoding="utf-8")
         new = text.replace(old_pkg, package).replace(old_cmd, command)
+        if manifest.get("kind") != "campaign":
+            new = _point_at_declaration(new, command, implements)
+            new = new.replace('spoke="REPLACE-spoke-name"', f'spoke="{manifest["spoke_id"]}"')
         if new != text:
             path.write_text(new, encoding="utf-8")
             changed.append(str(path.relative_to(root)))
+
+    declarations = root / "declarations"
+    template = declarations / f"{old_cmd}.tool.json"
+    if template.is_file():
+        if implements:
+            shutil.rmtree(declarations)
+            changed.append("removed declarations/ (this tool is declared by the hub)")
+        else:
+            template.rename(declarations / f"{command}.tool.json")
+            changed.append(f"declarations/{old_cmd}.tool.json -> declarations/{command}.tool.json "
+                           "(YOUR declaration: edit it to describe your tool; it never goes to the hub)")
     return changed
+
+
+def _point_at_declaration(text: str, command: str, implements: str | None) -> str:
+    """Point the skeleton's tool, tests and CI at the declaration it is built against.
+
+    The skeleton is written against the hub's `tcat-fit`; a spoke implementing
+    another hub tool names that one, and a tool of one's own is checked against
+    its local declaration (`tcat-conform --declaration`).
+    """
+    target = implements or command
+    text = text.replace('    name="tcat-fit",', f'    name="{target}",')
+    text = text.replace('DECLARED_AS = "tcat-fit"', f'DECLARED_AS = "{implements}"' if implements else "DECLARED_AS = None")
+    as_flag = f"--as {implements}" if implements else f"--declaration declarations/{command}.tool.json"
+    return re.sub(r"--as tcat-fit(?![\w-])", as_flag, text)
 
 
 def _fill_citation(root: Path, manifest: dict[str, Any], owner: str = HOME_OWNER) -> bool:
@@ -412,6 +476,7 @@ def _cmd_init(args: argparse.Namespace) -> int:
     manifest = _gather(root, answers, "campaign" if is_campaign else kind)
     owner = args.owner or manifest.pop("owner", None) or HOME_OWNER
     manifest.pop("owner", None)
+    implements = manifest.pop("implements", None)     # init-only, like owner
     if not re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})", owner):
         print(f"tcat-spoke init: --owner {owner!r} is not a GitHub account name", file=sys.stderr)
         return 1
@@ -450,6 +515,10 @@ def _cmd_init(args: argparse.Namespace) -> int:
 
     target.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print(f"wrote {SPOKE_MANIFEST}")
+    pinned = root / ".standard-version"
+    if pinned.is_file() and pinned.read_text(encoding="utf-8").strip() != CURRENT_SCHEMA_VERSION:
+        pinned.write_text(CURRENT_SCHEMA_VERSION + "\n", encoding="utf-8")
+        print(f"pinned .standard-version to {CURRENT_SCHEMA_VERSION}, the standard installed here")
 
     for rel in _fill_placeholders(root, manifest):
         print(f"filled placeholders in {rel}")
@@ -459,7 +528,7 @@ def _cmd_init(args: argparse.Namespace) -> int:
         print("filled CITATION.cff from the stewards block")
 
     if manifest.get("kind") == "analysis":
-        for line in _rename_package(root, manifest):
+        for line in _rename_package(root, manifest, implements):
             print(f"renamed: {line}")
         if _fill_pyproject(root, manifest, owner):
             print("filled pyproject.toml from the manifest")
@@ -595,11 +664,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     sub = ap.add_subparsers(dest="cmd", required=True)
 
-    p = sub.add_parser("init", help="materialise a skeleton (new directory) and fill it in: manifest, placeholders, package name, CODEOWNERS, fingerprint")
+    p = sub.add_parser("init", help="materialise a skeleton (new directory) and fill it in: manifest, placeholders, package name, CODEOWNERS, fingerprint",
+                       formatter_class=argparse.RawTextHelpFormatter)
     p.add_argument("path", nargs="?", default=".", type=Path)
     p.add_argument("--kind", choices=("data", "tool", "campaign"),
                    help="which skeleton to write into a NEW directory; each ships with its standard")
-    p.add_argument("--answers", help="a JSON file of answers, so an agent can drive this")
+    p.add_argument("--answers", help="a JSON file of answers, so a script or an agent can drive init "
+                   "without a terminal. Keys:\n" + ANSWER_KEYS)
     p.add_argument("--owner", help=f"the GitHub account or org that will hold the repository "
                    f"(default {HOME_OWNER}; also `owner` in --answers). Outside the org, the "
                    "spoke's url, copyright and citation are its owner's; the toolchain stays where it is")

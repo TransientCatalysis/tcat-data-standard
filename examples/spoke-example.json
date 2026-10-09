@@ -1,5 +1,5 @@
 {
-  "standard_version": "0.7.0",
+  "standard_version": "0.8.0",
   "spoke_id": "example-prbs-lab",
   "kind": "data",
   "name": "Example PRBS reactor spoke",
