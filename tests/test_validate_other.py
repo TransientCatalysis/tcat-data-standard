@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import copy
+import json
+from pathlib import Path
 
 import pytest
 
 from tcat_data import (
+    validate_dataset,
     validate_protocol,
     validate_provenance,
     validate_uncertainty_ensemble,
@@ -21,7 +24,6 @@ PROVENANCE = {
     "autonomy_level": "A1",
     "durability": "durable",
     "created_at": "2026-09-01T18:22:11Z",
-    "host": "gt-workstation-04",
 }
 
 ENSEMBLE = {
@@ -58,6 +60,37 @@ def test_every_provenance_field_is_required(field):
     report = validate_provenance(doc)
     assert not report.ok
     assert any(field in p.message for p in report.errors)
+
+
+def test_host_is_optional_since_0_9_0_and_the_new_fields_validate():
+    """A machine name leaked into a synced record (tcat-tool-standard#17); the SDK
+    writes `site` and `arch` instead, and `determinism`, `content_sha256` and
+    `tool.package_digest` carry what one id promises (#22, #16)."""
+    doc = copy.deepcopy(PROVENANCE)
+    doc["host"] = "gt-workstation-04"           # pre-0.9.0 records still validate
+    assert validate_provenance(doc).ok
+    doc = copy.deepcopy(PROVENANCE)
+    doc.update(site="gt-laptop", arch="arm64", determinism="stochastic", content_sha256="0" * 64)
+    doc["tool"]["package_digest"] = "a13e10b6"
+    assert validate_provenance(doc).ok
+    doc["determinism"] = "maybe"
+    assert not validate_provenance(doc).ok
+
+
+def test_a_malformed_artifact_id_names_the_field_and_the_pattern():
+    """tcat-data-standard#11: the raw oneOf error named neither."""
+    doc = copy.deepcopy(PROVENANCE)
+    doc["artifact_id"] = "my-fit-run-7"
+    report = validate_provenance(doc)
+    assert not report.ok
+    assert any(p.pointer == "/artifact_id" and "make_artifact_id" in p.message
+               and "YYYY-MM-DD" in p.message for p in report.errors)
+    # and by reference from a dataset, where the raw error is an unnamed oneOf
+    doc = json.loads((Path(__file__).resolve().parents[1] / "examples" / "dataset-prbs-co-ox.json").read_text())
+    doc["provenance"] = "my-fit-run-7"
+    report = validate_dataset(doc)
+    assert not report.ok
+    assert any(p.pointer == "/provenance" and "make_artifact_id" in p.message for p in report.errors)
 
 
 def test_tool_name_must_be_a_tcat_tool():
@@ -448,3 +481,19 @@ def test_two_specifications_differing_anywhere_get_different_ids():
 
     assert ident(a) != ident(b)
     assert ident(a) == ident(a)
+
+
+def test_a_campaign_artifact_may_be_recorded_under_the_tool_declarations_kind_name():
+    """tcat-data-standard#12: a tool declares `uncertainty-ensemble`; the campaign
+    lockfile said `ensemble`. One registry, two spellings, both accepted."""
+    import json
+    from pathlib import Path
+
+    from tcat_data import validate_campaign
+
+    doc = json.loads((Path(__file__).resolve().parents[1] / "examples" / "campaign-example.json").read_text())
+    assert validate_campaign(doc).ok
+    doc["artifacts"][0]["kind"] = "uncertainty-ensemble"
+    assert validate_campaign(doc).ok
+    doc["artifacts"][0]["kind"] = "posterior"
+    assert not validate_campaign(doc).ok

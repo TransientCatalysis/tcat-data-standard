@@ -20,7 +20,7 @@
     "then nothing downstream could tell which fits went stale."
   ],
   "calibration_id": "cal-REPLACE-2026-09-01-abc123",
-  "schema_version": "0.2.0",
+  "schema_version": "0.9.0",
   "instrument": {
     "model": "REPLACE",
     "identifier": "REPLACE-MUST-MATCH-THE-DATASET",
