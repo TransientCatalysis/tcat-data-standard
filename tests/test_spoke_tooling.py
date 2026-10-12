@@ -266,3 +266,22 @@ def test_a_data_spoke_is_not_given_a_package(tmp_path):
     (tmp_path / "README.md").write_text("# [BRACKETED]\n")
     assert main(["init", str(tmp_path), "--answers", _answers(tmp_path, _manifest())]) == 0
     assert not (tmp_path / "src").exists()
+
+
+def test_an_outside_owner_gets_its_own_account_in_every_home_only_credential_block():
+    """tcat-campaign-standard#12: the campaign skeleton's workflow attaches the CI
+    token to the org alone (the org security gate refuses a token beside any other
+    account); a campaign in a student's own account also needs its owner's."""
+    from tcat_data.spoke_cli import owner_credentials
+
+    block = ('          GIT_CONFIG_COUNT=1 \\\n'
+             '            GIT_CONFIG_KEY_0="url.https://x-access-token:${HUB_TOKEN}@github.com/TransientCatalysis/.insteadOf" \\\n'
+             '            GIT_CONFIG_VALUE_0="https://github.com/TransientCatalysis/" \\\n'
+             '            python -m pip install -r ours.txt\n')
+    text = block + "\n" + block
+    assert owner_credentials(text, "TransientCatalysis") == text
+    out = owner_credentials(text, "jdoe")
+    assert out.count("GIT_CONFIG_COUNT=2") == 2 and "GIT_CONFIG_COUNT=1" not in out
+    assert out.count('GIT_CONFIG_KEY_1="url.https://x-access-token:${HUB_TOKEN}@github.com/jdoe/.insteadOf"') == 2
+    assert out.count("github.com/TransientCatalysis/.insteadOf") == 2       # the org stays
+    assert out.count("python -m pip install -r ours.txt") == 2

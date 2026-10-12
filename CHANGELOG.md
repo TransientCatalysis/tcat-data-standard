@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — tooling, not standards
+
+**`tcat-spoke init --owner <account>` gives a campaign's CI its owner's credential**
+(tcat-campaign-standard#12; PI, 2026-10-12: students drive their own campaigns). The campaign
+skeleton's workflow now attaches the CI token to `github.com/TransientCatalysis/` alone, which is
+what the org's security gate requires; outside the org, init writes the owner's account into
+each credential block by name (`owner_credentials`), so tools in a student's own account still
+install. No schema or standards change.
+
 ## 0.12.0 — 2026-10-12 · schema 0.9.0
 
 Decided by the PI 2026-10-11 (tcat-tool-standard#16, #17, #22; tcat-data-standard#11, #12, #13);
