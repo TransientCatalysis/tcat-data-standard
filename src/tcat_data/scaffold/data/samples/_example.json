@@ -14,7 +14,7 @@
     "between a fit and the properties recorded here. If those live in a notebook,",
     "that comparison becomes a spreadsheet exercise at the worst possible moment."
   ],
-  "schema_version": "0.2.0",
+  "schema_version": "0.9.0",
   "sample_id": "REPLACE-YOUR-OWN-VIAL-LABEL",
   "$comment_id": [
     "Verbatim what is written on the vial. A project-assigned relabelling scheme",

@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from .schema import CURRENT_SCHEMA_VERSION, KINDS, load_all_schemas, load_schema
+from .ids import ARTIFACT_ID_RE
 
 
 class ValidationError(Exception):
@@ -407,7 +408,36 @@ def _structural_errors(document: Any, kind: str) -> list[Problem]:
         if p:
             out.append(p)
 
+    if kind == "provenance":
+        out.extend(_artifact_id_problems(document.get("artifact_id"), "/artifact_id"))
+    elif isinstance(document.get("provenance"), (dict, str)):
+        prov = document["provenance"]
+        if isinstance(prov, dict):
+            out.extend(_artifact_id_problems(prov.get("artifact_id"), "/provenance/artifact_id"))
+        else:
+            out.extend(_artifact_id_problems(prov, "/provenance"))
+
     return out
+
+
+def _artifact_id_problems(value: Any, pointer: str) -> list[Problem]:
+    """Name the field and the pattern when an artifact id is malformed.
+
+    A dataset's `provenance` is a oneOf (the record inline, or an id), so a
+    hand-written record whose `artifact_id` breaks the pattern fails as
+    "/provenance: {...} is not valid under any of the given schemas" -- the
+    whole object dumped, no field named, and STANDARD.md promises errors that
+    name the field. The schema stays the authority; this says what it wanted
+    (tcat-data-standard#11).
+    """
+    if not isinstance(value, str) or ARTIFACT_ID_RE.match(value):
+        return []
+    return [Problem(
+        pointer,
+        f"artifact_id {value!r} is not of the form <tool>-<name>-YYYY-MM-DD-<hash6..16> "
+        f"(pattern {ARTIFACT_ID_RE.pattern}); a conforming tool mints it, and a hand-written "
+        "record can use tcat_data.ids.make_artifact_id",
+    )]
 
 
 def _bed_uncertainty_errors(protocol: Any, prefix: str) -> list[Problem]:

@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.12.0 — 2026-10-12 · schema 0.9.0
+
+Decided by the PI 2026-10-11 (tcat-tool-standard#16, #17, #22; tcat-data-standard#11, #12, #13);
+the PR awaits approval (COLLABORATION.md section 5). Package 0.11.0. `0.8.0` frozen with a
+checksum manifest and added to the retention test; examples and fixtures regenerated.
+
+**Provenance stops naming the machine and starts naming what an id promises.**
+- `host` is optional and deprecated: a VPN hostname reached a durable, synced record
+  (tcat-tool-standard#17). `site` (which store wrote it) and `arch` (the CPU architecture, from
+  `platform.machine()`) replace it. Neither is hashed; the same computation on two architectures
+  mints one id, which is what makes a store shareable.
+- `determinism`: `deterministic` (the default when absent: one id, one set of bytes; a collision
+  with different bytes is a defect and a collection refuses it) or `stochastic` (one id, one
+  COMPUTATION, several realizations told apart by `content_sha256`; kept side by side, and a
+  cache hit returns one). The joint parent of notebook 5 was minted as `a89718` on two
+  architectures with different parameters (tcat-tool-standard#22). The architecture never enters
+  the id; this field carries the difference instead.
+- `content_sha256`: the payload's digest, excluding the record itself, computed at commit.
+- `tool.package_digest`: the tool's own digest, the one its `.tcat-fingerprint.json` indexes.
+  `source_digest` is a combination the index never sees, so a record could not be traced to a
+  commit (tcat-tool-standard#16); now it is two lookups, this digest and `libraries[].digest`.
+
+**Also:**
+- `campaign.artifacts[].kind` accepts `uncertainty-ensemble`, the tool declarations' name for
+  what this field called `ensemble` (#12).
+- `base_conditions` gains shared names for electrochemistry (electrolyte, pH, solvent,
+  electrode_area_cm2, reference_electrode); it was already open to any field (#13).
+- Field descriptions no longer presume catalysis (`sample_id`, `catalyst_family`,
+  `reaction_system`, `autonomy_level`, `measurement_type`); the skeleton's example documents
+  declare the current schema (#13).
+- The validator names the field and the pattern when a `provenance.artifact_id` (inline or by
+  reference) does not match `<tool>-<name>-YYYY-MM-DD-<hash>`, and points at
+  `tcat_data.ids.make_artifact_id`; the raw oneOf error named neither (#11).
+
 ## 0.11.0 — 2026-10-08 · schema 0.8.0
 
 Approved by the PI 2026-10-08 (COLLABORATION.md section 5). Package 0.10.0. `0.7.0` frozen

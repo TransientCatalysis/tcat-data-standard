@@ -1,0 +1,248 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://transientcatalysis.github.io/tcat-data-standard/0.9.0/provenance.schema.json",
+  "title": "Provenance record",
+  "description": "Written by every tool, on every run, in an identical shape. Tools stamp their own version and the schema version into this record; nothing here is manually logged, because manual logging is the first thing to rot.",
+  "type": "object",
+  "required": [
+    "artifact_id",
+    "tool",
+    "inputs",
+    "parameters",
+    "data_schema_version",
+    "autonomy_level",
+    "durability",
+    "created_at"
+  ],
+  "properties": {
+    "artifact_id": {
+      "$ref": "defs/common.schema.json#/$defs/artifact_id"
+    },
+    "tool": {
+      "type": "object",
+      "description": "What ran. Stamped by the tool itself, never supplied by hand -- manual logging is the first thing to rot. A conforming tool is named tcat-<verb>; anything else must set conforming to false, which is the state every spoke passes through while bootstrapping and every legacy deposit stays in.",
+      "required": [
+        "name",
+        "version",
+        "git_sha"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "not": {
+              "properties": {
+                "conforming": {
+                  "const": false
+                }
+              },
+              "required": [
+                "conforming"
+              ]
+            }
+          },
+          "then": {
+            "properties": {
+              "name": {
+                "pattern": "^tcat-[a-z][a-z0-9-]*$",
+                "description": "A conforming tool's declared name. To record something else, set conforming: false."
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "conforming": {
+          "type": "boolean",
+          "default": true,
+          "description": "False when this artifact was produced by something that does not implement the tool contract -- a lab conversion script, a spreadsheet, a hand deposit. Recording it as a flag rather than allowing any name silently is what keeps the question answerable: 'what in this store was never produced by a conforming tool?' is a query someone will need at release time, and it must not require reading notes fields to answer. Such an artifact carries no cache guarantee and no reproducibility claim beyond what its notes say.",
+          "examples": [
+            false
+          ]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "$ref": "defs/common.schema.json#/$defs/semver"
+        },
+        "git_sha": {
+          "type": "string",
+          "description": "Commit of the repository the TOOL's package lives in -- the spoke, not the analysis hub. Until schema 0.3.0 this recorded the hub's commit, which could not see the spoke at all, so a spoke running edited source at an unbumped version stamped `durable` on the strength of the hub being clean. The literal string 'dirty' is permitted and means the code behind the numbers cannot be recovered; PROMOTION.md makes it disqualifying. 'unknown' means no repository (a wheel).",
+          "pattern": "^(?:[0-9a-f]{7,40}|dirty|unknown)$"
+        },
+        "spoke": {
+          "type": "string",
+          "description": "The repository implementing this tool, e.g. 'tcat-campaign-coox'. Part of IDENTITY since 2026-09-02: a tool is spoke@version and both halves are hashed, because a version alone is not unique across spokes and two spokes implementing one declared tool used to mint identical ids."
+        },
+        "source_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8,64}$",
+          "description": "Automatic identity of the code that ran: a sha256 over the tool package's source with docstrings and comments stripped (an AST-normalised hash over (module name, AST) pairs, so relocating the package does not move it) combined with the same digest of every tcat-* library the tool imports. The artifact id hashes `<version>+<first 8 hex>` as its tool_version. This replaces hand-maintained version bumps as the thing that invalidates a cache: a code change re-hashes exactly the tools whose closure includes it, a comment edit re-hashes nothing, and two working trees with different source cannot mint one id. `version` stays the CONTRACT version, bumped only when the invocable surface changes. Absence means the record predates 0.3.0 and its tool_version was spoke@version alone."
+        },
+        "package_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8,64}$",
+          "description": "The tool's OWN package digest, before it is combined with its libraries' into source_digest. This is the digest the spoke's .tcat-fingerprint.json indexes, so a reader traces a record to a commit in two lookups: this digest in the tool's repository, and each entry of libraries[].digest in the library's. source_digest alone cannot be traced: it is a combination the index never sees (tcat-tool-standard#16)."
+        },
+        "libraries": {
+          "type": "array",
+          "description": "Every tcat-* library package the tool imported, with the version and normalised source digest actually installed. Folded into source_digest; listed here so a reader can see WHICH library moved when an id changed. A kinetics fix re-hashes every tool that lists it, which is correct: their outputs changed.",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "version",
+              "digest"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Import package name, e.g. tcat_kinetics."
+              },
+              "version": {
+                "$ref": "defs/common.schema.json#/$defs/semver",
+                "description": "The library's contract version."
+              },
+              "digest": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{8,64}$",
+                "description": "The library's normalised source digest as installed; the one its own repository's .tcat-fingerprint.json indexes, so `git log -S<first 8 hex> -- .tcat-fingerprint.json` there names the commit."
+              }
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "inputs": {
+      "type": "array",
+      "description": "Artifact ids of every input, in the order the tool consumed them. May be empty for a tool that reads only a manifest from disk (tcat-ingest at the raw boundary).",
+      "items": {
+        "$ref": "defs/common.schema.json#/$defs/artifact_id"
+      }
+    },
+    "parameters": {
+      "type": "object",
+      "description": "Every parameter that entered the artifact id hash. This is where an applied calibration's interpolation rule is recorded, so that choice is auditable rather than buried in code.",
+      "additionalProperties": true
+    },
+    "data_schema_version": {
+      "$ref": "defs/common.schema.json#/$defs/semver",
+      "description": "Version of the data standard the tool validated against."
+    },
+    "autonomy_level": {
+      "$ref": "defs/common.schema.json#/$defs/autonomy_level"
+    },
+    "durability": {
+      "type": "string",
+      "enum": [
+        "durable",
+        "ephemeral"
+      ],
+      "description": "Marked at creation, never inferred later. ephemeral = solver checkpoints and intermediate residuals, garbage-collectable, never synced between institutions. durable = fitted parameters, processed datasets, calibrations."
+    },
+    "created_at": {
+      "$ref": "defs/common.schema.json#/$defs/timestamp"
+    },
+    "host": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Deprecated since 0.9.0, optional, and never written by the SDK any more: a machine name leaks into records that sync between institutions (a VPN hostname did, 2026-10-08). Record `site` and `arch` instead. Retained so every record written before 0.9.0 still validates.",
+      "examples": [
+        "gt-workstation-04",
+        "pace-phoenix-login01"
+      ]
+    },
+    "arch": {
+      "type": "string",
+      "minLength": 1,
+      "description": "CPU architecture the tool ran on (`platform.machine()`: x86_64, arm64, ...). Recorded, never hashed: the same computation on two architectures must mint one id, which is what makes a store shareable. It is here because that is exactly when two realizations of one id can differ (an optimiser stops along a numerically null direction where last-bit arithmetic decides), and the architecture is the first thing to compare.",
+      "examples": [
+        "x86_64",
+        "arm64"
+      ]
+    },
+    "determinism": {
+      "type": "string",
+      "enum": [
+        "deterministic",
+        "stochastic"
+      ],
+      "description": "What one artifact id promises about its bytes. `deterministic` (the default when absent): the same id implies the same content, so two stores holding one id with different bytes have found a defect -- code or environment changed without the id noticing -- and a collection must refuse it. `stochastic`: the same id means the same COMPUTATION and each output is one realization, told apart by `content_sha256`; a collection keeps them side by side and a cache hit returns one of them. A tool declares its class (an MCMC sampler, an unseeded multistart) and may flag a run `stochastic` at run time when its own robustness checks say the result is machine-sensitive. The architecture never enters the id; this field is how cross-machine differences are carried instead."
+    },
+    "content_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "sha256 over the artifact's payload files, excluding this record (which cannot contain its own digest). Distinguishes realizations of a stochastic artifact and detects a deterministic collision; computed by the SDK at commit time."
+    },
+    "site": {
+      "type": "string",
+      "description": "Which store this artifact was first written to.",
+      "examples": [
+        "gt-pace",
+        "psu-rioux",
+        "bnl"
+      ]
+    },
+    "inputs_detail": {
+      "type": "array",
+      "description": "Optional per-input annotation, for when the role of an input is not obvious from its position.",
+      "items": {
+        "type": "object",
+        "required": [
+          "artifact_id",
+          "role"
+        ],
+        "properties": {
+          "artifact_id": {
+            "$ref": "defs/common.schema.json#/$defs/artifact_id"
+          },
+          "role": {
+            "type": "string",
+            "examples": [
+              "signal",
+              "calibration",
+              "background",
+              "reference_spectrum"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "environment": {
+      "type": "object",
+      "description": "Optional. Enough to reconstruct the run if a result is later disputed.",
+      "properties": {
+        "python": {
+          "type": "string"
+        },
+        "platform": {
+          "type": "string"
+        },
+        "packages": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "runtime_s": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Wall-clock seconds. Recorded because the AI-advantage metric is stated in wall-clock terms, so it needs to accumulate as a by-product rather than be reconstructed later."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Free text. Where a human explains something the parameters do not, such as why a run was retried."
+    },
+    "extensions": {
+      "$ref": "defs/common.schema.json#/$defs/extensions"
+    }
+  },
+  "additionalProperties": false
+}

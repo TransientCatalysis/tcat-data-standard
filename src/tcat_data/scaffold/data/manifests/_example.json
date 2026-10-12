@@ -9,7 +9,7 @@
     "",
     "Then: tcat-validate dataset manifests/<this file>"
   ],
-  "schema_version": "0.8.0",
+  "schema_version": "0.9.0",
   "dataset_id": "REPLACE-lab-system-run-001",
   "batch_id": "REPLACE-one-synthesis-batch-or-beamtime",
   "lineage_id": "REPLACE-groups-data-sharing-a-provenance-chain",
@@ -150,6 +150,7 @@
     "time_column, rather than pretending they share one."
   ],
   "access_status": "internal",
+  "$comment_embargo": "REPLACE with your own embargo instant, or delete the field if the data are not embargoed",
   "embargo_until": "2027-07-31T00:00:00Z",
   "license": "CC-BY-4.0",
   "$comment_access": [
