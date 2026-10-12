@@ -391,6 +391,42 @@ def _fill_pyproject(root: Path, manifest: dict[str, Any], owner: str = HOME_OWNE
     return False
 
 
+#: A workflow credential block attached to the home org alone, as the campaign
+#: skeleton ships it: `git` rewrites github.com/TransientCatalysis/ URLs to carry
+#: the token, and nothing else does.
+_HOME_CREDENTIAL = re.compile(
+    r'^(?P<i>[ \t]*)GIT_CONFIG_COUNT=1 \\\n'
+    r'(?P<j>[ \t]*)GIT_CONFIG_KEY_0="url\.https://x-access-token:\$\{HUB_TOKEN\}@github\.com/'
+    + re.escape(HOME_OWNER) + r'/\.insteadOf" \\\n'
+    r'(?P=j)GIT_CONFIG_VALUE_0="https://github\.com/' + re.escape(HOME_OWNER) + r'/" \\\n',
+    re.M)
+
+
+def owner_credentials(text: str, owner: str) -> str:
+    """Attach the CI token to an outside owner's account too, in every home-only block.
+
+    The campaign skeleton ships its workflow in the org's form: the token reaches
+    github.com/TransientCatalysis/ and nothing else, which is what the org security
+    gate requires (it reads the text and refuses a token beside any other account,
+    tcat-campaign-standard#12). A campaign in a student's own account also installs
+    tools from that account, so `init --owner` writes the owner's line here, as a
+    literal name: the gate never runs outside the org, and a repository moved INTO
+    the org later fails it loudly until the line is deleted.
+    """
+    if owner == HOME_OWNER:
+        return text
+
+    def expand(m: re.Match) -> str:
+        i, j = m["i"], m["j"]
+        return (f"{i}GIT_CONFIG_COUNT=2 \\\n"
+                f'{j}GIT_CONFIG_KEY_0="url.https://x-access-token:${{HUB_TOKEN}}@github.com/{HOME_OWNER}/.insteadOf" \\\n'
+                f'{j}GIT_CONFIG_VALUE_0="https://github.com/{HOME_OWNER}/" \\\n'
+                f'{j}GIT_CONFIG_KEY_1="url.https://x-access-token:${{HUB_TOKEN}}@github.com/{owner}/.insteadOf" \\\n'
+                f'{j}GIT_CONFIG_VALUE_1="https://github.com/{owner}/" \\\n')
+
+    return _HOME_CREDENTIAL.sub(expand, text)
+
+
 def _fill_owner(root: Path, manifest: dict[str, Any], owner: str) -> list[Path]:
     """Make the skeleton its owner's: the spoke's own url everywhere, and -- outside
     the home org -- the copyright line, which would otherwise assign a student's
@@ -410,12 +446,16 @@ def _fill_owner(root: Path, manifest: dict[str, Any], owner: str) -> list[Path]:
     for path in sorted(root.rglob("*")):
         if not path.is_file() or ".git" in path.parts:
             continue
-        if path.suffix not in {".md", ".cff", ".toml"} and not path.name.startswith("LICENSE"):
+        workflow = ".github" in path.parts and path.suffix in {".yml", ".yaml"}
+        if path.suffix not in {".md", ".cff", ".toml"} and not path.name.startswith("LICENSE") \
+                and not workflow:
             continue
         text = path.read_text(encoding="utf-8")
         new = text.replace(url_old, url_new)
         if owner != HOME_OWNER:
             new = new.replace(HOME_COPYRIGHT, holder)
+            if workflow:
+                new = owner_credentials(new, owner)
         if new != text:
             path.write_text(new, encoding="utf-8")
             touched.append(path.relative_to(root))
