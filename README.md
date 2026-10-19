@@ -129,4 +129,4 @@ See [`CITATION.cff`](CITATION.cff). If you use this standard, please also cite T
 
 ## Acknowledgment
 
-Developed under the DOE Genesis Mission, DE-FOA-0003612, *Transient Kinetics and Spectroscopy for Agentic Digital Twins to Upgrade Domestic Alkane Feedstocks into Value-Added Chemicals* (Phase I).
+Developed under the DOE Genesis Mission, award DE-SC0026638 (solicitation DE-FOA-0003612), *Transient Kinetics and Spectroscopy for Agentic Digital Twins to Upgrade Domestic Alkane Feedstocks into Value-Added Chemicals* (Phase I).

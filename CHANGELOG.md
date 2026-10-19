@@ -9,6 +9,15 @@ what the org's security gate requires; outside the org, init writes the owner's 
 each credential block by name (`owner_credentials`), so tools in a student's own account still
 install. No schema or standards change.
 
+**The DOE award number replaces the solicitation number** (PI, 2026-10-19; held for the next
+schema update). The project's award is DE-SC0026638; DE-FOA-0003612, used until now as
+`funding[].award`, is the funding opportunity it answered. Changed in the README acknowledgment,
+STANDARD.md's Identity section, `make_examples.py`, and the regenerated examples and fixtures.
+**Frozen schema versions keep their old `award` example annotation** (0.1.0–0.9.0 are never
+edited); when the next version directory is cut, change `defs/common.schema.json`
+`funding.items.properties.award.examples` to `DE-SC0026638` there. Records that already carry
+the FOA number stay valid: `award` is a free string. No spoke has to do anything.
+
 ## 0.12.0 — 2026-10-12 · schema 0.9.0
 
 Decided by the PI 2026-10-11 (tcat-tool-standard#16, #17, #22; tcat-data-standard#11, #12, #13);

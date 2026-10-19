@@ -25,7 +25,7 @@
 
 ## Identity
 
-This standard serves the DOE Genesis Mission Phase I project *Transient Kinetics and Spectroscopy for Agentic Digital Twins to Upgrade Domestic Alkane Feedstocks into Value-Added Chemicals* (DE-FOA-0003612), across:
+This standard serves the DOE Genesis Mission Phase I project *Transient Kinetics and Spectroscopy for Agentic Digital Twins to Upgrade Domestic Alkane Feedstocks into Value-Added Chemicals* (DOE award DE-SC0026638; solicitation DE-FOA-0003612), across:
 
 | Institution | Role | Data it produces |
 |---|---|---|
