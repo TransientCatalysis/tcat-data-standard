@@ -598,10 +598,11 @@ def build_model_spec_axial() -> dict:
             "inlet_reconstruction": {
                 "method": "tracer-shift",
                 "tracer": "Ar",
-                "notes": "The valve schedule is not logged, so the inlet is recovered "
-                         "from the co-fed inert tracer displaced by one empty-bed "
-                         "residence time. Section 1.4 asks the rig to log the "
-                         "schedule, which would let this become 'declared'.",
+                "notes": "The valve schedule of a randomised-dwell PRBS run is not "
+                         "usually logged, so the inlet is recovered from the co-fed "
+                         "inert tracer displaced by one empty-bed residence time. A "
+                         "rig that logs the schedule removes the need, and this "
+                         "becomes 'declared'.",
             },
             "notes": "21 nodes rather than the reference's 101: the outlet is "
                      "converged there with a second-order upwind stencil, and the "
