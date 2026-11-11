@@ -23,7 +23,7 @@ checksum manifest and added to the retention test; examples and fixtures regener
 - `determinism`: `deterministic` (the default when absent: one id, one set of bytes; a collision
   with different bytes is a defect and a collection refuses it) or `stochastic` (one id, one
   COMPUTATION, several realizations told apart by `content_sha256`; kept side by side, and a
-  cache hit returns one). The joint parent of notebook 5 was minted as `a89718` on two
+  cache hit returns one). One joint fit was minted under a single id on two
   architectures with different parameters (tcat-tool-standard#22). The architecture never enters
   the id; this field carries the difference instead.
 - `content_sha256`: the payload's digest, excluding the record itself, computed at commit.
@@ -105,9 +105,8 @@ lambda^p while theta_X ~ 1/lambda, so the SCALED coverage w_X = lambda theta_X i
 algebraic unknown fixed by X's own balance. For the vacancy `*` this is the saturated
 surface: the remaining coverages sum to one and the site balance is the algebraic row. One
 `reference` term per species carries no constant (w_X is in its units) and every other
-scaled term's constant is k / k_ref^p. Motivated by the 186 C CO-oxidation reduction, whose
-two remaining flat directions were exactly these limits (k1 + k2 + k3 on the vacancy,
-k_3 + k4 / 2 on O*). The free-parameter-count advisory counts reference terms out.
+scaled term's constant is k / k_ref^p. Motivated by a CO-oxidation mechanism reduction whose
+remaining flat directions were exactly these limits (one on the vacancy, one on O*). The free-parameter-count advisory counts reference terms out.
 
 **A step may declare a structured rate law: a numerator vacancy exponent and a rational
 denominator with named constants.** `rate_law.site_exponent` (optional, integer, possibly
@@ -286,8 +285,8 @@ when somebody graduates. The manifest also gains `spoke_id` and `kind`, and lose
 
 **Fixed.** A spoke's `standard_version` was applied as an override that beat each
 document's own `schema_version`. No spoke had a manifest yet, so nothing was
-mis-validated; it would have bitten on the first one, revalidating 47 PSU
-documents against a schema they were never written against and reporting it as
+mis-validated; it would have bitten on the first one, revalidating every existing
+document against a schema they were never written against and reporting it as
 though the schema change had broken the data. It is now a fallback, and the
 precedence is documented on `validate()`. `_infer_kind` also learned about spoke
 manifests, which it had been skipping in silence.
@@ -302,8 +301,7 @@ on a branch. They ship here, unedited, because what they say is accurate.
 
 ### 2026-08-29 — uncertainty stops being conditional by accident
 
-Uncertainty stops being conditional by accident (branch `axial-reworked`;
-`SPEC-DELTAS.md` 36–38 implemented). All additive and optional on 0.1.0, each
+Uncertainty stops being conditional by accident (branch `axial-reworked`). All additive and optional on 0.1.0, each
 field's ABSENCE stated to mean exactly what every existing document meant —
 **no existing document changes meaning, and no existing artifact id changes**
 (the additions are all optional properties; nothing regenerates an existing
@@ -335,12 +333,12 @@ example's bytes except the new example files themselves).
 
 ### 2026-08-27 — the reactor model becomes part of the hypothesis
 
-The reactor model. Forced by reading milestone M3 closely: it says *reproduce the
-published PSU CO-oxidation fit within stated uncertainty*, PSU's fit is a
-one-dimensional axially-dispersed packed bed at 101 nodes, and every `model-spec`
+The reactor model. Forced by the reproduction target: the reference CO-oxidation fit
+to be reproduced within its stated uncertainty (Penn State's MATLAB reactor model) is a
+one-dimensional axially-dispersed packed bed, and every `model-spec`
 written against this schema so far describes what reacts and is silent about where.
 A rate constant is not portable between a bed and a point, so with the reactor
-unstated the milestone could not be evaluated — a disagreement would be
+unstated the reproduction could not be evaluated — a disagreement would be
 unattributable between the fit and the reactor. Both blocks below are additive and
 optional; **no existing document changes meaning, and no existing artifact id
 changes** (checked: the three shipped model-spec examples hash identically before
@@ -366,38 +364,38 @@ and after).
   fraction, effective particle diameter, diluent and densities, site density. This
   is measured geometry and belongs to the experiment, not to the model — but a
   reactor model cannot run without it, and for the CO-oxidation campaigns **it
-  existed nowhere in any record**: the numbers lived only inside PSU's MATLAB
-  drivers. `bed_volume_cm3` already existed and was used by none of the 32 records;
+  existed nowhere in any record**: the numbers lived only inside the reference MATLAB
+  drivers. `bed_volume_cm3` already existed and was used by no record;
   it is kept, and length and diameter are preferable because they also fix the
   velocity.
 
   The `void_fraction` description says to compute it from the loaded masses rather
   than quote a handbook figure, which is not pedantry: the reference driver carries
-  a commented-out `0.5716` from an undiluted bed above the line that computes
-  `0.853` for the wool-diluted one, and taking the literal would put the gas holdup
-  out by half.
+  a commented-out literal from an undiluted bed above the line that computes
+  the value for the diluted one, and taking the literal would put the gas holdup
+  far out.
 
 - **`rate_basis` on the `reactor` block** (2026-08-28). What one unit of rate
   means, and therefore the units of every constant: `per-catalyst-mass` (the
   reference implementation's mol/(kg s), the default) or `per-site` (turnover
   frequencies, with the bed's measured site density moved into the gas-coupling
-  factor). Added because the axial spec family needs both: the PSU-comparison
-  variant must carry their units so "within stated uncertainty" is checkable
+  factor). Added because the axial spec family needs both: the reference-comparison
+  variant must carry the reference implementation's units so "within stated uncertainty" is checkable
   constant by constant, while the notebook-comparison variants must carry the
   gradientless treatment's units so the reactor comparison is a subtraction.
   The two are the same physics related by exact scalars, and a regression test
   holds the integrated fields identical under the conversion.
 
-Both are DRAFT on branch `axial-PDE`, for the September meeting to accept or
-overrule. `SPEC-DELTAS.md` deltas 34–35 carry the evidence, including what the
-implementation measured: the axial CO\* gradient is about 0.4 of a monolayer across
-the bed at the peak of a pulse, and modelling the velocity as constant leaves the
-outlet oxygen response wrong by 3.96% of its range against 0.18%.
+Both are DRAFT on branch `axial-PDE`, for the team to accept or
+overrule. What the implementation measured supports both: the axial CO\* gradient
+across the bed at the peak of a pulse is a substantial fraction of a monolayer, and
+modelling the velocity as constant leaves the outlet oxygen response wrong by an
+order of magnitude more than modelling it as variable does.
 
 ### 2026-08-24 — the first real dataset, and what it forced
 
 First contact with real data. Every change below was forced by a specific thing
-in PSU's CO-oxidation PRBS export or in Kitchin's fit of it; none was designed in
+in the first CO-oxidation PRBS export or in J. Kitchin's reference fit of it; none was designed in
 the abstract. Schema `0.1.0` is amended in place rather than forked, per
 `STANDARD.md` §6 — nothing has been tagged and no data was written against it.
 That window closes at the first tagged release, which is why these are being
@@ -405,14 +403,14 @@ made now and circulated for the team to overrule.
 
 - **PRBS `waveform` replaces the flat LFSR fields.** Three forms — `lfsr`,
   `recorded`, `reconstructed` — discriminated by `form`. The real experiment is a
-  randomised-dwell binary train ("6sMAX_50Pulses") with no LFSR anywhere, and its
+  randomised-dwell binary train with no LFSR anywhere, and its
   valve schedule was never logged. The old required set could not describe it
   truthfully. `parameters.label` is added for the operator's own sequence name,
-  explicitly untrusted: in the export at hand the identical label appears on all
-  five runs, at five different temperatures.
+  explicitly untrusted: in the export at hand the identical label appears on every
+  run, at different temperatures.
 - **Per-channel time bases.** A channel may name its own `time_column`, and
   `time_base.kind` may be `per_channel`. A scanning quadrupole visits its masses
-  in sequence — at 283.82 ms across 5 masses, 56.76 ms apart — so each species is
+  in sequence, tens of milliseconds apart, so each species is
   timestamped at its own acquisition instant. One shared time column would
   misdate every species but the first.
 - **`t0` is no longer required**, but its absence must be explained via
@@ -463,7 +461,7 @@ so they cannot collide, and nobody has to coordinate to guarantee it.
 
 - `model-spec.schema.json` covers a mechanism (`family: microkinetic`), a
   network architecture (`neural_ode`, `rnn`) or a term library
-  (`sparse_regression`) -- so the M3 neural baseline is described the same way,
+  (`sparse_regression`) -- so a neural baseline is described the same way,
   its seed included.
 - Each step declares `reversible` explicitly, required rather than defaulted: an
   unstated reversibility is the difference between an eight- and a
@@ -483,7 +481,7 @@ so they cannot collide, and nobody has to coordinate to guarantee it.
 ## 0.2.0 — 2026-08-20
 
 Second pass, driven by a clause-by-clause audit against the project Data
-Management and Sharing Plan. See `DMSP-COMPLIANCE.md` alongside the spec.
+Management and Sharing Plan.
 
 ### Three new document kinds
 
@@ -492,7 +490,7 @@ Management and Sharing Plan. See `DMSP-COMPLIANCE.md` alongside the spec.
   independently measured properties each with a method and uncertainty. One
   sample is measured many times across three institutions; repeating its history
   on every dataset guarantees the copies diverge. The `properties` object is the
-  side of the M9 join (a rate constant against a measured catalyst property) that
+  side of the join (a rate constant against a measured catalyst property) that
   is easy to leave in a notebook until too late.
 - **`model`** — a fitted or trained model as a research product. One schema for
   both ends of the graded palette, because two would put an arbitrary line down
