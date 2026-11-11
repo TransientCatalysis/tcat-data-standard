@@ -366,10 +366,10 @@ Everything in it is optional except `standard_version`. With no manifest at all,
 | Thing | Pattern | Example |
 |---|---|---|
 | `dataset_id` | lowercase, hyphen or underscore separated | `prbs-co-ox-synthetic-001` |
-| `batch_id` | lab prefix + synthesis or campaign identifier | `psu-vox-2026-09-a` |
+| `batch_id` | lab prefix + synthesis or campaign identifier | `lab-a-vox-2026-09-a` |
 | `lineage_id` | descriptive, stable across modalities | `vox-c3h8-odh-sample-14` |
-| `sample_id` | the lab's own sample label, verbatim | `PSU-VOx-SiO2-14` |
-| Instrument `identifier` | short, stable, uppercase | `MS-Q1`, `NSLS2-QAS-XAS` |
+| `sample_id` | the lab's own sample label, verbatim | `LABA-VOx-SiO2-14` |
+| Instrument `identifier` | short, stable, uppercase | `MS-Q1`, `BEAMLINE-X-XAS` |
 | Artifact id prefix | short verb or noun | `conc`, `fit`, `cal`, `frag` |
 
 `sample_id` is deliberately the lab's own label rather than a project-assigned one. A relabelling scheme that disagrees with what is written on the vial is a scheme that gets ignored.

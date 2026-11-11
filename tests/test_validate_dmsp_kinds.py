@@ -141,7 +141,7 @@ def test_unknown_top_level_fields_are_rejected(sample):
 
 def test_extensions_are_ignored(sample):
     doc = copy.deepcopy(sample)
-    doc["extensions"] = {"psu": {"calcination_furnace": "tube-3"}}
+    doc["extensions"] = {"lab-a": {"calcination_furnace": "tube-3"}}
     assert validate_sample(doc).ok
 
 

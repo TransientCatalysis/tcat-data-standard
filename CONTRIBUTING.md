@@ -17,7 +17,7 @@ tcat-validate all examples/
 **You are not blocked.** Put it in `extensions` — the validator ignores that object rather than rejecting it — and [open a schema-change issue](.github/ISSUE_TEMPLATE/schema-change.md).
 
 ```json
-"extensions": { "psu": { "mfc_calibration_date": "2026-08-30" } }
+"extensions": { "lab-a": { "mfc_calibration_date": "2026-08-30" } }
 ```
 
 Promotion threshold: the **same field, independently, in three labs' extensions**. Schema follows practice; it does not predict it. Two labs is a conversation, not yet a schema change — and a field promoted from one lab's usage is a field the other two will fill in wrong.

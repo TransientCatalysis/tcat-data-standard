@@ -167,26 +167,27 @@ def test_a_declared_floor_is_surfaced_as_advice(valid_calibration):
 
 
 def test_a_declared_but_unapplied_coefficient_survives_and_warns(valid_calibration):
-    """The workbook this came from declares CO->O = 0.005905 in a parameter cell
-    and hard-codes 0.0106 in 33,498 of 33,528 formula rows. `matrix` must carry
+    """A vendor workbook can declare one cracking fraction in a parameter cell and
+    hard-code a different one in nearly every formula row (the values here are
+    invented). `matrix` must carry
     what was applied; the declared value has to survive somewhere or the
     discrepancy is lost the moment anyone transcribes the parameter block."""
     doc = copy.deepcopy(valid_calibration)
     entry = doc["entries"][0]
-    entry["matrix"] = {"CO->O": 0.0106}
+    entry["matrix"] = {"CO->O": 0.0125}
     entry["declared_unused"] = {
-        "CO->O": {"value": 0.005905,
-                  "reason": "declared at W2; referenced by 1 of 1118 formula rows"},
+        "CO->O": {"value": 0.0042,
+                  "reason": "declared in a parameter cell; referenced by 1 formula row"},
     }
     report = validate_calibration(doc)
     assert report.ok
-    assert any("0.005905" in w.message for w in report.warnings)
+    assert any("0.0042" in w.message for w in report.warnings)
 
 
 def test_a_declared_unused_entry_must_say_how_it_was_established(valid_calibration):
     """'They disagree' is not a work item. Which cell, and how many rows, is."""
     doc = copy.deepcopy(valid_calibration)
-    doc["entries"][0]["declared_unused"] = {"CO->O": {"value": 0.005905}}
+    doc["entries"][0]["declared_unused"] = {"CO->O": {"value": 0.0042}}
     report = validate_calibration(doc)
     assert not report.ok
     assert "reason" in report.render()

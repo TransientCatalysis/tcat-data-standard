@@ -168,11 +168,11 @@
   ],
   "notes": "SYNTHETIC EXEMPLAR -- not measured data. Exists so that every required field has a worked, checkable value, and so the manifest indirection can be verified end to end: the sha256 below is the real checksum of examples/data/prbs-co-ox-synthetic.csv. Layer is canonical because the channels are ion currents with explicit units and per-point sigma; it is NOT derived, because no calibration has been applied -- calibration_ref records which calibration would apply, not one that has been used.",
   "extensions": {
-    "psu": {
+    "lab-a": {
       "reactor_conditioning_cycles": 3,
       "mfc_calibration_date": "2026-08-30"
     },
-    "bnl": {
+    "beamline-x": {
       "proposal_id": "GU-999999",
       "ring_current_mA": 398.2
     }

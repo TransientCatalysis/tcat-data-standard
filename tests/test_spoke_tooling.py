@@ -52,11 +52,11 @@ def test_the_calibration_directory_is_owned_by_the_instrument_owner():
     reviewed by whoever owns the instrument" from a sentence in PROMOTION.md
     into a review GitHub will require."""
     m = _manifest(
-        stewards=[_steward(), _steward(name="R Rioux", github="rmrioux", role="instrument_owner")],
+        stewards=[_steward(), _steward(name="A. Researcher", github="aresearcher", role="instrument_owner")],
         layout={"calibration": ["calibrations"]},
     )
     out = spoke.build_codeowners(m).text
-    assert "calibrations/\t@rmrioux" in out
+    assert "calibrations/\t@aresearcher" in out
     assert "@ajmedford" not in out.split("calibrations/")[1]
 
 

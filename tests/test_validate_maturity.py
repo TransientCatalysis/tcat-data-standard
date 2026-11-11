@@ -215,7 +215,7 @@ def test_a_reviewer_who_is_not_a_steward_is_warned_about():
     that set signing instead is either a missing steward or a misattributed
     review, and both are worth saying."""
     doc = sample(
-        stewards=[{"name": "R Rioux", "institution": "PSU",
+        stewards=[{"name": "A. Researcher", "institution": "Lab A",
                    "role": "instrument_owner", "orcid": "0000-0002-1825-0097"}],
         maturity=_reviewed(),  # reviewed_by is Medford, who is not in that list
     )
@@ -335,7 +335,7 @@ def _dataset_at(rung: str, *, url: bool = True, **maturity) -> dict:
     m = {"rung": rung, "entered_at": "2026-09-01"}
     if rung in ("reviewed", "published"):
         m |= {
-            "reviewed_by": {"name": "R Rioux", "orcid": "0000-0002-1825-0097"},
+            "reviewed_by": {"name": "A. Researcher", "orcid": "0000-0002-1825-0097"},
             "reviewed_on": "2026-09-01",
             "review_scope": "checked the exported counts against the instrument log",
         }

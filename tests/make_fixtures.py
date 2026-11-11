@@ -48,8 +48,8 @@ def main() -> None:
     # keeps labs recording things the schema has not caught up with.
     doc = copy.deepcopy(base)
     doc["extensions"] = {
-        "psu": {"reactor_conditioning_cycles": 3, "mfc_calibration_date": "2026-08-30"},
-        "bnl": {"proposal_id": "GU-999999", "ring_current_mA": 398.2},
+        "lab-a": {"reactor_conditioning_cycles": 3, "mfc_calibration_date": "2026-08-30"},
+        "beamline-x": {"proposal_id": "GU-999999", "ring_current_mA": 398.2},
     }
     (DATA / "dataset-with-extensions.json").write_text(json.dumps(doc, indent=2) + "\n")
 
