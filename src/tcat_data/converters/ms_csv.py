@@ -31,7 +31,7 @@ from .base import NotImplementedConverter, register
 class MSCsvConverter(NotImplementedConverter):
     name = "ms-csv"
     blocked_on = (
-        "two or three real MS exports from the PSU PRBS reactor (one from a failed run), "
+        "two or three real MS exports from the instrument's owner (one from a failed run), "
         "a written column dictionary, and an answer on MS/reactor clock alignment"
     )
 

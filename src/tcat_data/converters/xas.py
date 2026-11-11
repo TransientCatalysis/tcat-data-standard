@@ -37,8 +37,8 @@ from .base import NotImplementedConverter, register
 class XASConverter(NotImplementedConverter):
     name = "xas"
     blocked_on = (
-        "beamline assignment and a sample export from Frenkel's group, plus NSLS-II's "
-        "data-policy answer on what we retain versus link"
+        "a beamline assignment and a sample export from the group that runs the "
+        "measurement, plus the facility's data-policy answer on what we retain versus link"
     )
 
     def sniff(self, path: Path) -> bool:  # pragma: no cover - stub
