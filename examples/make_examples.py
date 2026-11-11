@@ -615,8 +615,8 @@ def build_model_spec_axial() -> dict:
         "reaction_system": "CO oxidation",
         "access_status": "public",
         "license": "CC-BY-4.0",
-        "notes": "DRAFT (2026-08), axial-PDE branch. The reactor block is what the "
-                 "September meeting is being asked to accept or overrule.",
+        "notes": "DRAFT (2026-08), axial-PDE branch. The reactor block is pending "
+                 "the collaboration's review.",
     }
 
 
