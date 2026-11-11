@@ -222,7 +222,7 @@ def _analysis_template(tmp_path: Path) -> Path:
 
 
 def _analysis_answers(tmp_path: Path) -> str:
-    m = _manifest(kind="analysis", spoke_id="gusmao-cqbax", name="Stiff DAE fitting")
+    m = _manifest(kind="analysis", spoke_id="labb-circx", name="Stiff DAE fitting")
     return _answers(tmp_path, {**m, "implements": "tcat-fit"})
 
 
@@ -232,11 +232,11 @@ def test_init_renames_the_example_package_to_this_spokes_own(tmp_path):
     root = _analysis_template(tmp_path)
     assert main(["init", str(root), "--answers", _analysis_answers(tmp_path)]) == 0
 
-    assert (root / "src" / "tcat_gusmao_cqbax").is_dir()
+    assert (root / "src" / "tcat_labb_circx").is_dir()
     assert not (root / "src" / "tcat_spoke_example").exists()
-    assert "tcat_gusmao_cqbax" in (root / "src" / "tcat_gusmao_cqbax" / "tool.py").read_text()
+    assert "tcat_labb_circx" in (root / "src" / "tcat_labb_circx" / "tool.py").read_text()
     assert "tcat_spoke_example" not in (root / "tests" / "test_conformance.py").read_text()
-    assert "tcat-fit-gusmao-cqbax" in (root / ".github" / "workflows" / "conform.yml").read_text()
+    assert "tcat-fit-labb-circx" in (root / ".github" / "workflows" / "conform.yml").read_text()
 
 
 def test_init_removes_the_stale_egg_info(tmp_path):
@@ -256,7 +256,7 @@ def test_init_fills_the_pyproject_a_spoke_would_otherwise_publish(tmp_path):
     main(["init", str(root), "--answers", _analysis_answers(tmp_path)])
     text = (root / "pyproject.toml").read_text()
     assert "REPLACE" not in text
-    assert 'name = "gusmao-cqbax"' in text
+    assert 'name = "labb-circx"' in text
     assert "A J Medford" in text
 
 
