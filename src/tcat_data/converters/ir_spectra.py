@@ -16,7 +16,7 @@ What this must produce:
   * a time base shared with the kinetic stream, so the modalities can be aligned
   * uncertainty: detector noise where available, otherwise a declared estimate
 
-Open questions for the PSU team:
+Open questions for the instrument's owners:
   * export format -- OPUS, SPA, JCAMP-DX, or a text dump?
   * is the exported spectrum already background-ratioed?
   * is the wavenumber axis identical across runs, or per-run?

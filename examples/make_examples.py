@@ -7,8 +7,7 @@ from it -- so ``tcat-validate`` passing on them means something, and a reader ca
 verify the manifest indirection end to end rather than taking it on faith.
 
 The trace is SYNTHETIC. It is a toy first-order response to a real LFSR-generated
-PRBS sequence, standing in for the PSU CO-oxidation dataset that the pipeline
-will bootstrap on. Nothing here is measured data and nothing here should be used
+PRBS sequence, standing in for a measured CO-oxidation PRBS dataset. Nothing here is measured data and nothing here should be used
 to draw a conclusion about a catalyst.
 
 Run:  python examples/make_examples.py
@@ -690,10 +689,9 @@ def build_model_spec_axial_irreversible() -> dict:
 
 
 def build_model_spec_axial_psu() -> dict:
-    """PSU's own treatment: nine constants, k_4 closed, partial pressures, per kg.
+    """Penn State's own treatment: nine constants, k_4 closed, partial pressures, per kg.
 
-    This is the reproduction comparator. The requirement reads "reproduce the published PSU
-    CO-oxidation fit within stated uncertainty", their per-temperature fits carry
+    This is the reproduction comparator. The reference per-temperature fits carry
     nlparci intervals, and comparing against them honestly means fitting the same
     free-parameter set in the same units -- per kilogram of catalyst, on a
     partial-pressure activity basis, with step 4's reverse fixed by detailed
@@ -1080,7 +1078,7 @@ def build_model_spec_reversible() -> dict:
         "parameter_transform": "log10",
         "mechanism": _co_ox_mechanism(reversible_last_two=True, closure=True),
         # Nine, not ten: step 4's reverse constant is fixed by the closure rather
-        # than fitted. PSU's MATLAB additionally fits a total site density, which
+        # than fitted. Penn State's MATLAB model additionally fits a total site density, which
         # in this formulation is folded into the fitted scale factor instead.
         "free_parameters": _free_parameters(
             ["k1", "k_1", "k2", "k_2", "k3", "k_3", "k4", "k5", "k_5"]

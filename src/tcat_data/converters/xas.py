@@ -20,11 +20,11 @@ What this must produce:
   * the facility record identifier -- proposal, beamline, endstation, scan id
   * a time base alignable with the reactor and IR streams
 
-Open questions for the Frenkel group:
+Open questions for the beamline group:
   * which beamline and endstation, and what does its export look like?
   * fast-scan XAS raw form: individual scans, or an already-binned array?
   * how is the beamline clock aligned to the reactor clock?
-  * what does NSLS-II's data policy require us to keep versus link?
+  * what does the facility's data policy require us to keep versus link?
 """
 
 from __future__ import annotations

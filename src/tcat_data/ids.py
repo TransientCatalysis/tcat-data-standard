@@ -2,8 +2,8 @@
 
 Why the hash rule lives in the DATA hub rather than the analysis hub
 -------------------------------------------------------------------
-The distributed design rests on one claim: an artifact id computed at Georgia
-Tech is byte-identical to one computed on a cluster at Penn State, so multiple
+The distributed design rests on one claim: an artifact id computed at one
+institution is byte-identical to one computed on a cluster at another, so multiple
 stores can agree on names without a central authority. That claim is only true
 if the hashing rule is normative and shared. If each site's tooling canonicalises
 parameters slightly differently -- key order, float formatting, how an empty

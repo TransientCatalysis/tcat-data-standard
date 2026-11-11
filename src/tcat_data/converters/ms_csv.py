@@ -13,7 +13,7 @@ What this must produce:
   * per-channel uncertainty: counting statistics where the instrument reports
     counts, otherwise a declared baseline-drift or calibrated estimate
 
-Open questions for the Rioux lab:
+Open questions for the instrument's owners:
   * which export format -- instrument software CSV, or the MATLAB intermediate
     the existing CO-oxidation workflow already produces?
   * are ion currents already background-subtracted on export? If so that is a
