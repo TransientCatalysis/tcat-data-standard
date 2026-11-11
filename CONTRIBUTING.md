@@ -2,7 +2,7 @@
 
 Read [`STANDARD.md`](STANDARD.md) first — it is the rulebook, and each rule says why it exists rather than only what it requires.
 
-Three institutions pin this repository for the definition of ingestible data. That is the whole reason it is small, boring, and slow to change. A change here can invalidate data at PSU, BNL, and GT simultaneously, so the bar is higher than it looks for a repository this size.
+Three institutions pin this repository for the definition of ingestible data. That is the whole reason it is small, boring, and slow to change. A change here can invalidate data at all three simultaneously, so the bar is higher than it looks for a repository this size.
 
 ## Setup
 

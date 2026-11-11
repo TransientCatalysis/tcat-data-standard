@@ -23,7 +23,7 @@
 
 **What counts as a valid dataset for the TransientCatalysis collaboration.** Schema, validator, and ingestion contract.
 
-> **Status:** in use; exercised against PSU's PRBS-MS and transient-IR campaigns. Versions: `tcat_data.STANDARDS_VERSION` (the rulebook) and the schema version (`src/tcat_data/schema/VERSION`); every older schema version is retained. To argue about a required field, see [STANDARD.md](STANDARD.md) §4 and open an issue.
+> **Status:** in use; exercised against real PRBS-MS and transient-IR campaigns. Versions: `tcat_data.STANDARDS_VERSION` (the rulebook) and the schema version (`src/tcat_data/schema/VERSION`); every older schema version is retained. To argue about a required field, see [STANDARD.md](STANDARD.md) §4 and open an issue.
 
 This repository is deliberately small and deliberately boring. Three institutions depend on it for the answer to one question — *is this data ingestible?* — so it has to be stable. Everything that is scientific judgement lives in [`tcat-tool-standard`](https://github.com/TransientCatalysis/tcat-tool-standard) instead, where it is free to be argued about and revised.
 
@@ -129,4 +129,4 @@ See [`CITATION.cff`](CITATION.cff). If you use this standard, please also cite T
 
 ## Acknowledgment
 
-Developed under the DOE Genesis Mission, DE-FOA-0003612, *Transient Kinetics and Spectroscopy for Agentic Digital Twins to Upgrade Domestic Alkane Feedstocks into Value-Added Chemicals* (Phase I).
+Supported by the U.S. Department of Energy, Genesis Mission, award DE-SC0026638.
