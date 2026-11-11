@@ -254,7 +254,7 @@
                 "source": {
                   "type": "string",
                   "minLength": 1,
-                  "description": "Where this prior comes from, specific enough to re-derive -- e.g. 'spread of declared 0.005905 vs applied 0.0106 vs NIST ~0.017'."
+                  "description": "Where this prior comes from, specific enough to re-derive -- e.g. 'spread between the constant the vendor workbook declares, the one its formulas apply, and a reference-database value'. A workbook can declare one constant and apply another, so record both."
                 },
                 "from_declared_unused": {
                   "type": "boolean",
@@ -317,8 +317,8 @@
       "type": "string",
       "description": "Who owns the instrument. A calibration change is reviewed by this person -- everything downstream depends on calibration code, so it carries a tighter gate than a fitting tool.",
       "examples": [
-        "rioux-lab",
-        "frenkel-group"
+        "lab-a",
+        "beamline-x-group"
       ]
     },
     "supersedes": {

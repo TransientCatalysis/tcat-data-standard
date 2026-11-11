@@ -20,7 +20,7 @@
       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
       "description": "Stable internal handle, usable before a DOI exists.",
       "examples": [
-        "2027-rioux-prbs-transient-vox-odh"
+        "2027-lab-a-prbs-transient-vox-odh"
       ]
     },
     "title": {

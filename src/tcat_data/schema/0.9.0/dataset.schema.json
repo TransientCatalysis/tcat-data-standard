@@ -185,7 +185,7 @@
       "type": "string",
       "description": "Which project this dataset belongs to. Named in the DMSP's metadata list; matters as soon as a lab runs more than one, and unrecoverable once someone has to guess.",
       "examples": [
-        "genesis-prbs-phase-1"
+        "transient-kinetics-phase-1"
       ]
     },
     "objective": {

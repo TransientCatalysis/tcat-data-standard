@@ -370,23 +370,23 @@
           "examples": [
             "MS-Q1",
             "PRBS-REACTOR-1",
-            "NSLS2-QAS-XAS"
+            "BEAMLINE-X-XAS"
           ]
         },
         "site": {
           "type": "string",
           "description": "Which institution or facility holds the instrument. Free text in 0.2.0; a controlled list is a promotion candidate.",
           "examples": [
-            "psu",
-            "bnl",
-            "gt"
+            "lab-a",
+            "beamline-x",
+            "lab-b"
           ]
         },
         "facility": {
           "type": "string",
           "description": "User facility and endstation, where applicable.",
           "examples": [
-            "NSLS-II QAS 7-BM"
+            "Synchrotron X, beamline 7"
           ]
         }
       },
@@ -517,7 +517,7 @@
           "award": {
             "type": "string",
             "examples": [
-              "DE-FOA-0003612"
+              "DE-SC0026638"
             ]
           },
           "program": {
@@ -841,7 +841,7 @@
         "review_scope": {
           "type": "string",
           "minLength": 30,
-          "description": "What the reviewer actually checked, and against what. Thirty characters minimum, mirroring the analysis hub's `blocked_on` rule -- \"reviewed\" describes nothing and cannot be audited. The model is the calibration case: reproduced PSU's own mole fractions from raw counts, 130,537 of 130,560 values bit-identical across 26 runs."
+          "description": "What the reviewer actually checked, and against what. Thirty characters minimum, mirroring the analysis hub's `blocked_on` rule -- \"reviewed\" describes nothing and cannot be audited. The model is the calibration case: reproduced the instrument workbook's own mole fractions from raw counts, bit-identical in all but a handful of values across every run of the campaign."
         },
         "published_in": {
           "type": "string",

@@ -75,7 +75,7 @@
         },
         "bed": {
           "type": "object",
-          "description": "Packed-bed geometry. MEASURED, so it belongs to the experiment rather than to any model -- but a reactor model cannot be evaluated without it, and none of it existed in any record before: for the CO-oxidation campaigns these numbers lived only in PSU's MATLAB drivers, which is also why the analysis spoke's residence-time bound had no traceable input. `bed_volume_cm3` above is kept and unused; state length and diameter instead, which determine it and also the velocity. DRAFT (2026-08): axial-PDE branch, for the September meeting.",
+          "description": "Packed-bed geometry. MEASURED, so it belongs to the experiment rather than to any model -- but a reactor model cannot be evaluated without it, and none of it existed in any record before: for the first campaigns these numbers lived only in the laboratory's own analysis scripts, which is also why the analysis spoke's residence-time bound had no traceable input. `bed_volume_cm3` above is kept and unused; state length and diameter instead, which determine it and also the velocity. DRAFT (2026-08): pending the collaboration's review.",
           "additionalProperties": false,
           "properties": {
             "length_mm": {
