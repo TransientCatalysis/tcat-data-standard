@@ -7,11 +7,11 @@ Twenty minutes, once. Work down the list.
 **A spoke is any repository whose records validate.** Pick the unit that matches how you actually work — nobody can usefully decide this for you in advance, and the registry means it is not a decision you are stuck with.
 
 ```
-spoke-psu-prbs           by instrument or campaign
-spoke-rioux-lab          by lab
+spoke-prbs-reactor       by instrument or campaign
+spoke-smith-lab          by lab
 spoke-jsmith             by student
 spoke-odh-mechanism      by sub-project
-psu-transient-data       a monorepo holding several
+transient-data           a monorepo holding several
 ```
 
 Two things worth knowing. A repository is a unit of **review and access control**, so the granularity that usually feels right is whatever matches who reviews and who needs access. And a repository per *dataset* is the one shape to avoid — not because it breaks anything, but because you would get hundreds of repositories with identical permissions and no shared history, for no gain.
@@ -89,7 +89,7 @@ Copy `protocols/_example.json`. A PRBS protocol must declare a `waveform` in one
 
 If you find yourself reaching for the third form, that is worth an instrument work item rather than a metadata one: logging the schedule is usually a small change, and everything downstream of a reconstructed inlet inherits the reconstruction's assumptions.
 
-Do not use `parameters.label` as metadata. It is there to hold the operator's own sequence name verbatim, and in the first real dataset the project ingested the identical label appeared on five runs at five different temperatures.
+Do not use `parameters.label` as metadata. It is there to hold the operator's own sequence name verbatim, and in the first real dataset the project ingested the identical label appeared on several runs at different temperatures.
 
 ## 9. Your first dataset
 
@@ -129,9 +129,9 @@ A merged PR gets data into the repository; registering makes it findable. From a
 checkout of [`tcat-index`](https://github.com/TransientCatalysis/tcat-index):
 
 ```bash
-python scripts/register.py sample  ../my-spoke/samples/PSU-VOx-14.json
+python scripts/register.py sample  ../my-spoke/samples/VOx-14.json
 python scripts/register.py dataset ../my-spoke/manifests/prbs-run-014.json \
-    --spoke my-spoke --site psu-rioux
+    --spoke my-spoke --site my-lab
 python scripts/check_index.py
 ```
 

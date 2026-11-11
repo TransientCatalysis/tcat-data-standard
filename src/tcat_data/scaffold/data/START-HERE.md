@@ -124,11 +124,9 @@ wait.
   other people can find it.
 - Turn on the CI gate (it is already in `.github/workflows/`) so the check runs
   on every push instead of only when you remember.
-- The worked example on real data is
-  [`tcat-data-psu-coox`](https://github.com/TransientCatalysis/tcat-data-psu-coox)
-  — 26 PSU CO-oxidation runs, and `scripts/build_records.py` is 905 lines of
-  what this actually looks like once it is real. Read it when the example here
-  runs out.
+- A spoke holding a real campaign usually grows a record-building script of its
+  own (several hundred lines is normal). The examples here are the shapes it has
+  to produce.
 
 ## If you get stuck
 

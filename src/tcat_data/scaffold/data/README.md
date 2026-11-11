@@ -56,14 +56,14 @@ Validating locally and merging a PR gets the data into this repository. It does 
 
 ```bash
 # in a checkout of tcat-index
-python scripts/register.py sample  ../my-spoke/samples/PSU-VOx-14.json
-python scripts/register.py dataset ../my-spoke/manifests/prbs-run-014.json --spoke my-spoke --site psu-rioux
+python scripts/register.py sample  ../my-spoke/samples/VOx-14.json
+python scripts/register.py dataset ../my-spoke/manifests/prbs-run-014.json --spoke my-spoke --site my-lab
 ```
 
 Then anyone — or any agent — can find it:
 
 ```bash
-python scripts/query.py --sample PSU-VOx-14
+python scripts/query.py --sample VOx-14
 ```
 
 Register the **sample first**. A dataset whose `sample_id` does not resolve produces a warning, because the data-to-sample link is the one the project's data-management plan specifically commits to.

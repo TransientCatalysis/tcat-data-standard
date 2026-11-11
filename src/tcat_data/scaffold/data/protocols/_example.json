@@ -57,7 +57,7 @@
     "",
     "There is also an optional `label` for the operator's own sequence name. It is",
     "recorded verbatim and trusted for nothing: in the first real dataset the",
-    "project ingested, the identical label appeared on five runs at five different",
+    "project ingested, the identical label appeared on several runs at different",
     "temperatures."
   ],
 
