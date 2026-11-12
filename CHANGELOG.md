@@ -1,6 +1,11 @@
 # Changelog
 
-## 0.12.0 — tooling, not standards (2026-11-12)
+Through 2026-10-12 a heading named the STANDARDS version and the entry stated the package
+version beside it (they have been separate numbers since 0.6.1); each heading now names both,
+read from the release commits. The 2026-11-12 entry is a package release that leaves the
+standards at 0.12.0.
+
+## Package 0.12.0 (standards 0.12.0, unchanged) — tooling, not standards (2026-11-12)
 
 **Packaging, ready for an index (no upload yet).** The version is single-sourced from
 `tcat_data.__version__` (`pyproject.toml` reads it); the licence is the SPDX expression `MIT`
@@ -54,7 +59,7 @@ their old `award` example annotation** (0.1.0–0.8.0 are never edited); 0.9.0's
 Records that already carry the FOA number stay valid: `award` is a free string. No spoke has to
 do anything.
 
-## 0.12.0 — 2026-10-12 · schema 0.9.0
+## Standards 0.12.0 (package 0.11.0) — 2026-10-12 · schema 0.9.0
 
 Decided by the PI 2026-10-11 (tcat-tool-standard#16, #17, #22; tcat-data-standard#11, #12, #13);
 the PR awaits approval (COLLABORATION.md section 5). Package 0.11.0. `0.8.0` frozen with a
@@ -88,7 +93,7 @@ checksum manifest and added to the retention test; examples and fixtures regener
   reference) does not match `<tool>-<name>-YYYY-MM-DD-<hash>`, and points at
   `tcat_data.ids.make_artifact_id`; the raw oneOf error named neither (#11).
 
-## 0.11.0 — 2026-10-08 · schema 0.8.0
+## Standards 0.11.0 (package 0.10.0) — 2026-10-08 · schema 0.8.0
 
 Approved by the PI 2026-10-08 (COLLABORATION.md section 5). Package 0.10.0. `0.7.0` frozen
 with a checksum manifest and added to the retention test; examples and fixtures regenerated.
@@ -124,7 +129,7 @@ is told at the end of init that CI needs a repository secret `TCAT_HUB_TOKEN`. N
 change; `tcat_data` is outside every tool identity (`import_closure` ignores it), so no
 artifact id moves.
 
-## 0.10.0 — 2026-10-05 · schema 0.7.0
+## Standards 0.10.0 (package 0.9.0) — 2026-10-05 · schema 0.7.0
 
 Approved by the PI 2026-10-05 (COLLABORATION.md section 5). Package 0.9.0. `0.6.0` frozen
 with a checksum manifest and added to the retention test; examples and fixtures regenerated.
@@ -141,7 +146,7 @@ tracks main, a held notebook is checked against its own identities rather than t
 an expensive exhibit is not re-executed on every tool change -- and it must still have run on
 exactly those identities, so a hold never hides a notebook that ran on something else.
 
-## 0.9.0 — 2026-09-28 · schema 0.6.0
+## Standards 0.9.0 (package 0.8.0) — 2026-09-28 · schema 0.6.0
 
 **Quasi-steady species (2026-09-29, additive within the unreleased 0.6.0).**
 `mechanism.quasi_steady`: species whose coverage has gone to zero in a limit of a parent
@@ -184,7 +189,7 @@ breaks the cycle constraint; `reversible: false` stays a hypothesis a human writ
 **Approved by the PI as a standards bump on 2026-09-30 (COLLABORATION.md
 section 5)**, together with `thermodynamics.reverse_barriers` and `steps[].modified`.
 
-## 0.8.0 — 2026-09-18 · schema 0.5.0
+## Standards 0.8.0 (package 0.7.0) — 2026-09-18 · schema 0.5.0
 
 **A fourth location form, `uri`, and the exactly-one rule stops being quadratic.**
 
@@ -220,7 +225,7 @@ the thing that gets away with something is the thing that has to be named.
 No existing record changes meaning. `0.4.0` is frozen with a checksum manifest and
 retained, as `0.3.0`, `0.2.0` and `0.1.0` are.
 
-## 0.7.0 — 2026-09-09 · schema 0.4.0
+## Standards 0.7.0 (package 0.7.0) — 2026-09-09 · schema 0.4.0
 
 **`measurement_type` is a free string, and an unanticipated modality is presumed experimental.**
 
