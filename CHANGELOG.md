@@ -2,6 +2,11 @@
 
 ## Unreleased — tooling, not standards
 
+**The stub converter package is removed** (`tcat_data.converters`: `Converter`,
+`ConversionResult`, `NotImplementedConverter`, `register`, `registry`, `find_converter`, and the
+three stubs). No code imported it; instrument converters live in `tcat-ingest`, which names
+its own. No schema change.
+
 **`tcat-spoke init --owner <account>` gives a campaign's CI its owner's credential**
 (tcat-campaign-standard#12; PI, 2026-10-12: students drive their own campaigns). The campaign
 skeleton's workflow now attaches the CI token to `github.com/TransientCatalysis/` alone, which is
