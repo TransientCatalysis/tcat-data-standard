@@ -476,11 +476,15 @@ def _write_codeowners(root: Path, manifest: dict[str, Any]) -> bool:
 
 def _fill_campaign_record(root: Path, manifest: dict[str, Any]) -> bool:
     """A campaign's manifest is its campaign.json (tcat-campaign-standard/CAMPAIGN.md):
-    fill the id and title; the pins are written later by `tcat-campaign pin`."""
+    fill the schema version, id and title; the pins are written later by
+    `tcat-campaign pin`."""
     path = root / "campaign.json"
     if not path.is_file():
         return False
     record = json.loads(path.read_text(encoding="utf-8"))
+    # The installed standard's version, as `.standard-version` is for a data
+    # spoke: a skeleton's literal goes stale the day the schema moves.
+    record["schema_version"] = CURRENT_SCHEMA_VERSION
     record["campaign_id"] = manifest["spoke_id"]
     if manifest.get("name"):
         record["title"] = manifest["name"]
@@ -613,14 +617,14 @@ def _cmd_init(args: argparse.Namespace) -> int:
 
 
 def _print_outside_note(owner: str) -> None:
-    """The one thing an outside repository needs that init cannot do for it."""
+    """What an outside repository may need that init cannot do for it."""
     if owner == HOME_OWNER:
         return
     print(
-        f"\nThis repository lives in {owner}, outside {HOME_OWNER}, so the org's\n"
-        "TCAT_HUB_TOKEN secret does not reach it. Before CI can install the private\n"
-        "toolchain, add a REPOSITORY secret named TCAT_HUB_TOKEN holding a classic\n"
-        "personal access token (`repo` scope) from an account that can read the org:\n"
+        f"\nThis repository lives in {owner}, outside {HOME_OWNER}. The standards and the\n"
+        "org's tools are public, so CI installs them with no secret. Only if it comes to\n"
+        "depend on a PRIVATE repository, add a repository secret TCAT_HUB_TOKEN holding a\n"
+        "token that can read that repository (org secrets do not reach this account):\n"
         f"  gh secret set TCAT_HUB_TOKEN --repo {owner}/<repo>"
     )
 

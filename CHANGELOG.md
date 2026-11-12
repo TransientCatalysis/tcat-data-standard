@@ -2,6 +2,23 @@
 
 ## Unreleased — tooling, not standards
 
+**`tcat-spoke init` makes a repository that passes the org's gates on its first run.**
+- It writes only into a new or empty directory: filling a populated directory in place was the
+  route from a cloned template repository, and template repositories no longer exist. Template
+  mode is gone with it (`.tcat/IS_TEMPLATE` in `init` and `check`), as is `init --force` and the
+  fingerprint check's message about the pre-digest file format.
+- It writes `AGENTS.md`, `CLAUDE.md`, `SECURITY.md`, `.github/dependabot.yml` and
+  `.github/workflows/dependabot-automerge.yml` with the org's generator, vendored byte-identical as
+  `tcat_data.org_files` (a test fails when it differs from the org's copy; it finds that copy via
+  `TCAT_ORG_TOOLING` or a sibling checkout, and refuses when it cannot), and deletes the skeleton's
+  `_tcat-spoke.json.template` once the manifest exists. A campaign's `campaign.json` is stamped
+  with the installed schema version.
+- `tcat-spoke check` on a campaign runs `tcat-campaign check` (refusing loudly when that is not
+  installed) instead of asking for a spoke manifest a campaign never has.
+- The data skeleton's actions are pinned to commits, and no skeleton tells anyone to make a
+  repository private or to find a token: the toolchain is public, and a token is needed only for a
+  private dependency.
+
 **`tcat-validate all` fails on input it could not read.** A corrupt `.tcat-spoke.json`, a
 `.json` file that does not parse, a path that does not exist, and a tree holding no tcat
 document are now errors; each used to exit 0 (the manifest was treated as absent, the file as a

@@ -339,11 +339,14 @@ The validator's directory-name convention is a **default**:
 manifests/  raw/  canonical/  derived/  calibrations/  protocols/  samples/
 ```
 
-A spoke that diverges declares its layout in `.tcat-spoke.json` at its root, and `tcat-validate all` believes it:
+A spoke that diverges declares its layout in `.tcat-spoke.json` at its root (`tcat-spoke init` writes the file), and `tcat-validate all` believes it:
 
 ```json
 {
-  "standard_version": "0.1.0",
+  "standard_version": "0.9.0",
+  "spoke_id": "lab-a-data",
+  "kind": "data",
+  "stewards": [{"name": "A. Steward", "role": "data_steward", "github": "a-steward"}],
   "granularity": "campaign",
   "layout": {
     "dataset": ["2026-09-campaign/measurements", "2026-11-campaign/measurements"],
@@ -355,9 +358,9 @@ A spoke that diverges declares its layout in `.tcat-spoke.json` at its root, and
 }
 ```
 
-Everything in it is optional except `standard_version`. With no manifest at all, kind is inferred from directory names and then from each document's own contents — so an unconventional spoke validates without a manifest too; the manifest just makes the intent explicit and lets `exclude` and `strict` be set.
+`standard_version`, `spoke_id`, `kind` and `stewards` are required; the rest is optional. A manifest that is present but does not parse is an error, never treated as absent. With no manifest at all, kind is inferred from directory names and then from each document's own contents — so an unconventional spoke validates without a manifest too; the manifest just makes the intent explicit and lets `exclude` and `strict` be set.
 
-`strict: true` turns an unrecognised JSON file from a skip into an error. Off by default, because a spoke legitimately holds configuration and working notes, and forcing every JSON file to be a valid document would make people keep their real files somewhere the validator never sees.
+`strict: true` turns an unrecognised JSON file from a skip into an error. A JSON file that does not parse is an error either way, and so is a walk that finds no document at all: "0/0 passed" checked nothing. Off by default, because a spoke legitimately holds configuration and working notes, and forcing every JSON file to be a valid document would make people keep their real files somewhere the validator never sees.
 
 ---
 
