@@ -18,18 +18,19 @@ Two things worth knowing. A repository is a unit of **review and access control*
 
 If your granularity changes later, moving records between spokes is a `git mv` plus a re-register. Nothing joins on a repository name.
 
-## 2. Make it private
+## 2. Choose its visibility
 
-The DMSP: private during early development, public on release. Data is released no later than the publication it supports.
+Public or private, whichever your data's release terms allow: data you may not publish yet does not belong in a public repository. Data is released no later than the publication it supports.
 
 Repository visibility is a coarse gate; the fine-grained one is each dataset's `access_status` field (`internal` / `staged` / `public`). Set that per dataset and the release conversation later is a query rather than an audit.
 
-## 3. Fill in the placeholders
+## 3. Check what init filled in
 
-- `README.md` — every `[BRACKETED]` item, then delete the "this is a template" line
-- `LICENSE` — the copyright holder
+`tcat-spoke init` wrote `.tcat-spoke.json`, filled the README, `CITATION.cff` and `LICENSE` placeholders it could, and generated `.github/CODEOWNERS`. `tcat-spoke check .` names, by file and line, anything it could not fill. Then:
+
+- `README.md` — make it describe your data
 - `.standard-version` — leave as-is unless you have a reason
-- `_tcat-spoke.json.template` — **only if your layout differs from the default**, or you want `exclude` / `strict`. Copy it to `.tcat-spoke.json`, strip the `$comment` keys, fill it in. Otherwise delete it: the default directory names work without a manifest, and so does content-based inference for a layout that matches neither.
+- `.tcat-spoke.json` — edit `layout` **only if your layout differs from the default**, or to set `exclude` / `strict`. With no `layout`, the default directory names work, and so does content-based inference for a layout that matches neither.
 
 ## 4. Install the validator
 
@@ -66,7 +67,7 @@ A hand-written label like `our-calibration-v2` could be edited in place, and the
 ## 7. Your first sample
 
 Before your first dataset, if this lab makes catalysts. `samples/_example.json` is
-the template.
+the example to copy.
 
 Authored **once** per sample, by the lab that made it. Every dataset measured on
 it then carries only `sample_id`. The thing worth taking seriously is
@@ -113,15 +114,13 @@ Read the warnings as well as the errors. Warnings never fail CI, and the one abo
 
 `.github/workflows/validate.yml` runs on every PR. In repository settings, make it a **required status check** so a failing validation blocks the merge. Without that, "passing CI is the definition of ingestible" is a convention rather than a mechanism.
 
-The `TransientCatalysis` org is on the **Team plan**, so this works on private repositories. (It did not on Free, and an earlier version of this guide told you to record the gap instead — that no longer applies.)
-
 ## 11. Check the whole tree
 
 ```bash
 tcat-validate all .
 ```
 
-`SKIP` lines mean the validator could not infer a document's kind from its location. Either move the file into the directory that matches it, or pass `--kind` explicitly.
+`SKIP` lines mean the validator could not infer a document's kind from its location or contents. Either move the file into the directory that matches it, or declare the directory in `.tcat-spoke.json`'s `layout`. A file that does not parse, or a tree with no document in it, is an error, not a skip.
 
 ## 12. Register what you deposited
 
@@ -144,9 +143,9 @@ link is one the project's data-management plan explicitly commits to.
 
 ```
 [ ] Named at whatever granularity matches who reviews and who needs access
-[ ] Private
-[ ] README placeholders filled in, template line removed
-[ ] .tcat-spoke.json written, or the template deleted
+[ ] Visibility matches what the data's release terms allow
+[ ] tcat-spoke check . is clean
+[ ] .tcat-spoke.json layout matches where things are
 [ ] LICENSE copyright filled in
 [ ] Site registered in tcat-index, with an honest egress value
 [ ] First calibration written in the TIME-INDEXED form

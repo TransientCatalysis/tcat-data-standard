@@ -16,6 +16,6 @@ WHY THIS DEFAULT
 ON RELEASE
   Data is released no later than publication of the paper it supports. Until then
   a dataset's `access_status` is `internal` or `staged`, and this repository is
-  private. Changing the file does not change the field; change the field.
+  not public. Changing the file does not change the field; change the field.
 
 FILL IN THE COPYRIGHT LINE ABOVE before your first commit.
