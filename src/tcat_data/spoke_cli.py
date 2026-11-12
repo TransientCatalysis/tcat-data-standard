@@ -499,7 +499,8 @@ def _write_org_files(root: Path) -> list[Path]:
     repository failed its first `security` run, which its own workflow calls."""
     from . import org_files
 
-    return [p.relative_to(root) for p in org_files.write(root.resolve())]
+    root = root.resolve()
+    return [p.relative_to(root) for p in org_files.write(root)]
 
 
 def _cmd_init(args: argparse.Namespace) -> int:

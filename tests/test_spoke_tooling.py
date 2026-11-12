@@ -142,6 +142,16 @@ def test_init_refuses_a_populated_directory_and_changes_nothing_in_it(tmp_path, 
     assert (root / "README.md").read_text() == "# mine [BRACKETED]\n"
 
 
+def test_init_into_a_relative_path_writes_the_gate_files(tmp_path, monkeypatch):
+    """How a person types it. The first version resolved one side of a path
+    comparison and not the other, and crashed after writing the files."""
+    monkeypatch.chdir(tmp_path)
+    m = _manifest(stewards=[_steward(), _steward(name="A. Researcher", github="aresearcher",
+                                                 role="instrument_owner")])
+    assert main(["init", "rel-spoke", "--kind", "data", "--answers", _answers(tmp_path, m)]) == 0
+    assert (tmp_path / "rel-spoke" / "AGENTS.md").is_file()
+
+
 def test_init_deletes_the_manifest_template_once_the_manifest_is_written(tmp_path):
     """Left behind, the annotated copy reads as a second, unfilled manifest."""
     root = _init(tmp_path)
