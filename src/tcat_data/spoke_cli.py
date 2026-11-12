@@ -56,7 +56,13 @@ HOME_COPYRIGHT = "Copyright (c) 2026 A. J. Medford and the TransientCatalysis co
 def _ask(prompt: str, default: str | None = None, *, required: bool = True) -> str:
     suffix = f" [{default}]" if default else ""
     while True:
-        got = input(f"{prompt}{suffix}: ").strip() or (default or "")
+        try:
+            got = input(f"{prompt}{suffix}: ").strip() or (default or "")
+        except EOFError:
+            raise ValueError(
+                f"tcat-spoke init: no answer for {prompt!r} -- stdin is not interactive. "
+                "Pass --answers FILE (a JSON object; `tcat-spoke init --help` lists its keys)."
+            ) from None
         if got or not required:
             return got
         print("  needed.", file=sys.stderr)
@@ -514,18 +520,25 @@ def _cmd_init(args: argparse.Namespace) -> int:
     if kind is None:
         print("tcat-spoke init: --kind data|tool|campaign is required", file=sys.stderr)
         return 1
+    if root.exists() and (not root.is_dir() or any(root.iterdir())):
+        print(f"tcat-spoke init: {root} is not empty; init writes only into a new or empty "
+              "directory", file=sys.stderr)
+        return 1
+    is_campaign = kind == "campaign"
+    target = root / SPOKE_MANIFEST
+
+    # The answers come first, so an unanswered question (a script with no tty and
+    # no --answers) leaves nothing behind: half a skeleton in the directory made
+    # the corrected re-run refuse it as not empty.
+    answers = json.loads(Path(args.answers).read_text()) if args.answers else None
+    manifest = _gather(root, answers, "campaign" if is_campaign else kind)
+
     try:
         written = _scaffold.materialise(kind, root)
     except (LookupError, FileExistsError) as exc:
         print(f"tcat-spoke init: {exc}", file=sys.stderr)
         return 1
     print(f"wrote the {kind} skeleton: {len(written)} files into {root}")
-
-    is_campaign = kind == "campaign"
-    target = root / SPOKE_MANIFEST
-
-    answers = json.loads(Path(args.answers).read_text()) if args.answers else None
-    manifest = _gather(root, answers, "campaign" if is_campaign else kind)
     owner = args.owner or manifest.pop("owner", None) or HOME_OWNER
     manifest.pop("owner", None)
     implements = manifest.pop("implements", None)     # init-only, like owner

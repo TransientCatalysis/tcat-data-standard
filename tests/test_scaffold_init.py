@@ -91,3 +91,30 @@ def test_the_data_skeletons_example_declares_the_installed_schema_and_fails_only
     errors = validate_dataset(doc).errors
     assert all("REPLACE" in json.dumps(e.message) or "REPLACE" in e.message for e in errors), \
         [f"{e.pointer}: {e.message}" for e in errors]
+
+
+def test_init_without_a_tty_or_answers_fails_cleanly_and_writes_nothing(tmp_path, capsys, monkeypatch):
+    """With stdin closed and no --answers, init used to copy the skeleton, then
+    die on an EOFError traceback -- leaving a half-made directory that the
+    corrected re-run refused as not empty."""
+    import io
+
+    monkeypatch.setattr("sys.stdin", io.StringIO(""))
+    root = tmp_path / "scripted"
+    assert tcat_spoke(["init", str(root), "--kind", "tool"]) == 1
+    err = capsys.readouterr().err
+    assert "--answers" in err and "Spoke id" in err
+    assert not root.exists() or not any(root.iterdir())
+
+
+def test_init_refuses_a_populated_directory_before_asking_anything(tmp_path, capsys, monkeypatch):
+    import io
+
+    monkeypatch.setattr("sys.stdin", io.StringIO(""))
+    root = tmp_path / "busy"
+    root.mkdir()
+    (root / "work.txt").write_text("someone's work\n")
+    assert tcat_spoke(["init", str(root), "--kind", "data"]) == 1
+    err = capsys.readouterr().err
+    assert "not empty" in err and "no answer" not in err
+    assert [p.name for p in root.iterdir()] == ["work.txt"]
