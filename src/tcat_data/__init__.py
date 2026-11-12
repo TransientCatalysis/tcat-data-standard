@@ -56,7 +56,7 @@ from .validate import (
 
 #: THE PACKAGE's version: this distribution, its CLIs, its helpers. Moves for a
 #: bug fix or a tooling feature and needs nobody's approval.
-__version__ = "0.11.0"
+__version__ = "0.12.0"
 
 #: THE STANDARD's version: what STANDARD.md says a valid record is. Moves only on
 #: a normative change and needs written approval (COLLABORATION.md section 5),

@@ -1,6 +1,14 @@
 # Changelog
 
-## Unreleased — tooling, not standards
+## 0.12.0 — tooling, not standards (2026-11-12)
+
+**Packaging, ready for an index (no upload yet).** The version is single-sourced from
+`tcat_data.__version__` (`pyproject.toml` reads it); the licence is the SPDX expression `MIT`
+with both licence files shipped; classifiers name the supported Pythons. A `setup.py` build hook
+writes `tcat_data/_tcat_build.json` (the commit a wheel was built from, and whether the package
+was dirty) into every wheel and sdist, so a wheel install can name its commit; an editable
+install is unchanged. `tcat-spoke init` asks its questions before writing anything, so a script
+with no terminal and no `--answers` gets a one-line error and an untouched directory.
 
 **`tcat-spoke init` makes a repository that passes the org's gates on its first run.**
 - It writes only into a new or empty directory: filling a populated directory in place was the

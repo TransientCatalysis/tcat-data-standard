@@ -123,7 +123,13 @@ def _pyproject_version() -> str:
     from pathlib import Path
 
     text = (Path(__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8")
-    return re.search(r'^version = "([^"]+)"', text, re.M).group(1)
+    # Single-sourced: pyproject declares the version dynamic and reads the
+    # package's own `__version__`, so the source of truth is that attribute.
+    assert re.search(r'^dynamic = \["version"\]', text, re.M), "pyproject must not carry a literal version"
+    assert re.search(r'^version = \{ attr = "tcat_data.__version__" \}', text, re.M)
+    import tcat_data
+
+    return tcat_data.__version__
 
 
 def test_the_package_version_is_recorded_consistently():
