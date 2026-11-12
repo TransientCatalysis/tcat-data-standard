@@ -136,7 +136,28 @@ def validate(
     if kind not in KINDS:
         raise ValueError(f"unknown document kind {kind!r}; expected one of {', '.join(KINDS)}")
 
-    declared = document.get("schema_version") if isinstance(document, dict) else None
+    # Two shapes no schema can be selected for, so they are answered here, by
+    # field, before any schema is loaded. Both used to raise from deep inside
+    # the checks (an AttributeError on a list, a TypeError on a numeric
+    # version), which a CI log shows as a crash in the validator rather than a
+    # defect in the document.
+    if not isinstance(document, dict):
+        return ValidationReport(
+            kind=kind, source=source,
+            schema_version=version or fallback_version or CURRENT_SCHEMA_VERSION,
+            errors=[Problem("", "a document must be a JSON object, got "
+                                f"{type(document).__name__}")],
+        )
+    declared = document.get("schema_version")
+    if declared is not None and not isinstance(declared, str):
+        return ValidationReport(
+            kind=kind, source=source,
+            schema_version=version or fallback_version or CURRENT_SCHEMA_VERSION,
+            errors=[Problem("/schema_version",
+                            "schema_version must be a string such as "
+                            f"{CURRENT_SCHEMA_VERSION!r}, got {type(declared).__name__} "
+                            f"{declared!r}")],
+        )
     effective = version or declared or fallback_version or CURRENT_SCHEMA_VERSION
 
     report = ValidationReport(kind=kind, source=source, schema_version=effective)
@@ -1191,12 +1212,19 @@ def validate_file(
     path = Path(path)
     try:
         document = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
         return ValidationReport(
             kind=kind,
             source=str(path),
             schema_version=version or CURRENT_SCHEMA_VERSION,
             errors=[Problem("", f"not valid JSON: {exc}")],
+        )
+    except OSError as exc:
+        return ValidationReport(
+            kind=kind,
+            source=str(path),
+            schema_version=version or CURRENT_SCHEMA_VERSION,
+            errors=[Problem("", f"could not be read: {exc}")],
         )
     return validate(
         document, kind, version=version, fallback_version=fallback_version, source=str(path)

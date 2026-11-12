@@ -2,6 +2,12 @@
 
 ## Unreleased — tooling, not standards
 
+**`tcat-validate all` fails on input it could not read.** A corrupt `.tcat-spoke.json`, a
+`.json` file that does not parse, a path that does not exist, and a tree holding no tcat
+document are now errors; each used to exit 0 (the manifest was treated as absent, the file as a
+SKIP, the empty walk as "0/0 passed"). `validate()` reports a non-object document at the root and
+a non-string `schema_version` at `/schema_version` instead of raising.
+
 **The stub converter package is removed** (`tcat_data.converters`: `Converter`,
 `ConversionResult`, `NotImplementedConverter`, `register`, `registry`, `find_converter`, and the
 three stubs). No code imported it; instrument converters live in `tcat-ingest`, which names
