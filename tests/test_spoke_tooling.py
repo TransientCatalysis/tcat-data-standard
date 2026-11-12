@@ -94,74 +94,86 @@ def test_an_unfilled_placeholder_is_found_and_named_by_file_and_line(tmp_path):
 
 
 def test_underscore_prefixed_files_may_keep_their_placeholders(tmp_path):
-    """Fragile point 8. `_`-prefixed files are skipped by `tcat-validate all`
+    """`_`-prefixed files are skipped by `tcat-validate all`
     and by the registry precisely so they can carry REPLACE as a thing to copy
     from. Flagging them would contradict the rule that makes them useful."""
     (tmp_path / "_example.json").write_text('{"sample_id": "REPLACE"}')
     assert spoke.find_placeholders(tmp_path) == []
 
 
-def test_the_template_itself_must_keep_its_placeholders(tmp_path):
-    """A template whose placeholders were filled in is broken for everyone who
-    creates a repository from it, and the breakage is invisible."""
-    (tmp_path / ".tcat").mkdir()
-    (tmp_path / ".tcat" / "IS_TEMPLATE").write_text("")
-    (tmp_path / "README.md").write_text("# All filled in\n")
-    findings = spoke.check(tmp_path)
-    assert any("filled them in" in str(f) for f in findings)
-
-
 # --- init ------------------------------------------------------------------
 
+def _init(tmp_path: Path, manifest: dict | None = None) -> Path:
+    """A data spoke made the only way init makes one: into a new directory."""
+    root = tmp_path / "spoke"
+    default = _manifest(stewards=[_steward(), _steward(name="A. Researcher", github="aresearcher",
+                                                       role="instrument_owner")])
+    assert main(["init", str(root), "--kind", "data",
+                 "--answers", _answers(tmp_path, manifest or default)]) == 0
+    return root
+
+
 def test_init_writes_a_manifest_codeowners_and_fills_the_citation(tmp_path):
-    (tmp_path / "README.md").write_text("# [BRACKETED]\n\nContact: [YOUR NAME, EMAIL]\n")
-    (tmp_path / "CITATION.cff").write_text(
-        'cff-version: 1.2.0\ntitle: "[LAB OR CAMPAIGN NAME]"\n'
-        'date-released: "REPLACE-YYYY-MM-DD"\n'
-        'repository-code: "https://github.com/TransientCatalysis/REPLACE"\n'
-        "authors:\n  - family-names: REPLACE\n    given-names: REPLACE\n"
-    )
-    rc = main(["init", str(tmp_path), "--answers", _answers(tmp_path, _manifest())])
-    assert rc == 0
-    assert (tmp_path / ".tcat-spoke.json").is_file()
-    assert (tmp_path / ".github" / "CODEOWNERS").is_file()
-    citation = (tmp_path / "CITATION.cff").read_text()
+    root = _init(tmp_path)
+    assert (root / ".tcat-spoke.json").is_file()
+    assert (root / ".github" / "CODEOWNERS").is_file()
+    citation = (root / "CITATION.cff").read_text()
     assert "REPLACE" not in citation
     assert "Medford" in citation
 
 
 def test_init_refuses_a_manifest_that_would_not_validate(tmp_path):
     bad = {"standard_version": "0.2.0", "spoke_id": "x", "kind": "data", "stewards": []}
-    assert main(["init", str(tmp_path), "--answers", _answers(tmp_path, bad)]) == 1
-    assert not (tmp_path / ".tcat-spoke.json").exists()
+    root = tmp_path / "spoke"
+    assert main(["init", str(root), "--kind", "data", "--answers", _answers(tmp_path, bad)]) == 1
+    assert not (root / ".tcat-spoke.json").exists()
 
 
-def test_init_does_not_overwrite_without_force(tmp_path):
-    a = _answers(tmp_path, _manifest())
-    assert main(["init", str(tmp_path), "--answers", a]) == 0
-    assert main(["init", str(tmp_path), "--answers", a]) == 1
-    assert main(["init", str(tmp_path), "--answers", a, "--force"]) == 0
+def test_init_refuses_a_populated_directory_and_changes_nothing_in_it(tmp_path, capsys):
+    """Filling a populated directory in place was the route from a cloned template
+    repository. There are none now, so a populated directory is somebody's work,
+    and init would have rewritten its README and citation in place."""
+    root = tmp_path / "mine"
+    root.mkdir()
+    (root / "README.md").write_text("# mine [BRACKETED]\n")
+    assert main(["init", str(root), "--kind", "data", "--answers", _answers(tmp_path, _manifest())]) == 1
+    assert "not empty" in capsys.readouterr().err
+    assert [p.name for p in root.iterdir()] == ["README.md"]
+    assert (root / "README.md").read_text() == "# mine [BRACKETED]\n"
 
 
-def test_init_removes_the_template_sentinel(tmp_path):
-    (tmp_path / ".tcat").mkdir()
-    (tmp_path / ".tcat" / "IS_TEMPLATE").write_text("")
-    main(["init", str(tmp_path), "--answers", _answers(tmp_path, _manifest())])
-    assert not (tmp_path / ".tcat" / "IS_TEMPLATE").exists()
+def test_init_deletes_the_manifest_template_once_the_manifest_is_written(tmp_path):
+    """Left behind, the annotated copy reads as a second, unfilled manifest."""
+    root = _init(tmp_path)
+    assert not (root / "_tcat-spoke.json.template").exists()
+
+
+def test_init_writes_every_file_the_org_security_gate_checks_and_they_pass_it(tmp_path):
+    """A new spoke used to fail its first `security` run: the gate checks five
+    generated files and the skeleton carried none of them."""
+    from tcat_data import org_files
+
+    root = _init(tmp_path)
+    for rel in ("AGENTS.md", "CLAUDE.md", "SECURITY.md", ".github/dependabot.yml",
+                ".github/workflows/dependabot-automerge.yml"):
+        assert (root / rel).is_file(), rel
+    assert org_files.drifted(root.resolve()) == []
+    assert main(["check", str(root)]) == 0
 
 
 # --- check -----------------------------------------------------------------
 
 def test_check_fails_on_a_hand_edited_codeowners(tmp_path):
-    main(["init", str(tmp_path), "--answers", _answers(tmp_path, _manifest())])
-    (tmp_path / ".github" / "CODEOWNERS").write_text("*\t@someone-else\n")
-    assert main(["codeowners", "--check", str(tmp_path)]) == 1
+    root = _init(tmp_path)
+    (root / ".github" / "CODEOWNERS").write_text("*\t@someone-else\n")
+    assert main(["codeowners", "--check", str(root)]) == 1
 
 
 def test_check_mode_names_the_command_that_fixes_it(tmp_path, capsys):
-    main(["init", str(tmp_path), "--answers", _answers(tmp_path, _manifest())])
-    (tmp_path / ".github" / "CODEOWNERS").write_text("*\t@someone-else\n")
-    main(["codeowners", "--check", str(tmp_path)])
+    root = _init(tmp_path)
+    (root / ".github" / "CODEOWNERS").write_text("*\t@someone-else\n")
+    capsys.readouterr()
+    main(["codeowners", "--check", str(root)])
     assert "tcat-spoke codeowners" in capsys.readouterr().err
 
 
@@ -179,9 +191,7 @@ def test_a_committed_codeowners_with_no_manifest_fails(tmp_path):
 
 
 def test_check_passes_on_a_fully_bootstrapped_spoke(tmp_path):
-    (tmp_path / "README.md").write_text("# [BRACKETED]\n")
-    main(["init", str(tmp_path), "--answers", _answers(tmp_path, _manifest())])
-    assert main(["check", str(tmp_path)]) == 0
+    assert main(["check", str(_init(tmp_path))]) == 0
 
 
 def test_check_reports_a_missing_manifest_with_the_command_that_makes_one(tmp_path, capsys):
@@ -221,16 +231,22 @@ def _analysis_template(tmp_path: Path) -> Path:
     return tmp_path
 
 
-def _analysis_answers(tmp_path: Path) -> str:
+def _rename(root: Path) -> None:
+    """The package rename init applies to a tool spoke, on a stand-in tree, so this
+    repository's tests need no tool standard installed (the full `init --kind
+    tool` path is tested in tcat-tool-standard, which ships that skeleton)."""
+    from tcat_data.spoke_cli import _fill_pyproject, _rename_package
+
     m = _manifest(kind="analysis", spoke_id="labb-circx", name="Stiff DAE fitting")
-    return _answers(tmp_path, {**m, "implements": "tcat-fit"})
+    _rename_package(root, m, "tcat-fit")
+    _fill_pyproject(root, m)
 
 
 def test_init_renames_the_example_package_to_this_spokes_own(tmp_path):
     """Seven places reference it, and missing any one leaves a spoke that
-    installs a package named after the template."""
+    installs a package named after the skeleton."""
     root = _analysis_template(tmp_path)
-    assert main(["init", str(root), "--answers", _analysis_answers(tmp_path)]) == 0
+    _rename(root)
 
     assert (root / "src" / "tcat_labb_circx").is_dir()
     assert not (root / "src" / "tcat_spoke_example").exists()
@@ -244,7 +260,7 @@ def test_init_removes_the_stale_egg_info(tmp_path):
     the OLD package and is regenerated on install, so it is deleted rather than
     renamed."""
     root = _analysis_template(tmp_path)
-    main(["init", str(root), "--answers", _analysis_answers(tmp_path)])
+    _rename(root)
     assert not list((root / "src").glob("*.egg-info"))
 
 
@@ -253,7 +269,7 @@ def test_init_fills_the_pyproject_a_spoke_would_otherwise_publish(tmp_path):
     before anyone edits it. That is right for the template and wrong for a spoke,
     where it means a package credited to "REPLACE ME"."""
     root = _analysis_template(tmp_path)
-    main(["init", str(root), "--answers", _analysis_answers(tmp_path)])
+    _rename(root)
     text = (root / "pyproject.toml").read_text()
     assert "REPLACE" not in text
     assert 'name = "labb-circx"' in text
@@ -263,9 +279,7 @@ def test_init_fills_the_pyproject_a_spoke_would_otherwise_publish(tmp_path):
 def test_a_data_spoke_is_not_given_a_package(tmp_path):
     """Only the analysis side has one; running the rename on a data spoke would
     be looking for something that is correctly absent."""
-    (tmp_path / "README.md").write_text("# [BRACKETED]\n")
-    assert main(["init", str(tmp_path), "--answers", _answers(tmp_path, _manifest())]) == 0
-    assert not (tmp_path / "src").exists()
+    assert not (_init(tmp_path) / "src").exists()
 
 
 def test_an_outside_owner_gets_its_own_account_in_every_home_only_credential_block():

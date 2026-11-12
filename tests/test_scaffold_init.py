@@ -39,15 +39,6 @@ def test_a_new_directory_needs_a_kind(tmp_path, capsys):
     assert "--kind" in capsys.readouterr().err
 
 
-def test_a_populated_directory_is_filled_in_place_as_before(tmp_path):
-    """The pre-2026-09-09 route (a clone of a template) still works: no skeleton
-    is written over existing files."""
-    root = tmp_path / "old"; root.mkdir(); (root / "README.md").write_text("mine [BRACKETED]\n")
-    assert tcat_spoke(["init", str(root), "--answers", _answers(tmp_path, spoke_id="old", kind="data", name="Old")]) == 0
-    assert (root / "README.md").read_text().startswith("mine Old"), "filled, not replaced"
-    assert not (root / "START-HERE.md").exists()
-
-
 def test_the_skeleton_source_is_the_installed_standard(tmp_path):
     from tcat_data import scaffold
     assert scaffold.source("data").is_dir()

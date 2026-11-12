@@ -57,7 +57,10 @@ def materialise(kind: str, target: Path) -> list[Path]:
     root = source(kind)
     target = Path(target)
     if target.exists() and any(target.iterdir()):
-        raise FileExistsError(f"{target} is not empty; init materialises a skeleton only into a new directory")
+        raise FileExistsError(
+            f"{target} is not empty; init writes a skeleton only into a new or empty directory, "
+            "so that it never overwrites work. To bring existing files into a spoke, init a new "
+            "directory and move them in.")
     written: list[Path] = []
     for path in sorted(p for p in root.rglob("*") if p.is_file()):
         rel = Path(*[_real_name(part) for part in path.relative_to(root).parts])
