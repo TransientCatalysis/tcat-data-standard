@@ -6,6 +6,10 @@
 # It is also a REQUIRED CHECK on `main` in this organisation, so leaving this
 # file out does not make a spoke more permissive -- it makes it unmergeable.
 # To change what is checked, edit the workflow in the .github repository.
+#
+# The one `uses:` here not pinned to a commit, deliberately: it is the org's
+# own gate, not third-party code, and a spoke pinned to an old commit of it
+# would keep passing a gate the org has since tightened.
 name: security
 
 on:

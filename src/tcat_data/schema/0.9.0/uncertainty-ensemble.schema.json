@@ -144,7 +144,7 @@
     },
     "conditioning": {
       "type": "object",
-      "description": "DRAFT (2026-08): axial-reworked branch, for the September meeting. What this ensemble's spread conditions on. ABSENCE MEANS kind='conditional': the intervals are Type A evaluations (statistical, from the fitted observations alone, JCGM 100:2008) computed with every upstream quantity -- calibration chain, bed geometry, reconstructed inlet, transport correlations, feed -- held fixed at its point value, which is what every ensemble written before this field existed did silently. 'marginalized' means named nuisance quantities were integrated out against stated Type B inputs (calibration certificates, record-sourced priors), so the spread is a combined standard uncertainty in GUM's sense. 'profiled' means the named parameters were re-optimised at each evaluation point rather than integrated.",
+      "description": "DRAFT (2026-08): pending the collaboration's review. What this ensemble's spread conditions on. ABSENCE MEANS kind='conditional': the intervals are Type A evaluations (statistical, from the fitted observations alone, JCGM 100:2008) computed with every upstream quantity -- calibration chain, bed geometry, reconstructed inlet, transport correlations, feed -- held fixed at its point value, which is what every ensemble written before this field existed did silently. 'marginalized' means named nuisance quantities were integrated out against stated Type B inputs (calibration certificates, record-sourced priors), so the spread is a combined standard uncertainty in GUM's sense. 'profiled' means the named parameters were re-optimised at each evaluation point rather than integrated.",
       "properties": {
         "kind": {
           "type": "string",

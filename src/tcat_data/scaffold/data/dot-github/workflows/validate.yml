@@ -24,9 +24,11 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # Pinned to commits: a tag is whatever was last pushed to it. Bump both
+      # together; dependabot does it (.github/dependabot.yml, written by init).
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.11"
 
@@ -68,14 +70,10 @@ jobs:
         run: tcat-validate all .
 
       - name: The spoke is configured, not merely created
-        # Nothing used to check that the template placeholders had been filled
+        # Nothing used to check that the skeleton's placeholders had been filled
         # in, so a repository could be created, committed, and pass every other
         # check here with its README still unfilled and its CITATION.cff
         # crediting nobody.
-        #
-        # In THIS repository -- the template -- the check inverts and asserts the
-        # placeholders are still present, because a template whose placeholders
-        # got filled in is broken for everyone who creates a repository from it.
         run: tcat-spoke check .
 
       - name: CODEOWNERS still matches the stewards block

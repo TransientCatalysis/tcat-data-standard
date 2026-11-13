@@ -41,7 +41,7 @@ def steward(**over) -> dict:
 
 
 def spoke(**over) -> dict:
-    d = {"standard_version": V, "spoke_id": "psu-coox", "kind": "data",
+    d = {"standard_version": V, "spoke_id": "lab-a-co-ox", "kind": "data",
          "stewards": [steward()]}
     d.update(over)
     return d

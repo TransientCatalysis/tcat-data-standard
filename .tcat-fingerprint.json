@@ -3,9 +3,9 @@
   "format": 2,
   "packages": {
     "tcat_data": {
-      "version": "0.11.0",
-      "digest": "b0a9210230e106ffab7187d206926a1d15bd8c70300c4bea35dad65169224f93",
-      "files": 16
+      "version": "0.12.0",
+      "digest": "08b30063a5f99d358cbb334e241d6f22379c43b5497045c8e4f07c605a0d6ce0",
+      "files": 12
     }
   }
 }

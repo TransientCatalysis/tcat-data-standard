@@ -38,13 +38,13 @@ If `pip` is not a command you have, install Python from python.org first, or ask
 
 ## 1. Make the repository
 
-One command, from the data standard's package (there is no template repository to clone):
+One command, from the data standard's package:
 
 ```bash
 tcat-spoke init --kind data <your-repo>
 ```
 
-It writes the whole skeleton and then asks who is answerable for it.
+It writes the whole skeleton into a new directory and then asks who is answerable for it.
 
 Name it after whatever unit you actually work in — your lab, yourself, one
 campaign, one instrument. **There is no right answer and it is not a commitment**;
@@ -58,14 +58,20 @@ you made it with `--owner <your-account>`:
 
 ```bash
 cd <your-repo> && git init && git add -A && git commit -m "spoke skeleton"
-gh repo create <owner>/<your-repo> --private --source . --push
+gh repo create <owner>/<your-repo> --public --source . --push
 ```
+
+Choose the visibility your data's release terms allow: data you may not publish yet
+belongs in a repository that is not public, and its records say so in
+`access_status`.
 
 ## 2. What init asked, and wrote
 
 It asked about eight questions and then wrote everything: the spoke manifest,
-your `.github/CODEOWNERS`, your `CITATION.cff` with real authors and ORCIDs, and
-it fills in every placeholder in the README.
+your `.github/CODEOWNERS`, your `CITATION.cff` with real authors and ORCIDs, the
+files the organisation's security check looks for (`AGENTS.md`, `CLAUDE.md`,
+`SECURITY.md`, the dependabot configuration), and it fills in every placeholder in
+the README.
 
 Two of the questions are worth thinking about for a moment:
 
@@ -124,15 +130,13 @@ wait.
   other people can find it.
 - Turn on the CI gate (it is already in `.github/workflows/`) so the check runs
   on every push instead of only when you remember.
-- The worked example on real data is
-  [`tcat-data-psu-coox`](https://github.com/TransientCatalysis/tcat-data-psu-coox)
-  — 26 PSU CO-oxidation runs, and `scripts/build_records.py` is 905 lines of
-  what this actually looks like once it is real. Read it when the example here
-  runs out.
+- A spoke holding a real campaign usually grows a record-building script of its
+  own (several hundred lines is normal). The examples here are the shapes it has
+  to produce.
 
 ## If you get stuck
 
-Open an issue on this template. Genuinely — a confusing error message here is a
+Open an issue on [`tcat-data-standard`](https://github.com/TransientCatalysis/tcat-data-standard/issues). Genuinely — a confusing error message here is a
 bug in the tooling, not a gap in your knowledge, and it is the single most useful
 thing you can report. The people who wrote this have all been reading it for
 months and can no longer see what is missing from it.

@@ -56,7 +56,13 @@ HOME_COPYRIGHT = "Copyright (c) 2026 A. J. Medford and the TransientCatalysis co
 def _ask(prompt: str, default: str | None = None, *, required: bool = True) -> str:
     suffix = f" [{default}]" if default else ""
     while True:
-        got = input(f"{prompt}{suffix}: ").strip() or (default or "")
+        try:
+            got = input(f"{prompt}{suffix}: ").strip() or (default or "")
+        except EOFError:
+            raise ValueError(
+                f"tcat-spoke init: no answer for {prompt!r} -- stdin is not interactive. "
+                "Pass --answers FILE (a JSON object; `tcat-spoke init --help` lists its keys)."
+            ) from None
         if got or not required:
             return got
         print("  needed.", file=sys.stderr)
@@ -476,11 +482,15 @@ def _write_codeowners(root: Path, manifest: dict[str, Any]) -> bool:
 
 def _fill_campaign_record(root: Path, manifest: dict[str, Any]) -> bool:
     """A campaign's manifest is its campaign.json (tcat-campaign-standard/CAMPAIGN.md):
-    fill the id and title; the pins are written later by `tcat-campaign pin`."""
+    fill the schema version, id and title; the pins are written later by
+    `tcat-campaign pin`."""
     path = root / "campaign.json"
     if not path.is_file():
         return False
     record = json.loads(path.read_text(encoding="utf-8"))
+    # The installed standard's version, as `.standard-version` is for a data
+    # spoke: a skeleton's literal goes stale the day the schema moves.
+    record["schema_version"] = CURRENT_SCHEMA_VERSION
     record["campaign_id"] = manifest["spoke_id"]
     if manifest.get("name"):
         record["title"] = manifest["name"]
@@ -488,32 +498,47 @@ def _fill_campaign_record(root: Path, manifest: dict[str, Any]) -> bool:
     return True
 
 
+def _write_org_files(root: Path) -> list[Path]:
+    """The files the org security gate checks are generated (AGENTS.md, CLAUDE.md,
+    SECURITY.md, the dependabot configuration and its auto-merge workflow), written
+    by the org's own generator, vendored here as `org_files`. Without them a new
+    repository failed its first `security` run, which its own workflow calls."""
+    from . import org_files
+
+    root = root.resolve()
+    return [p.relative_to(root) for p in org_files.write(root)]
+
+
 def _cmd_init(args: argparse.Namespace) -> int:
     root = Path(args.path)
     kind = args.kind
 
-    # A new directory (or an empty one) gets the skeleton first. An existing,
-    # populated directory is the pre-2026-09-09 route -- a clone of a template
-    # repository -- and is filled in place as before.
-    if not root.exists() or not any(root.iterdir()):
-        if kind is None:
-            print("tcat-spoke init: a new directory needs --kind data|tool|campaign", file=sys.stderr)
-            return 1
-        try:
-            written = _scaffold.materialise(kind, root)
-        except (LookupError, FileExistsError) as exc:
-            print(f"tcat-spoke init: {exc}", file=sys.stderr)
-            return 1
-        print(f"wrote the {kind} skeleton: {len(written)} files into {root}")
-
-    is_campaign = kind == "campaign" or (root / "campaign.json").is_file() and not (root / SPOKE_MANIFEST).exists() and kind is None and (root / "pyproject.toml").is_file() and "tcat-campaign" in (root / "pyproject.toml").read_text(encoding="utf-8")
-    target = root / SPOKE_MANIFEST
-    if not is_campaign and target.exists() and not args.force:
-        print(f"{target} already exists; --force to overwrite", file=sys.stderr)
+    # Only ever into a new or empty directory. Filling a populated directory in
+    # place was the route from a cloned template repository, and template
+    # repositories no longer exist: a populated directory now holds someone's
+    # work, which init would overwrite file by file.
+    if kind is None:
+        print("tcat-spoke init: --kind data|tool|campaign is required", file=sys.stderr)
         return 1
+    if root.exists() and (not root.is_dir() or any(root.iterdir())):
+        print(f"tcat-spoke init: {root} is not empty; init writes only into a new or empty "
+              "directory", file=sys.stderr)
+        return 1
+    is_campaign = kind == "campaign"
+    target = root / SPOKE_MANIFEST
 
+    # The answers come first, so an unanswered question (a script with no tty and
+    # no --answers) leaves nothing behind: half a skeleton in the directory made
+    # the corrected re-run refuse it as not empty.
     answers = json.loads(Path(args.answers).read_text()) if args.answers else None
     manifest = _gather(root, answers, "campaign" if is_campaign else kind)
+
+    try:
+        written = _scaffold.materialise(kind, root)
+    except (LookupError, FileExistsError) as exc:
+        print(f"tcat-spoke init: {exc}", file=sys.stderr)
+        return 1
+    print(f"wrote the {kind} skeleton: {len(written)} files into {root}")
     owner = args.owner or manifest.pop("owner", None) or HOME_OWNER
     manifest.pop("owner", None)
     implements = manifest.pop("implements", None)     # init-only, like owner
@@ -542,6 +567,8 @@ def _cmd_init(args: argparse.Namespace) -> int:
             print(f"wrote {CODEOWNERS}")
         write_fingerprint(root)
         print("recorded .tcat-fingerprint.json")
+        for rel in _write_org_files(root):
+            print(f"wrote {rel} (generated; the org security gate checks it)")
         print("\nNext, once the toolchain is installed:")
         print(f"  tcat-campaign pin {root}     # record the identities this study runs on")
         print(f"  tcat-campaign check {root}   # the gate, locally and in CI")
@@ -555,6 +582,11 @@ def _cmd_init(args: argparse.Namespace) -> int:
 
     target.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print(f"wrote {SPOKE_MANIFEST}")
+    # The skeleton's annotated copy-me version of the manifest. Left behind it
+    # reads as a second, unfilled manifest, and every newcomer asks which is real.
+    stale_template = root / "_tcat-spoke.json.template"
+    if stale_template.is_file():
+        stale_template.unlink()
     pinned = root / ".standard-version"
     if pinned.is_file() and pinned.read_text(encoding="utf-8").strip() != CURRENT_SCHEMA_VERSION:
         pinned.write_text(CURRENT_SCHEMA_VERSION + "\n", encoding="utf-8")
@@ -578,11 +610,8 @@ def _cmd_init(args: argparse.Namespace) -> int:
 
     if _write_codeowners(root, manifest):
         print(f"wrote {CODEOWNERS}")
-
-    sentinel = root / ".tcat" / "IS_TEMPLATE"
-    if sentinel.is_file():
-        sentinel.unlink()
-        print("removed .tcat/IS_TEMPLATE -- this is a spoke now, not a template")
+    for rel in _write_org_files(root):
+        print(f"wrote {rel} (generated; the org security gate checks it)")
 
     remaining = check_spoke(root)
     print()
@@ -602,14 +631,14 @@ def _cmd_init(args: argparse.Namespace) -> int:
 
 
 def _print_outside_note(owner: str) -> None:
-    """The one thing an outside repository needs that init cannot do for it."""
+    """What an outside repository may need that init cannot do for it."""
     if owner == HOME_OWNER:
         return
     print(
-        f"\nThis repository lives in {owner}, outside {HOME_OWNER}, so the org's\n"
-        "TCAT_HUB_TOKEN secret does not reach it. Before CI can install the private\n"
-        "toolchain, add a REPOSITORY secret named TCAT_HUB_TOKEN holding a classic\n"
-        "personal access token (`repo` scope) from an account that can read the org:\n"
+        f"\nThis repository lives in {owner}, outside {HOME_OWNER}. The standards and the\n"
+        "org's tools are public, so CI installs them with no secret. Only if it comes to\n"
+        "depend on a PRIVATE repository, add a repository secret TCAT_HUB_TOKEN holding a\n"
+        "token that can read that repository (org secrets do not reach this account):\n"
         f"  gh secret set TCAT_HUB_TOKEN --repo {owner}/<repo>"
     )
 
@@ -655,26 +684,37 @@ def _cmd_codeowners(args: argparse.Namespace) -> int:
     return 0
 
 
+def _is_campaign(root: Path) -> bool:
+    """A campaign's manifest is its campaign.json; it has no .tcat-spoke.json."""
+    return (root / "campaign.json").is_file() and not (root / SPOKE_MANIFEST).exists()
+
+
 def _cmd_check(args: argparse.Namespace) -> int:
     root = Path(args.path)
-    is_template = (root / ".tcat" / "IS_TEMPLATE").is_file()
-    findings = check_spoke(root)
-    if not is_template:
-        findings += check_fingerprint(root)
+    if _is_campaign(root):
+        # A campaign is held to the campaign standard's gate, which checks the
+        # record, the pins, the notebooks and the fingerprint. This check used to
+        # look for a spoke manifest a campaign never has and report "run
+        # tcat-spoke init" -- advice that would have overwritten the campaign.
+        try:
+            from tcat_campaign.cli import main as campaign_main
+        except ImportError:
+            print(
+                f"{root} is a campaign (campaign.json, no {SPOKE_MANIFEST}); its gate is "
+                "`tcat-campaign check`, which ships with tcat-campaign-standard and is not "
+                "installed here. Nothing was checked.",
+                file=sys.stderr,
+            )
+            return 1
+        print(f"{root} is a campaign: delegating to `tcat-campaign check`", file=sys.stderr)
+        return int(campaign_main(["check", str(root)]))
+    findings = check_spoke(root) + check_fingerprint(root)
     if not findings:
-        # Say which check passed. In the template the check is INVERTED -- it
-        # asserts the placeholders survive -- and reporting that as "configured"
-        # would describe the opposite of what was verified.
-        print(
-            "template intact: placeholders still present for repositories made from it"
-            if is_template
-            else "spoke is configured"
-        )
+        print("spoke is configured")
         return 0
     for f in findings:
         print(f, file=sys.stderr)
     return 1
-
 
 
 def _cmd_fingerprint(args: argparse.Namespace) -> int:
@@ -685,7 +725,7 @@ def _cmd_fingerprint(args: argparse.Namespace) -> int:
             for f in findings:
                 print(f, file=sys.stderr)
             return 1
-        print("the shipped source matches the recorded version")
+        print("the recorded digests match the shipped source")
         return 0
     record = write_fingerprint(root)
     for name, entry in record["packages"].items():
@@ -714,7 +754,6 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--owner", help=f"the GitHub account or org that will hold the repository "
                    f"(default {HOME_OWNER}; also `owner` in --answers). Outside the org, the "
                    "spoke's url, copyright and citation are its owner's; the toolchain stays where it is")
-    p.add_argument("--force", action="store_true", help="overwrite an existing manifest")
     p.set_defaults(func=_cmd_init)
 
     p = sub.add_parser("codeowners", help="generate .github/CODEOWNERS from the manifest")
@@ -722,17 +761,19 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--check", action="store_true", help="fail if it has drifted")
     p.set_defaults(func=_cmd_codeowners)
 
-    p = sub.add_parser("check", help="placeholders filled, manifest present, CODEOWNERS current")
+    p = sub.add_parser("check", help="placeholders filled, manifest present, CODEOWNERS and fingerprint "
+                                    "current; a campaign is handed to `tcat-campaign check`")
     p.add_argument("path", nargs="?", default=".", type=Path)
     p.set_defaults(func=_cmd_check)
 
     p = sub.add_parser(
         "fingerprint",
-        help="record which shipped source produced this version (--check in CI)",
+        help="record each shipped package's version and normalised source digest (--check in CI)",
     )
     p.add_argument("path", nargs="?", default=".", type=Path)
     p.add_argument("--check", action="store_true",
-                   help="fail if the code changed but the version did not")
+                   help="fail if a recorded digest is not the current source's, so a digest in an "
+                        "artifact's provenance could not be traced to a commit. Writes nothing")
     p.set_defaults(func=_cmd_fingerprint)
 
     args = ap.parse_args(argv)

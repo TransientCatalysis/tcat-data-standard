@@ -30,7 +30,7 @@
       "description": "Scheme-tagged location for bytes held by a service that is neither this repository nor a plain web server. The SCHEME selects a resolver, so a second host arrives by registering a resolver rather than by minting a schema version. `http` and `https` are deliberately excluded: those are `url`, and one address expressible in two fields is the ambiguity the exactly-one rule exists to prevent. An authority with no dot in it is a deployment ALIAS resolved at fetch time, which is what lets a locator committed to git survive a host migration. The checksum still proves the bytes, so a consumer with no resolver for the scheme fails loudly rather than reading something else.",
       "format": "uri",
       "pattern": "^(?!https?:)[a-z][a-z0-9+.\\-]*://[^\\s]+$",
-      "examples": ["dataerai://tcat/asset/4e9bb6e7-5005-4801-b11c-dc33ee3972c8/content/920d140e-de34-4140-accf-db39b18882b6?file=run1_200C_counts.csv"]
+      "examples": ["dataerai://tcat/asset/00000000-0000-0000-0000-000000000000/content/11111111-1111-1111-1111-111111111111?file=example_counts.csv"]
     },
     "sha256": { "$ref": "defs/common.schema.json#/$defs/sha256" },
     "size_bytes": {

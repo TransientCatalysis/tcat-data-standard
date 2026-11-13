@@ -2,7 +2,7 @@
 
 Read [`STANDARD.md`](STANDARD.md) first — it is the rulebook, and each rule says why it exists rather than only what it requires.
 
-Three institutions pin this repository for the definition of ingestible data. That is the whole reason it is small, boring, and slow to change. A change here can invalidate data at PSU, BNL, and GT simultaneously, so the bar is higher than it looks for a repository this size.
+Three institutions pin this repository for the definition of ingestible data. That is the whole reason it is small, boring, and slow to change. A change here can invalidate data at all three simultaneously, so the bar is higher than it looks for a repository this size.
 
 ## Setup
 
@@ -17,7 +17,7 @@ tcat-validate all examples/
 **You are not blocked.** Put it in `extensions` — the validator ignores that object rather than rejecting it — and [open a schema-change issue](.github/ISSUE_TEMPLATE/schema-change.md).
 
 ```json
-"extensions": { "psu": { "mfc_calibration_date": "2026-08-30" } }
+"extensions": { "lab-a": { "mfc_calibration_date": "2026-08-30" } }
 ```
 
 Promotion threshold: the **same field, independently, in three labs' extensions**. Schema follows practice; it does not predict it. Two labs is a conversation, not yet a schema change — and a field promoted from one lab's usage is a field the other two will fill in wrong.

@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Any
 
 from .schema import CURRENT_SCHEMA_VERSION, KINDS, available_versions
-from .validate import ValidationReport, validate, validate_file
+from .validate import Problem, ValidationReport, validate_file
 
 #: The spoke manifest filename. Optional; a spoke with no manifest falls back to
 #: the directory-name convention below.
@@ -54,19 +54,24 @@ _DIR_KIND = {
 }
 
 
-def _load_spoke_manifest(root: Path) -> dict[str, Any] | None:
+def _load_spoke_manifest(root: Path) -> tuple[dict[str, Any] | None, ValidationReport | None]:
     """Read ``.tcat-spoke.json`` from a walk root, if there is one.
 
     Its absence is the common and entirely fine case: the directory-name
-    convention covers a spoke that has no reason to diverge.
+    convention covers a spoke that has no reason to diverge. A manifest that is
+    PRESENT but unreadable is a failure, returned as a report: it used to be
+    treated as absent, so its declared layout, exclusions and strict mode all
+    silently stopped applying while the walk still printed a pass.
     """
     path = root / SPOKE_MANIFEST if root.is_dir() else root.parent / SPOKE_MANIFEST
     if not path.is_file():
-        return None
+        return None, None
+    report = validate_file(path, "spoke")
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return None
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None, report
+    return (manifest if isinstance(manifest, dict) else None), report
 
 
 def _declared_layout(manifest: dict[str, Any] | None, root: Path) -> dict[Path, str]:
@@ -192,7 +197,12 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.kind == "all":
         for root in args.paths:
-            manifest = _load_spoke_manifest(root)
+            if not root.exists():
+                reports.append(ValidationReport(
+                    kind="all", source=str(root), schema_version=CURRENT_SCHEMA_VERSION,
+                    errors=[Problem("", "path does not exist")]))
+                continue
+            manifest, manifest_report = _load_spoke_manifest(root)
             declared = _declared_layout(manifest, root if root.is_dir() else root.parent)
             excluded = [
                 (root / e).resolve() for e in ((manifest or {}).get("exclude") or [])
@@ -202,11 +212,14 @@ def main(argv: list[str] | None = None) -> int:
             # Per ROOT, not accumulated across roots: one tree's pin is not a
             # statement about the next tree.
             spoke_default = None
+            if manifest_report is not None:
+                reports.append(manifest_report)
             if manifest is not None:
-                report = validate(manifest, "spoke", source=str(root / SPOKE_MANIFEST))
-                reports.append(report)
-                spoke_default = (manifest or {}).get("standard_version") or None
+                spoke_default = manifest.get("standard_version") or None
+                if not isinstance(spoke_default, str):
+                    spoke_default = None
 
+            checked_before = len(reports)
             files = sorted(root.rglob("*.json")) if root.is_dir() else [root]
             for f in files:
                 if f.name.startswith("_") or ".github" in f.parts:
@@ -218,6 +231,16 @@ def main(argv: list[str] | None = None) -> int:
                     continue
                 kind = _infer_kind(f, declared)
                 if kind is None:
+                    # A file that does not parse cannot have its kind inferred,
+                    # and used to be reported as a SKIP with exit 0. It is a
+                    # broken document, whatever kind it was meant to be.
+                    unreadable = validate_file(f, "dataset")
+                    if unreadable.errors and unreadable.errors[0].pointer == "" and (
+                            unreadable.errors[0].message.startswith(("not valid JSON",
+                                                                     "could not be read"))):
+                        unreadable.kind = "unknown"
+                        reports.append(unreadable)
+                        continue
                     skipped.append(f)
                     continue
                 reports.append(
@@ -225,6 +248,15 @@ def main(argv: list[str] | None = None) -> int:
                         f, kind, version=args.schema_version, fallback_version=spoke_default
                     )
                 )
+            if len(reports) == checked_before and manifest_report is None:
+                # Nothing under this root was a tcat document. "0/0 passed" read
+                # as a pass, so a mistyped path or a checkout that never happened
+                # gated nothing.
+                reports.append(ValidationReport(
+                    kind="all", source=str(root), schema_version=CURRENT_SCHEMA_VERSION,
+                    errors=[Problem("", "nothing to validate: no tcat document found under "
+                                        "this path" + (f" ({len(skipped)} file(s) of unknown "
+                                                       "kind skipped)" if skipped else ""))]))
     else:
         for p in args.paths:
             reports.append(validate_file(p, args.kind, version=args.schema_version))

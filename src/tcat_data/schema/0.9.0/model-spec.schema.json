@@ -557,7 +557,7 @@
     },
     "thermodynamics": {
       "type": "object",
-      "description": "OPTIONAL, and it changes what the free parameters ARE. When present with parameterisation 'arrhenius-detailed-balance', the specification's free parameters are physical: (log10A, Ea) per step and (dH_ads, dS_ads) per adsorbate; every reverse rate constant follows from detailed balance against the named gas-phase thermochemistry, and a conforming fit treats all provided runs JOINTLY across temperature. This block lives in the SPECIFICATION because the parameterisation is a property of the hypothesis, not of the fitting code -- switching between per-temperature and thermodynamically-consistent treatments is a different spec id, not a different tool. DRAFT (2026-08): real-data-revision branch, for the September meeting.",
+      "description": "OPTIONAL, and it changes what the free parameters ARE. When present with parameterisation 'arrhenius-detailed-balance', the specification's free parameters are physical: (log10A, Ea) per step and (dH_ads, dS_ads) per adsorbate; every reverse rate constant follows from detailed balance against the named gas-phase thermochemistry, and a conforming fit treats all provided runs JOINTLY across temperature. This block lives in the SPECIFICATION because the parameterisation is a property of the hypothesis, not of the fitting code -- switching between per-temperature and thermodynamically-consistent treatments is a different spec id, not a different tool. DRAFT (2026-08): pending the collaboration's review.",
       "required": [
         "parameterisation",
         "gas_parents",
@@ -612,7 +612,7 @@
     },
     "reactor": {
       "type": "object",
-      "description": "OPTIONAL, and it changes what the MODEL PREDICTS. Its absence is the gradientless treatment -- the catalyst sees one gas composition, there is no axial coordinate, and the observable is a per-site rate times a fitted scale -- which is what a spec without this block has always meant, unchanged. When present with kind 'axially-dispersed-packed-bed', the gas becomes a STATE with a spatial coordinate, the model predicts outlet mole fractions rather than a scaled rate, and the site-count scale factor stops being a free parameter because the bed supplies it. This block lives in the SPECIFICATION and not in a capability registry for two reasons. A rate constant fitted under one reactor model is not the same quantity as one fitted under another, so the reactor is part of what the hypothesis asserts and has to be hashed with it. And a registry entry is a bare name: it could not carry the node count or the discretisation, and a hashed name beside unhashed numbers is the failure mode CONTRACT.md section 2 calls the worst one available. Bed GEOMETRY is deliberately NOT here -- that is measured, belongs to the experiment, and rides on the protocol's `bed` block. DRAFT (2026-08): axial-PDE branch, for the September meeting.",
+      "description": "OPTIONAL, and it changes what the MODEL PREDICTS. Its absence is the gradientless treatment -- the catalyst sees one gas composition, there is no axial coordinate, and the observable is a per-site rate times a fitted scale -- which is what a spec without this block has always meant, unchanged. When present with kind 'axially-dispersed-packed-bed', the gas becomes a STATE with a spatial coordinate, the model predicts outlet mole fractions rather than a scaled rate, and the site-count scale factor stops being a free parameter because the bed supplies it. This block lives in the SPECIFICATION and not in a capability registry for two reasons. A rate constant fitted under one reactor model is not the same quantity as one fitted under another, so the reactor is part of what the hypothesis asserts and has to be hashed with it. And a registry entry is a bare name: it could not carry the node count or the discretisation, and a hashed name beside unhashed numbers is the failure mode CONTRACT.md section 2 calls the worst one available. Bed GEOMETRY is deliberately NOT here -- that is measured, belongs to the experiment, and rides on the protocol's `bed` block. DRAFT (2026-08): pending the collaboration's review.",
       "required": [
         "kind"
       ],
@@ -628,7 +628,7 @@
         "nodes": {
           "type": "integer",
           "minimum": 3,
-          "description": "Axial nodes, inlet included. Hashed: it is a discretisation choice that moves the answer. The reference implementation uses 101; on the B29 bed the outlet is converged by about 21 with a second-order upwind scheme, and the binding constraint is the timestep rather than the grid."
+          "description": "Axial nodes, inlet included. Hashed: it is a discretisation choice that moves the answer. The reference implementation uses 101; on a measured packed bed the outlet was converged with a few tens of nodes under a second-order upwind scheme, and the binding constraint is the timestep rather than the grid."
         },
         "convection": {
           "type": "string",

@@ -1,6 +1,6 @@
 # [LAB OR CAMPAIGN NAME] — a tcat data spoke
 
-> **This is a template.** Create your repository from it, then work through [`SPOKE-SETUP.md`](SPOKE-SETUP.md) and replace this file.
+> Written by `tcat-spoke init`. Work through [`SPOKE-SETUP.md`](SPOKE-SETUP.md), then make this README describe your data.
 
 **A spoke is any repository whose records validate.** That is the whole definition.
 
@@ -10,7 +10,7 @@ The one thing worth avoiding is a repository per *dataset* — not because it br
 
 ## What goes where
 
-The layout below is the **default**, not a requirement. If yours differs, copy `_tcat-spoke.json.template` to `.tcat-spoke.json`, declare where things live, and `tcat-validate all` will believe you. With no manifest, kind is inferred from directory names and then from each document's own contents — so an unconventional spoke validates either way; the manifest just makes the intent explicit and lets you set `exclude` and `strict`.
+The layout below is the **default**, not a requirement. If yours differs, declare where things live in the `layout` block of `.tcat-spoke.json` (init wrote the file), and `tcat-validate all` will believe you. With no manifest, kind is inferred from directory names and then from each document's own contents — so an unconventional spoke validates either way; the manifest just makes the intent explicit and lets you set `exclude` and `strict`.
 
 | Directory | Layer | Mutability |
 |---|---|---|
@@ -56,14 +56,14 @@ Validating locally and merging a PR gets the data into this repository. It does 
 
 ```bash
 # in a checkout of tcat-index
-python scripts/register.py sample  ../my-spoke/samples/PSU-VOx-14.json
-python scripts/register.py dataset ../my-spoke/manifests/prbs-run-014.json --spoke my-spoke --site psu-rioux
+python scripts/register.py sample  ../my-spoke/samples/VOx-14.json
+python scripts/register.py dataset ../my-spoke/manifests/prbs-run-014.json --spoke my-spoke --site my-lab
 ```
 
 Then anyone — or any agent — can find it:
 
 ```bash
-python scripts/query.py --sample PSU-VOx-14
+python scripts/query.py --sample VOx-14
 ```
 
 Register the **sample first**. A dataset whose `sample_id` does not resolve produces a warning, because the data-to-sample link is the one the project's data-management plan specifically commits to.

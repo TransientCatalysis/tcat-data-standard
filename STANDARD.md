@@ -19,20 +19,21 @@
 **Standards version:** 0.12.0 — what this document says. Moves only on a normative change, and that needs written approval (`COLLABORATION.md` section 5). Read it from `tcat_data.STANDARDS_VERSION`.
 **Package version:** separate on purpose, and free to move — `tcat_data.__version__`, `pip show tcat-data-standard`. A tooling fix or a new `tcat-spoke` feature is not a change to what a valid record is, and before 2026-09-09 one number served both, so every tooling release spent a standards version.
 **Schema version:** 0.9.0 (`src/tcat_data/schema/0.9.0/`; `0.8.0/`, `0.7.0/`, `0.6.0/`, `0.5.0/`, `0.4.0/`, `0.3.0/`, `0.2.0/` and `0.1.0/` are frozen and retained)
-**Status:** accepted by the team, September 2026, and exercised against a real campaign — 26 PSU CO-oxidation PRBS runs across four batches, ingested and validating. Six schema changes came out of that exercise rather than out of anticipation, which is the difference between this version and the last.
+**Status:** accepted by the team, September 2026, and exercised against a real campaign of CO-oxidation PRBS runs, ingested and validating. Six schema changes came out of that exercise rather than out of anticipation, which is the difference between this version and the last.
 
 ---
 
 ## Identity
 
-This standard serves the DOE Genesis Mission Phase I project *Transient Kinetics and Spectroscopy for Agentic Digital Twins to Upgrade Domestic Alkane Feedstocks into Value-Added Chemicals* (DE-FOA-0003612), across:
+This standard serves a multi-institution collaboration on transient kinetics and operando spectroscopy of catalysts. The kinds of work it has to hold together:
 
-| Institution | Role | Data it produces |
-|---|---|---|
-| Penn State (Janik, Rioux, Hodges) | Prime. PRBS reactor kinetics, transient IR, catalyst synthesis | PRBS traces, MS, gas-phase and transient IR, characterization |
-| Brookhaven National Laboratory (Frenkel) | Modulation-excitation fast-scan XAS | Operando XAS, derived oxidation state and coordination |
-| Georgia Tech (Medford) | Agentic AI kinetic fitting and workflow integration | Fits, ensembles, designed experiments, sensor models |
-| ExxonMobil (Meyer) | Industrial partner (unfunded) | Framing; no data deposition expected |
+| Kind of work | Data it produces |
+|---|---|
+| PRBS reactor kinetics, transient IR, catalyst synthesis | PRBS traces, MS, gas-phase and transient IR, characterization |
+| Modulation-excitation fast-scan XAS | Operando XAS, derived oxidation state and coordination |
+| Kinetic fitting and workflow integration | Fits, ensembles, designed experiments, sensor models |
+
+Supported by the U.S. Department of Energy, Genesis Mission, award DE-SC0026638.
 
 The design goal beyond this project is that the standard survives it — a transient-kinetics profile that a wider community could adopt. That ambition is the reason for the strictness below; it is much cheaper to be strict now than to retrofit a field into three institutions' historical data later.
 
@@ -206,7 +207,7 @@ The prefix is for humans and **carries no authority**; only the hash is trusted.
 
 The digest covers **tool name + tool version + ordered input ids + parameters**, canonicalised as specified in `tcat_data.ids`.
 
-This rule lives in the data hub rather than the analysis hub for a specific reason. The distributed design rests on the claim that an artifact id computed at Georgia Tech is byte-identical to one computed on a cluster at Penn State, so multiple stores can agree on names without a central authority. That claim is only true if the hashing rule is shared. If each site canonicalises parameters slightly differently — key order, float formatting, how an empty input list is encoded — the same computation yields two ids, the cross-site cache never hits, and the design degrades into per-site scratch directories without anyone noticing.
+This rule lives in the data hub rather than the analysis hub for a specific reason. The distributed design rests on the claim that an artifact id computed at one institution is byte-identical to one computed on a cluster at another, so multiple stores can agree on names without a central authority. That claim is only true if the hashing rule is shared. If each site canonicalises parameters slightly differently — key order, float formatting, how an empty input list is encoded — the same computation yields two ids, the cross-site cache never hits, and the design degrades into per-site scratch directories without anyone noticing.
 
 Consequences worth knowing:
 
@@ -269,7 +270,7 @@ Three kinds exist because the project's Data Management and Sharing Plan commits
 
 One sample is measured many times, across modalities, at three institutions. Repeating its synthesis history on every dataset guarantees the copies diverge and then nobody knows which is right — so a dataset carries `sample_id`, and a `sample` document carries everything the id stands for: synthesis method, precursors with lots, ordered thermal treatments, nominal *and* measured composition, and independently measured properties.
 
-The `properties` object is the part worth planning for. A rate constant correlating with an independently measured catalyst property is a **join** between a fitted parameter and this field. If the properties live in a notebook, that milestone becomes a spreadsheet exercise at the worst possible time.
+The `properties` object is the part worth planning for. A rate constant correlating with an independently measured catalyst property is a **join** between a fitted parameter and this field. If the properties live in a notebook, that comparison becomes a spreadsheet exercise at the worst possible time.
 
 Flag-never-delete applies here too. A failed synthesis is retained with a reason; those are often the most informative entries in a materials series.
 
@@ -338,11 +339,14 @@ The validator's directory-name convention is a **default**:
 manifests/  raw/  canonical/  derived/  calibrations/  protocols/  samples/
 ```
 
-A spoke that diverges declares its layout in `.tcat-spoke.json` at its root, and `tcat-validate all` believes it:
+A spoke that diverges declares its layout in `.tcat-spoke.json` at its root (`tcat-spoke init` writes the file), and `tcat-validate all` believes it:
 
 ```json
 {
-  "standard_version": "0.1.0",
+  "standard_version": "0.9.0",
+  "spoke_id": "lab-a-data",
+  "kind": "data",
+  "stewards": [{"name": "A. Steward", "role": "data_steward", "github": "a-steward"}],
   "granularity": "campaign",
   "layout": {
     "dataset": ["2026-09-campaign/measurements", "2026-11-campaign/measurements"],
@@ -354,9 +358,9 @@ A spoke that diverges declares its layout in `.tcat-spoke.json` at its root, and
 }
 ```
 
-Everything in it is optional except `standard_version`. With no manifest at all, kind is inferred from directory names and then from each document's own contents — so an unconventional spoke validates without a manifest too; the manifest just makes the intent explicit and lets `exclude` and `strict` be set.
+`standard_version`, `spoke_id`, `kind` and `stewards` are required; the rest is optional. A manifest that is present but does not parse is an error, never treated as absent. With no manifest at all, kind is inferred from directory names and then from each document's own contents — so an unconventional spoke validates without a manifest too; the manifest just makes the intent explicit and lets `exclude` and `strict` be set.
 
-`strict: true` turns an unrecognised JSON file from a skip into an error. Off by default, because a spoke legitimately holds configuration and working notes, and forcing every JSON file to be a valid document would make people keep their real files somewhere the validator never sees.
+`strict: true` turns an unrecognised JSON file from a skip into an error. A JSON file that does not parse is an error either way, and so is a walk that finds no document at all: "0/0 passed" checked nothing. Off by default, because a spoke legitimately holds configuration and working notes, and forcing every JSON file to be a valid document would make people keep their real files somewhere the validator never sees.
 
 ---
 
@@ -365,10 +369,10 @@ Everything in it is optional except `standard_version`. With no manifest at all,
 | Thing | Pattern | Example |
 |---|---|---|
 | `dataset_id` | lowercase, hyphen or underscore separated | `prbs-co-ox-synthetic-001` |
-| `batch_id` | lab prefix + synthesis or campaign identifier | `psu-vox-2026-09-a` |
+| `batch_id` | lab prefix + synthesis or campaign identifier | `lab-a-vox-2026-09-a` |
 | `lineage_id` | descriptive, stable across modalities | `vox-c3h8-odh-sample-14` |
-| `sample_id` | the lab's own sample label, verbatim | `PSU-VOx-SiO2-14` |
-| Instrument `identifier` | short, stable, uppercase | `MS-Q1`, `NSLS2-QAS-XAS` |
+| `sample_id` | the lab's own sample label, verbatim | `LABA-VOx-SiO2-14` |
+| Instrument `identifier` | short, stable, uppercase | `MS-Q1`, `BEAMLINE-X-XAS` |
 | Artifact id prefix | short verb or noun | `conc`, `fit`, `cal`, `frag` |
 
 `sample_id` is deliberately the lab's own label rather than a project-assigned one. A relabelling scheme that disagrees with what is written on the vial is a scheme that gets ignored.
@@ -381,13 +385,13 @@ These are recorded rather than guessed at. Each needs an answer from someone spe
 
 | Question | Who | Why it matters |
 |---|---|---|
-| **AmSC/ModCon**: is the position below sufficient, or is there a concrete interface specification? | DOE / Janik | See the note under this table. Tracked as a watch item rather than a blocker. |
-| Does the HPC allocation permit **outbound network access from compute nodes**? | GT / PACE | Determines whether artifact pulls can happen mid-job or must be staged in advance. |
-| Which **NSLS-II beamline and endstation**, and what does its data policy require us to retain versus link? | Frenkel | Shapes the XAS converter and whether raw beamline data enters a spoke at all. |
-| How are the **MS, IR, XAS, and reactor clocks aligned**, and to what precision? | Rioux / Frenkel | Multimodal fusion is meaningless without it. A shared `time_base` assumes an answer exists. |
-| Are exported **MS ion currents and IR spectra already background-subtracted**? | Rioux | If so, that background is a transformation and needs its own artifact, or the chain has a hole. |
-| Is a git-backed registry accepted as the **web-accessible research database**, or is a hosted service expected? | Janik | `tcat-index` is built on the former reading. See `tcat-index/DATABASE.md` for the argument and the honest limits. |
-| Which **public repository** for publication data packages? | Medford / Janik | Needed before first submission. Criteria in `tcat-index/RELEASE.md`. |
+| **AmSC/ModCon**: is the position below sufficient, or is there a concrete interface specification? | Funder / project lead | See the note under this table. Tracked as a watch item rather than a blocker. |
+| Does the HPC allocation permit **outbound network access from compute nodes**? | Each computing site | Determines whether artifact pulls can happen mid-job or must be staged in advance. |
+| Which **beamline and endstation**, and what does the facility's data policy require us to retain versus link? | Beamline group | Shapes the XAS converter and whether raw beamline data enters a spoke at all. |
+| How are the **MS, IR, XAS, and reactor clocks aligned**, and to what precision? | Instrument owners | Multimodal fusion is meaningless without it. A shared `time_base` assumes an answer exists. |
+| Are exported **MS ion currents and IR spectra already background-subtracted**? | Instrument owners | If so, that background is a transformation and needs its own artifact, or the chain has a hole. |
+| Is a git-backed registry accepted as the **web-accessible research database**, or is a hosted service expected? | Project lead | `tcat-index` is built on the former reading. |
+| Which **public repository** for publication data packages? | Maintainer / project lead | Needed before first submission. |
 
 ### On AmSC/ModCon
 
@@ -482,9 +486,9 @@ Two consequences worth being explicit about:
 - **`review_scope` is the load-bearing field**, not `reviewed_by`. A name is easy
   to type; a sentence saying *what was checked, against what* is what makes the
   claim auditable later, and it is why the minimum length exists. The model is
-  the calibration case: *"reproduced PSU's own exported mole fractions from raw
-  counts through the four-stage chain — 130,537 of 130,560 values bit-identical
-  across 26 runs."*
+  the calibration case: *"reproduced the instrument workbook's own exported mole fractions
+  from raw counts through the four-stage chain — bit-identical in all but a
+  handful of values, across every run."*
 - **`autonomy_level` does not move when a record is reviewed.** It records how
   the work was *produced*, which does not change retroactively. A record produced
   at A4 and then reviewed is still A4 — and the pair, high autonomy plus a named
@@ -689,6 +693,6 @@ route to a person.
 | 0.9.0 | 2026-09-28 | **Schema `0.6.0` is minted and `0.5.0` is frozen.** A step gains an optional structured `rate_law` -- `site_exponent` and a rational `denominator` of named free constants (the Briggs-Haldane quasi-steady-state form, `k m / (1 + sum Q m')`, bounded below by one) -- `site_exponent`: the power of the free-site activity in its forward rate when it differs from the free-site count on the left of the equation, as it does for a step LUMPED through a quasi-equilibrated intermediate -- the equilibrium releases a site before the slow step, and the lumped rate carries that site as a divisor (`CO* + O* -> CO2 + 2 *` from an equilibrated `CO* + O* <=> CO2* + *` followed by `CO2* -> CO2 + *` declares -1). Recorded on the step because it changes what the step's constant means; absent, the rate law is the equation's mass action and no existing record changes meaning. Hashed into a specification's id like every other science block. |
 | 0.5.0 | 2026-09-09 | **The package is `tcat_data`** (was `tcat_standard`), so the three standards read data / tool / campaign and the most generic name in the org no longer belongs to the narrowest hub. Import paths change; nothing in the schema does -- schema stays `0.3.0`, no artifact id moves on the data side. Paired with the analysis hub becoming `tcat-tool-standard` (package `tcat_tool`); decided 2026-09-08, `tcat-tool-standard/ARCHITECTURE.md` "Names". |
 | 0.4.0 | 2026-09-08 | **Schema `0.3.0` is minted and `0.2.0` is frozen** with a checked-in manifest, because every artifact in every store declares 0.2.0. Two additive blocks, both for IDENTITY. `provenance.tool` gains **`source_digest`** -- a sha256 over the tool package's source with docstrings and comments stripped, combined with the same digest of every `tcat-*` library it imports -- and **`libraries`**, the list of those libraries as installed; the artifact id hashes `<version>+<digest8>` as its tool_version, so a code change re-hashes exactly the tools whose closure includes it and nobody bumps a version for a bug fix. `tool.version` becomes the CONTRACT version. `tool.git_sha` is corrected to mean the TOOL's repository rather than the analysis hub's, which could not see the spoke at all. `campaign.spokes` entries may be objects pinning `{name, kind, version, digest}`, so a campaign record is a lockfile: which code produced a study is answerable without walking its artifacts. `tcat-spoke fingerprint` becomes per package and its file becomes the index from a digest to a commit. Absence of every new field means what the record meant before. |
-| 0.3.0 | 2026-09-01 | Accepted by the team, and the first version written against real data rather than in anticipation of it. **Schema `0.2.0` is minted and `0.1.0` is frozen** — 47 real PSU documents declare 0.1.0, and amending a version that real data declares is the thing `schema_version` exists to prevent. Adds **`maturity`** (`sandbox` / `working` / `reviewed` / `published`, plus the terminal `superseded`), whose absence means `sandbox` so nothing already written changes meaning, and every rung of which has an entry criterion a validator can check — including `warnings_accepted`, which makes a `working` claim falsifiable and is the only place an advisory check gains a consequence. Adds **`stewards`**, required on the spoke manifest, with a closed duty enum and CRediT contributor roles, and generating `.github/CODEOWNERS` so ownership metadata and repository permission cannot drift; `personnel` stays alongside it, because who did the work and who answers for it now are different questions. The spoke manifest also gains `spoke_id` and `kind`, and loses `contacts` (zero instances anywhere, and 0.1.0 still accepts it — pinned by a test). **Fixed:** a spoke's `standard_version` was applied as an override that beat each document's own `schema_version`, which would have silently revalidated a whole tree against a schema it was never written against on the first manifest anyone wrote; it is now a fallback, and the precedence is documented. `_infer_kind` learned about spoke manifests, which it had been skipping in silence. Examples now source the current version instead of hardcoding one, and a `spoke-example.json` exists because the manifest is the one document every new spoke must write. |
-| 0.2.0 | 2026-08-20 | Second pass, driven by a clause-by-clause audit against the project DMSP (see `DMSP-COMPLIANCE.md` alongside the spec). Adds three document kinds the DMSP commits to and the first draft lacked: **`sample`** (materials data, and the measured properties milestone M9 joins a rate constant against), **`model`** (fitted and trained models as research products, with grouped splits, metrics with intervals, and limitations on appropriate use), and **`publication`** (the data-to-publication link, and the unit the release gate operates on). Adds the last of the DMSP's enumerated metadata fields — `project`, `objective`, `software`, and per-channel `chemical_identifiers` — all optional, because none is lost by being backfilled. Schema `0.1.0` was amended in place rather than forked to `0.2.0`: it is a pre-release draft nobody has used, and manufacturing a fake version history would have been worse than saying so. Retention now explicitly begins at the first tagged release. AmSC/ModCon moved from an open question to a stated position with a watch item. |
+| 0.3.0 | 2026-09-01 | Accepted by the team, and the first version written against real data rather than in anticipation of it. **Schema `0.2.0` is minted and `0.1.0` is frozen** — real documents declare 0.1.0, and amending a version that real data declares is the thing `schema_version` exists to prevent. Adds **`maturity`** (`sandbox` / `working` / `reviewed` / `published`, plus the terminal `superseded`), whose absence means `sandbox` so nothing already written changes meaning, and every rung of which has an entry criterion a validator can check — including `warnings_accepted`, which makes a `working` claim falsifiable and is the only place an advisory check gains a consequence. Adds **`stewards`**, required on the spoke manifest, with a closed duty enum and CRediT contributor roles, and generating `.github/CODEOWNERS` so ownership metadata and repository permission cannot drift; `personnel` stays alongside it, because who did the work and who answers for it now are different questions. The spoke manifest also gains `spoke_id` and `kind`, and loses `contacts` (zero instances anywhere, and 0.1.0 still accepts it — pinned by a test). **Fixed:** a spoke's `standard_version` was applied as an override that beat each document's own `schema_version`, which would have silently revalidated a whole tree against a schema it was never written against on the first manifest anyone wrote; it is now a fallback, and the precedence is documented. `_infer_kind` learned about spoke manifests, which it had been skipping in silence. Examples now source the current version instead of hardcoding one, and a `spoke-example.json` exists because the manifest is the one document every new spoke must write. |
+| 0.2.0 | 2026-08-20 | Second pass, driven by a clause-by-clause audit against the project DMSP. Adds three document kinds the DMSP commits to and the first draft lacked: **`sample`** (materials data, and the measured properties a fitted rate constant is joined against), **`model`** (fitted and trained models as research products, with grouped splits, metrics with intervals, and limitations on appropriate use), and **`publication`** (the data-to-publication link, and the unit the release gate operates on). Adds the last of the DMSP's enumerated metadata fields — `project`, `objective`, `software`, and per-channel `chemical_identifiers` — all optional, because none is lost by being backfilled. Schema `0.1.0` was amended in place rather than forked to `0.2.0`: it is a pre-release draft nobody has used, and manufacturing a fake version history would have been worse than saying so. Retention now explicitly begins at the first tagged release. AmSC/ModCon moved from an open question to a stated position with a watch item. |
 | 0.1.0 | 2026-08-20 | Initial draft, for team review before any real data exists. Required-field set is the infrastructure spec's §3.1 list plus the fields the DMSP commits to that would be unrecoverable if retrofitted (`sample_id`, `measurement_type`, `access_status`, `license`, `protocol`, `layer`). Units and uncertainty are per-channel rather than two top-level maps, so the inconsistent state is unrepresentable. The artifact hash rule is normative and lives here rather than in the analysis hub, because content addressing is only site-independent if the rule is shared. TRACE-AI is pinned at v2.2.0 — see `profiles/trace-ai/pin.json` for why not v2.0.0. Nothing in this version has been exercised against real instrument data. |

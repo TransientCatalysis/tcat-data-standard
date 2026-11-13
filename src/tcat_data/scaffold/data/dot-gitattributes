@@ -7,7 +7,7 @@
 
 # LFS candidates. NOT enabled by default -- turning on LFS is a decision with a
 # quota attached, and it should be made deliberately rather than inherited from a
-# template.
+# skeleton.
 #
 # Before reaching for LFS, ask whether the file should be in the repository at
 # all. A manifest entry's `url` field points at object storage or a facility

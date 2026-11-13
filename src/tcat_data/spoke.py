@@ -39,11 +39,10 @@ PLACEHOLDERS = (
     "[WHO APPROVES CALIBRATION CHANGES]",
 )
 
-#: Files that are ALLOWED to contain placeholder strings: the template's own
-#: scaffolding, and anything documenting the placeholders themselves.
+#: Files that are ALLOWED to contain placeholder strings: the guides that
+#: document the placeholders themselves, and this module.
 PLACEHOLDER_EXEMPT = (
     ".git",
-    ".tcat",
     "SPOKE-SETUP.md",
     "START-HERE.md",
     "bootstrap.py",
@@ -216,21 +215,6 @@ def check(root: Path) -> list[Finding]:
     """Everything that makes a spoke configured rather than merely created."""
     root = Path(root)
     findings: list[Finding] = []
-
-    if (root / ".tcat" / "IS_TEMPLATE").is_file():
-        # The template's own CI. Its placeholders SHOULD still be there; a
-        # template whose placeholders were filled in is broken for everyone
-        # downstream, so assert the opposite.
-        if not find_placeholders(root):
-            findings.append(
-                Finding(
-                    ".tcat/IS_TEMPLATE",
-                    "this is the template, but no placeholders remain -- somebody "
-                    "filled them in, and every repository created from it will "
-                    "inherit their name.",
-                )
-            )
-        return findings
 
     findings.extend(find_placeholders(root))
 
@@ -497,10 +481,6 @@ def check_fingerprint(root: Path) -> list[Finding]:
                         "missing. Run `tcat-spoke fingerprint` and commit it -- without it a digest in an "
                         "artifact's provenance cannot be traced back to the commit that produced it.")]
     recorded = json.loads(path.read_text(encoding="utf-8"))
-    if recorded.get("format") != 2:
-        return [Finding(FINGERPRINT,
-                        "is in the pre-2026-09-08 single-version format. Run `tcat-spoke fingerprint` "
-                        "and commit the result.")]
     findings = []
     current = fingerprint_record(root)["packages"]
     for name, now in current.items():
